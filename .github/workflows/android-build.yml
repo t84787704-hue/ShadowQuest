@@ -60,14 +60,33 @@ jobs:
       - name: Ensure Valid Gradle Wrapper
         run: |
           cd android
-          if [ ! -s gradle/wrapper/gradle-wrapper.jar ] || ! unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
-            echo "Downloading official Gradle 8.5 wrapper JAR..."
-            mkdir -p gradle/wrapper
-            curl -sSL -o /tmp/gradle-8.5-bin.zip https://services.gradle.org/distributions/gradle-8.5-bin.zip
-            unzip -q /tmp/gradle-8.5-bin.zip gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar -d /tmp/gradle-extract
-            mv /tmp/gradle-extract/gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
-            rm -rf /tmp/gradle-8.5-bin.zip /tmp/gradle-extract
-          fi
+          python3 -c "
+          import os, zipfile, io, urllib.request
+
+          jar_path = 'gradle/wrapper/gradle-wrapper.jar'
+          needs_download = False
+
+          if not os.path.exists(jar_path) or os.path.getsize(jar_path) == 0:
+              needs_download = True
+          else:
+              try:
+                  with zipfile.ZipFile(jar_path, 'r') as z:
+                      if 'org/gradle/wrapper/GradleWrapperMain.class' not in z.namelist():
+                          needs_download = True
+              except Exception as e:
+                  needs_download = True
+
+          if needs_download:
+              print('Downloading official Gradle 8.5 wrapper JAR...')
+              os.makedirs('gradle/wrapper', exist_ok=True)
+              url = 'https://services.gradle.org/distributions/gradle-8.5-bin.zip'
+              data = urllib.request.urlopen(url).read()
+              with zipfile.ZipFile(io.BytesIO(data)) as z:
+                  wrapper_bytes = z.read('gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar')
+                  with open(jar_path, 'wb') as f:
+                      f.write(wrapper_bytes)
+              print('Successfully updated wrapper JAR! Size:', os.path.getsize(jar_path))
+          "
           chmod +x gradlew
           ./gradlew --version
 
