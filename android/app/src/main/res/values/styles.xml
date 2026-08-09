@@ -1,0 +1,14 @@
+<resources>
+    <style name="Theme.BlazeAdventure" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#0284c7</item>
+        <item name="colorPrimaryDark">#0369a1</item>
+        <item name="colorAccent">#f59e0b</item>
+    </style>
+
+    <style name="Theme.BlazeAdventure.FullScreen" parent="Theme.BlazeAdventure">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>
