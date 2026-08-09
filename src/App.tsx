@@ -83,6 +83,11 @@ export default function App() {
 
         {currentScreen === 'STORY' && (
           <StoryModal
+            onComplete={() => {
+              SaveSystem.markStorySeen();
+              setSaveData(SaveSystem.load());
+              setCurrentScreen('WORLD_MAP');
+            }}
             onClose={() => {
               SaveSystem.markStorySeen();
               setSaveData(SaveSystem.load());

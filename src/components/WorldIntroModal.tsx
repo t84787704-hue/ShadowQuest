@@ -1,12 +1,14 @@
 import React from 'react';
-import { Play, Compass, Mountain, Shield, Flame, Skull } from 'lucide-react';
+import { Play, Compass, Mountain, Shield, Flame, Skull, X } from 'lucide-react';
 import { WORLD_NAMES } from '../game/world/LevelData';
 import { audioEngine } from '../game/audio/AudioEngine';
 
 interface WorldIntroModalProps {
-  worldId: number;
-  levelNum: number;
+  levelId?: string;
+  worldId?: number;
+  levelNum?: number;
   onStart: () => void;
+  onBack?: () => void;
 }
 
 const WORLD_DESCRIPTIONS: Record<number, { desc: string; icon: React.ReactNode; color: string }> = {
@@ -43,24 +45,52 @@ const WORLD_DESCRIPTIONS: Record<number, { desc: string; icon: React.ReactNode; 
 };
 
 export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
+  levelId,
   worldId,
   levelNum,
   onStart,
+  onBack,
 }) => {
-  const worldInfo = WORLD_DESCRIPTIONS[worldId] || WORLD_DESCRIPTIONS[1];
-  const worldName = WORLD_NAMES[worldId] || `WORLD ${worldId}`;
-  const isBoss = levelNum === 5;
+  let effectiveWorldId = worldId ?? 1;
+  let effectiveLevelNum = levelNum ?? 1;
+
+  if (levelId) {
+    const parts = levelId.split('-').map((p) => parseInt(p, 10));
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      effectiveWorldId = parts[0];
+      effectiveLevelNum = parts[1];
+    }
+  }
+
+  const worldInfo = WORLD_DESCRIPTIONS[effectiveWorldId] || WORLD_DESCRIPTIONS[1];
+  const worldName = WORLD_NAMES[effectiveWorldId] || `WORLD ${effectiveWorldId}`;
+  const isBoss = effectiveLevelNum === 5;
 
   const handleStartLevel = () => {
     audioEngine.playButtonClick();
     onStart();
   };
 
+  const handleBack = () => {
+    audioEngine.playButtonClick();
+    if (onBack) onBack();
+  };
+
   return (
     <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex items-center justify-center p-4 select-none">
       <div
-        className={`w-full max-w-sm bg-gradient-to-b ${worldInfo.color} border-2 rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center`}
+        className={`w-full max-w-sm bg-gradient-to-b ${worldInfo.color} border-2 rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center relative`}
       >
+        {onBack && (
+          <button
+            onClick={handleBack}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+
         <div className="w-16 h-16 rounded-2xl bg-slate-900/90 border border-slate-700 flex items-center justify-center mb-3 shadow-lg">
           {worldInfo.icon}
         </div>
@@ -70,20 +100,31 @@ export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
         </span>
 
         <h2 className="text-xl font-black text-slate-100 tracking-wider mb-1">
-          {isBoss ? `LEVEL ${worldId}-5 • BOSS BATTLE` : `LEVEL ${worldId}-${levelNum}`}
+          {isBoss ? `LEVEL ${effectiveWorldId}-5 • BOSS BATTLE` : `LEVEL ${effectiveWorldId}-${effectiveLevelNum}`}
         </h2>
 
         <p className="text-xs text-slate-300 bg-slate-900/80 border border-slate-800 rounded-xl p-3 my-4 leading-relaxed">
           {worldInfo.desc}
         </p>
 
-        <button
-          onClick={handleStartLevel}
-          className="w-full py-3 px-6 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl border border-amber-300/40 shadow-lg flex items-center justify-center gap-2 transition"
-        >
-          <Play className="w-4 h-4 fill-slate-950" />
-          START LEVEL
-        </button>
+        <div className="w-full flex gap-2">
+          {onBack && (
+            <button
+              onClick={handleBack}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700 transition"
+            >
+              BACK
+            </button>
+          )}
+
+          <button
+            onClick={handleStartLevel}
+            className="flex-1 py-3 px-6 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl border border-amber-300/40 shadow-lg flex items-center justify-center gap-2 transition"
+          >
+            <Play className="w-4 h-4 fill-slate-950" />
+            START LEVEL
+          </button>
+        </div>
       </div>
     </div>
   );

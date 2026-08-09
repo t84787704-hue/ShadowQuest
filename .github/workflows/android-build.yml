@@ -14,21 +14,37 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        if: hashFiles('bun.lock') != ''
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Setup Node.js Environment
+        if: hashFiles('bun.lock') == ''
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install Web Dependencies
         run: |
-          if [ -f package-lock.json ]; then
+          if [ -f bun.lock ]; then
+            bun install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
             npm ci
+          elif [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
           else
             npm install
           fi
 
       - name: Build Web Game Production Bundle
-        run: npm run build
+        run: |
+          if [ -f bun.lock ]; then
+            bun run build
+          else
+            npm run build
+          fi
 
       - name: Copy Web Dist Assets to Android Assets Directory
         run: |

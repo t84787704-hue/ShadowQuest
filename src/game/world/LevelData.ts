@@ -17,7 +17,7 @@ export interface LevelDefinition {
   signs?: TutorialSign[];
   coins: { x: number; y: number; value?: number }[];
   healthPickups?: { x: number; y: number; healAmount?: number }[];
-  goblins: { x: number; y: number; patrolRange?: number }[];
+  goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[];
 }
 
 // Helper to construct Level 1-1 Green Forest Tile Grid (140 cols x 15 rows = 4480px)

@@ -86,7 +86,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   const unlockedWorlds = saveData.unlockedWorlds || [1];
 
   // Calculate total stars earned across all worlds
-  const totalStars = Object.values(saveData.levelStars || {}).reduce((a, b) => a + b, 0);
+  const totalStars = Object.values(saveData.levelStars || {}).reduce((a: number, b: number) => a + b, 0);
 
   const handleBack = () => {
     audioEngine.playButtonClick();

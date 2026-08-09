@@ -49,8 +49,8 @@ export class GameEngine {
 
     this.levelDef = getLevelDefinition(levelId);
     this.tileMap = new TileMap(
-      Math.floor(this.levelDef.width / 32),
-      Math.floor(this.levelDef.height / 32),
+      Math.floor(this.levelDef.config.width / 32),
+      Math.floor(this.levelDef.config.height / 32),
       this.levelDef.grid
     );
     this.camera = new Camera(canvas.width, canvas.height);

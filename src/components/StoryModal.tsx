@@ -3,11 +3,20 @@ import { Shield, Flame, Compass, ChevronRight, SkipForward } from 'lucide-react'
 import { audioEngine } from '../game/audio/AudioEngine';
 
 interface StoryModalProps {
-  onComplete: () => void;
+  onComplete?: () => void;
+  onClose?: () => void;
 }
 
-export const StoryModal: React.FC<StoryModalProps> = ({ onComplete }) => {
+export const StoryModal: React.FC<StoryModalProps> = ({ onComplete, onClose }) => {
   const [currentPage, setCurrentPage] = useState<number>(0);
+
+  const handleFinish = () => {
+    if (onComplete) {
+      onComplete();
+    } else if (onClose) {
+      onClose();
+    }
+  };
 
   const storyPages = [
     {
@@ -41,13 +50,13 @@ export const StoryModal: React.FC<StoryModalProps> = ({ onComplete }) => {
     if (currentPage < storyPages.length - 1) {
       setCurrentPage((prev) => prev + 1);
     } else {
-      onComplete();
+      handleFinish();
     }
   };
 
   const handleSkip = () => {
     audioEngine.playButtonClick();
-    onComplete();
+    handleFinish();
   };
 
   const activePage = storyPages[currentPage];
