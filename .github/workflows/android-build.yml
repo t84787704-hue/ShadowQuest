@@ -71,20 +71,36 @@ jobs:
           else:
               try:
                   with zipfile.ZipFile(jar_path, 'r') as z:
-                      if 'org/gradle/wrapper/GradleWrapperMain.class' not in z.namelist():
+                      names = z.namelist()
+                      if 'org/gradle/wrapper/GradleWrapperMain.class' not in names or 'org/gradle/wrapper/IDownload.class' not in names:
                           needs_download = True
               except Exception as e:
                   needs_download = True
 
           if needs_download:
-              print('Downloading official Gradle 8.5 wrapper JAR...')
-              os.makedirs('gradle/wrapper', exist_ok=True)
+              print('Downloading and assembling complete Gradle 8.5 wrapper JAR...')
               url = 'https://services.gradle.org/distributions/gradle-8.5-bin.zip'
               data = urllib.request.urlopen(url).read()
-              with zipfile.ZipFile(io.BytesIO(data)) as z:
-                  wrapper_bytes = z.read('gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar')
-                  with open(jar_path, 'wb') as f:
-                      f.write(wrapper_bytes)
+              z = zipfile.ZipFile(io.BytesIO(data))
+              
+              shared_bytes = z.read('gradle-8.5/lib/gradle-wrapper-shared-8.5.jar')
+              wrapper_bytes = z.read('gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar')
+
+              z_shared = zipfile.ZipFile(io.BytesIO(shared_bytes))
+              z_wrapper = zipfile.ZipFile(io.BytesIO(wrapper_bytes))
+
+              out_buffer = io.BytesIO()
+              with zipfile.ZipFile(out_buffer, 'w', zipfile.ZIP_DEFLATED) as z_out:
+                  added = set()
+                  for z_src in [z_wrapper, z_shared]:
+                      for item in z_src.infolist():
+                          if item.filename not in added and not item.filename.startswith('META-INF/MANIFEST'):
+                              added.add(item.filename)
+                              z_out.writestr(item, z_src.read(item.filename))
+
+              os.makedirs('gradle/wrapper', exist_ok=True)
+              with open(jar_path, 'wb') as f:
+                  f.write(out_buffer.getvalue())
               print('Successfully updated wrapper JAR! Size:', os.path.getsize(jar_path))
           "
           chmod +x gradlew
