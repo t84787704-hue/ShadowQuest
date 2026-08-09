@@ -4,7 +4,7 @@ import { ForestGoblin } from '../entities/Enemy';
 import { Coin, HealthPickup } from '../entities/Collectible';
 import { Checkpoint } from '../entities/Checkpoint';
 import { TileMap } from '../world/TileMap';
-import { LEVEL_1_1, LevelDefinition } from '../world/LevelData';
+import { LEVEL_1_1, LevelDefinition, getLevelDefinition } from '../world/LevelData';
 import { Camera } from './Camera';
 import { InputManager } from './InputManager';
 import { ParticleSystem } from './ParticleSystem';
@@ -39,7 +39,7 @@ export class GameEngine {
   private lastAttackId: number = -1;
   private hitEnemiesThisAttack: Set<ForestGoblin> = new Set();
 
-  constructor(canvas: HTMLCanvasElement, saveData: SaveData) {
+  constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1') {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
     if (!context) {
@@ -47,8 +47,12 @@ export class GameEngine {
     }
     this.ctx = context;
 
-    this.levelDef = LEVEL_1_1;
-    this.tileMap = new TileMap(140, 15, this.levelDef.grid);
+    this.levelDef = getLevelDefinition(levelId);
+    this.tileMap = new TileMap(
+      Math.floor(this.levelDef.width / 32),
+      Math.floor(this.levelDef.height / 32),
+      this.levelDef.grid
+    );
     this.camera = new Camera(canvas.width, canvas.height);
     this.input = new InputManager();
     this.particles = new ParticleSystem();
@@ -76,7 +80,7 @@ export class GameEngine {
   private initLevelEntities() {
     // Populate Goblins
     this.goblins = this.levelDef.goblins.map(
-      (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100)
+      (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false)
     );
 
     // Populate Coins

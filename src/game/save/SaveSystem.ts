@@ -7,6 +7,8 @@ const DEFAULT_SAVE_DATA: SaveData = {
   currentWorld: 1,
   currentLevel: 1,
   completedLevels: [],
+  unlockedWorlds: [1],
+  hasSeenStory: false,
   levelStars: {},
   upgrades: {
     maxHealth: 0,
@@ -32,6 +34,8 @@ export class SaveSystem {
       return {
         ...DEFAULT_SAVE_DATA,
         ...parsed,
+        unlockedWorlds: parsed.unlockedWorlds || [1],
+        completedLevels: parsed.completedLevels || [],
         upgrades: { ...DEFAULT_SAVE_DATA.upgrades, ...(parsed.upgrades || {}) },
         settings: { ...DEFAULT_SAVE_DATA.settings, ...(parsed.settings || {}) },
       };
@@ -68,8 +72,62 @@ export class SaveSystem {
     if (stars > currentStar) {
       data.levelStars[levelId] = stars;
     }
+
+    // Determine next level to unlock
+    const [worldStr, levelStr] = levelId.split('-');
+    const w = parseInt(worldStr, 10);
+    const l = parseInt(levelStr, 10);
+
+    if (l < 5) {
+      // Unlocks next level in same world (e.g. 1-1 -> 1-2)
+      data.currentWorld = w;
+      data.currentLevel = l + 1;
+    } else {
+      // World boss cleared! Unlock next world
+      const nextWorld = w + 1;
+      if (nextWorld <= 6) {
+        if (!data.unlockedWorlds.includes(nextWorld)) {
+          data.unlockedWorlds.push(nextWorld);
+        }
+        data.currentWorld = nextWorld;
+        data.currentLevel = 1;
+      }
+    }
+
     this.save(data);
     return data;
+  }
+
+  public static getLatestUnlockedLevel(): string {
+    const data = this.load();
+    // Default to 1-1
+    if (data.completedLevels.length === 0) {
+      return '1-1';
+    }
+
+    // Find highest completed level
+    let maxWorld = 1;
+    let maxLevel = 1;
+
+    for (const lvlId of data.completedLevels) {
+      const [wStr, lStr] = lvlId.split('-');
+      const w = parseInt(wStr, 10);
+      const l = parseInt(lStr, 10);
+
+      if (w > maxWorld || (w === maxWorld && l > maxLevel)) {
+        maxWorld = w;
+        maxLevel = l;
+      }
+    }
+
+    // Next level to play
+    if (maxLevel < 5) {
+      return `${maxWorld}-${maxLevel + 1}`;
+    } else if (maxWorld < 6) {
+      return `${maxWorld + 1}-1`;
+    }
+
+    return `${maxWorld}-5`;
   }
 
   public static purchaseUpgrade(upgradeKey: keyof SaveData['upgrades'], cost: number): { success: boolean; data: SaveData } {
@@ -83,9 +141,17 @@ export class SaveSystem {
     return { success: false, data };
   }
 
+  public static markStorySeen(): SaveData {
+    const data = this.load();
+    data.hasSeenStory = true;
+    this.save(data);
+    return data;
+  }
+
   public static resetSaveData(): SaveData {
     const fresh = { ...DEFAULT_SAVE_DATA };
     this.save(fresh);
     return fresh;
   }
 }
+

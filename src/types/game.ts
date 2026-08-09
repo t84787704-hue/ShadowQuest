@@ -1,4 +1,4 @@
-export type GameScreen = 'MAIN_MENU' | 'LEVELS' | 'UPGRADES' | 'SETTINGS' | 'PLAYING';
+export type GameScreen = 'MAIN_MENU' | 'STORY' | 'WORLD_MAP' | 'LEVELS' | 'UPGRADES' | 'SETTINGS' | 'PLAYING';
 
 export type GameStateStatus = 'RUNNING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 
@@ -42,13 +42,16 @@ export interface LevelConfig {
   completed: boolean;
   stars: number;
   highScoreCoins: number;
+  isBossLevel?: boolean;
 }
 
 export interface SaveData {
   coins: number;
   currentWorld: number;
   currentLevel: number;
-  completedLevels: string[]; // e.g. ['1-1']
+  completedLevels: string[]; // e.g. ['1-1', '1-2']
+  unlockedWorlds: number[]; // e.g. [1, 2]
+  hasSeenStory: boolean;
   levelStars: Record<string, number>;
   upgrades: {
     maxHealth: number; // level 0-5
@@ -69,3 +72,4 @@ export interface InputState {
   jump: boolean;
   attack: boolean;
 }
+

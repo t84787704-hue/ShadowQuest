@@ -7,11 +7,15 @@ import { LevelsMenu } from './components/LevelsMenu';
 import { UpgradesMenu } from './components/UpgradesMenu';
 import { SettingsMenu } from './components/SettingsMenu';
 import { GameCanvas } from './components/GameCanvas';
+import { WorldMap } from './components/WorldMap';
+import { StoryModal } from './components/StoryModal';
+import { WorldIntroModal } from './components/WorldIntroModal';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('MAIN_MENU');
   const [saveData, setSaveData] = useState<SaveData>(() => SaveSystem.load());
   const [selectedLevelId, setSelectedLevelId] = useState<string>('1-1');
+  const [pendingLevelId, setPendingLevelId] = useState<string | null>(null);
 
   useEffect(() => {
     // Synchronize sound settings on initial load
@@ -42,6 +46,18 @@ export default function App() {
     setSaveData(updated);
   };
 
+  const handleLevelSelect = (levelId: string) => {
+    setPendingLevelId(levelId);
+  };
+
+  const handleConfirmStartLevel = () => {
+    if (pendingLevelId) {
+      setSelectedLevelId(pendingLevelId);
+      setPendingLevelId(null);
+      setCurrentScreen('PLAYING');
+    }
+  };
+
   return (
     <div className="w-screen h-screen bg-slate-950 flex items-center justify-center overflow-hidden font-sans">
       <div className="w-full h-full max-w-[1280px] max-h-[720px] relative flex flex-col bg-slate-950">
@@ -49,7 +65,29 @@ export default function App() {
           <MainMenu
             saveData={saveData}
             onNavigate={setCurrentScreen}
+            onSelectLevel={(lvl) => {
+              setSelectedLevelId(lvl);
+              setCurrentScreen('PLAYING');
+            }}
             onSoundToggle={handleSoundToggle}
+          />
+        )}
+
+        {currentScreen === 'WORLD_MAP' && (
+          <WorldMap
+            saveData={saveData}
+            onNavigate={setCurrentScreen}
+            onSelectLevel={handleLevelSelect}
+          />
+        )}
+
+        {currentScreen === 'STORY' && (
+          <StoryModal
+            onClose={() => {
+              SaveSystem.markStorySeen();
+              setSaveData(SaveSystem.load());
+              setCurrentScreen('WORLD_MAP');
+            }}
           />
         )}
 
@@ -85,15 +123,26 @@ export default function App() {
           <GameCanvas
             key={selectedLevelId}
             saveData={saveData}
+            levelId={selectedLevelId}
             onSaveUpdate={handleSaveUpdate}
             onReturnToMainMenu={() => {
               const freshSave = SaveSystem.load();
               setSaveData(freshSave);
-              setCurrentScreen('MAIN_MENU');
+              setCurrentScreen('WORLD_MAP');
             }}
+          />
+        )}
+
+        {/* World Intro Modal overlay when selecting level from World Map */}
+        {pendingLevelId && (
+          <WorldIntroModal
+            levelId={pendingLevelId}
+            onStart={handleConfirmStartLevel}
+            onBack={() => setPendingLevelId(null)}
           />
         )}
       </div>
     </div>
   );
 }
+

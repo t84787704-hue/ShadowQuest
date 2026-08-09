@@ -10,12 +10,14 @@ import { SaveSystem } from '../game/save/SaveSystem';
 
 interface GameCanvasProps {
   saveData: SaveData;
+  levelId?: string;
   onSaveUpdate: (updatedSave: SaveData) => void;
   onReturnToMainMenu: () => void;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   saveData,
+  levelId = '1-1',
   onSaveUpdate,
   onReturnToMainMenu,
 }) => {
@@ -39,7 +41,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Load save data & create game engine
     const currentSave = SaveSystem.load();
-    const engine = new GameEngine(canvas, currentSave);
+    const engine = new GameEngine(canvas, currentSave, levelId);
     engineRef.current = engine;
 
     setPlayerHp({

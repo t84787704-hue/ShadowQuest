@@ -15,16 +15,28 @@ export class ForestGoblin extends Entity {
   public hitFlashTimer: number = 0;
   public animFrame: number = 0;
   public animTime: number = 0;
+  public isBoss: boolean = false;
 
   private patrolMinX: number;
   private patrolMaxX: number;
   private patrolDirection: number = 1;
 
-  constructor(x: number, y: number, patrolRange: number = 120) {
-    super(x, y, 32, 40);
+  constructor(x: number, y: number, patrolRange: number = 120, isBoss: boolean = false) {
+    const width = isBoss ? 54 : 32;
+    const height = isBoss ? 60 : 40;
+    super(x, y, width, height);
+    this.isBoss = isBoss;
+    this.maxHp = isBoss ? 250 : 50;
+    this.hp = this.maxHp;
+    this.attackDamage = isBoss ? 25 : 15;
+    this.moveSpeed = isBoss ? 1.8 : 2.0;
+    this.detectionRadius = isBoss ? 300 : 220;
+    this.attackRange = isBoss ? 48 : 36;
+
     this.patrolMinX = x - patrolRange / 2;
     this.patrolMaxX = x + patrolRange / 2;
   }
+
 
   public update(dt: number, player: Player, tileMap: TileMap, particles: ParticleSystem) {
     if (!this.isAlive) return;
@@ -122,12 +134,29 @@ export class ForestGoblin extends Entity {
     // Anchor at feet center for ground alignment
     ctx.translate(px + this.width / 2, py + this.height);
 
-    const scaleX = this.facingRight ? 1.25 : -1.25;
-    ctx.scale(scaleX, 1.25);
+    const baseScale = this.isBoss ? 1.85 : 1.25;
+    const scaleX = this.facingRight ? baseScale : -baseScale;
+    ctx.scale(scaleX, baseScale);
 
     const isAttacking = this.attackCooldown > 0.9; // Attack windup/slash pose
     const walkCycle = Math.sin(this.animFrame * 1.2);
     const bob = Math.sin(this.animTime * 6) * 1.5;
+
+    // Golden Boss Crown
+    if (this.isBoss) {
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.moveTo(-8, -40 + bob);
+      ctx.lineTo(-6, -48 + bob);
+      ctx.lineTo(-2, -42 + bob);
+      ctx.lineTo(0, -50 + bob);
+      ctx.lineTo(2, -42 + bob);
+      ctx.lineTo(6, -48 + bob);
+      ctx.lineTo(8, -40 + bob);
+      ctx.closePath();
+      ctx.fill();
+    }
+
 
     // 1. Goblin Ground Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';

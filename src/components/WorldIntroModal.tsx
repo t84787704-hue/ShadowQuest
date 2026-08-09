@@ -1,0 +1,90 @@
+import React from 'react';
+import { Play, Compass, Mountain, Shield, Flame, Skull } from 'lucide-react';
+import { WORLD_NAMES } from '../game/world/LevelData';
+import { audioEngine } from '../game/audio/AudioEngine';
+
+interface WorldIntroModalProps {
+  worldId: number;
+  levelNum: number;
+  onStart: () => void;
+}
+
+const WORLD_DESCRIPTIONS: Record<number, { desc: string; icon: React.ReactNode; color: string }> = {
+  1: {
+    desc: 'Deep in Green Valley, Forest Goblins lurk among wooden platforms and ancient ruins. Retrieve the Earth Orb!',
+    icon: <Compass className="w-10 h-10 text-emerald-400" />,
+    color: 'from-emerald-950 via-slate-900 to-slate-950 border-emerald-500/40',
+  },
+  2: {
+    desc: 'Scorching desert sands, crumbling temple bridges, and venomous desert beasts await in the Ancient Ruins.',
+    icon: <Mountain className="w-10 h-10 text-amber-400" />,
+    color: 'from-amber-950 via-slate-900 to-slate-950 border-amber-500/40',
+  },
+  3: {
+    desc: 'Icy cliffs and slippery glaciers! Navigating these frozen peaks requires precise jumping and swift blade slashes.',
+    icon: <Shield className="w-10 h-10 text-sky-400" />,
+    color: 'from-sky-950 via-slate-900 to-slate-950 border-sky-500/40',
+  },
+  4: {
+    desc: 'Pitch-black caverns with razor-sharp stalactite spikes and shadow beasts lurking in the dark depths.',
+    icon: <Skull className="w-10 h-10 text-purple-400" />,
+    color: 'from-purple-950 via-slate-900 to-slate-950 border-purple-500/40',
+  },
+  5: {
+    desc: 'Floating cloud islands high above Aetheria! One wrong step means falling into the abyss.',
+    icon: <Compass className="w-10 h-10 text-cyan-300" />,
+    color: 'from-cyan-950 via-slate-900 to-slate-950 border-cyan-500/40',
+  },
+  6: {
+    desc: 'The ultimate stronghold of the Goblin King! Burning magma rivers and the final showdown for Aetheria!',
+    icon: <Flame className="w-10 h-10 text-rose-500 animate-pulse" />,
+    color: 'from-rose-950 via-slate-900 to-slate-950 border-rose-500/40',
+  },
+};
+
+export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
+  worldId,
+  levelNum,
+  onStart,
+}) => {
+  const worldInfo = WORLD_DESCRIPTIONS[worldId] || WORLD_DESCRIPTIONS[1];
+  const worldName = WORLD_NAMES[worldId] || `WORLD ${worldId}`;
+  const isBoss = levelNum === 5;
+
+  const handleStartLevel = () => {
+    audioEngine.playButtonClick();
+    onStart();
+  };
+
+  return (
+    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex items-center justify-center p-4 select-none">
+      <div
+        className={`w-full max-w-sm bg-gradient-to-b ${worldInfo.color} border-2 rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center`}
+      >
+        <div className="w-16 h-16 rounded-2xl bg-slate-900/90 border border-slate-700 flex items-center justify-center mb-3 shadow-lg">
+          {worldInfo.icon}
+        </div>
+
+        <span className="text-[10px] font-mono tracking-widest text-amber-400 uppercase font-black mb-1">
+          {worldName}
+        </span>
+
+        <h2 className="text-xl font-black text-slate-100 tracking-wider mb-1">
+          {isBoss ? `LEVEL ${worldId}-5 • BOSS BATTLE` : `LEVEL ${worldId}-${levelNum}`}
+        </h2>
+
+        <p className="text-xs text-slate-300 bg-slate-900/80 border border-slate-800 rounded-xl p-3 my-4 leading-relaxed">
+          {worldInfo.desc}
+        </p>
+
+        <button
+          onClick={handleStartLevel}
+          className="w-full py-3 px-6 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl border border-amber-300/40 shadow-lg flex items-center justify-center gap-2 transition"
+        >
+          <Play className="w-4 h-4 fill-slate-950" />
+          START LEVEL
+        </button>
+      </div>
+    </div>
+  );
+};
