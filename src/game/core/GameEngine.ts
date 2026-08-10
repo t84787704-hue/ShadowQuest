@@ -1,4 +1,4 @@
-import { GameStateStatus, SaveData } from '../../types/game';
+import { GameStateStatus, SaveData, PlayerStats } from '../../types/game';
 import { Player } from '../entities/Player';
 import { ForestGoblin } from '../entities/Enemy';
 import { Coin, HealthPickup } from '../entities/Collectible';
@@ -28,13 +28,15 @@ export class GameEngine {
   public particles: ParticleSystem;
 
   public levelDef: LevelDefinition;
+  public startingCoins: number = 0;
   public collectedCoinsCount: number = 0;
   public totalCoinsInLevel: number = 0;
   public activeSpawn: { x: number; y: number };
 
   private lastTime: number = 0;
   private animFrameId: number | null = null;
-  private onStateChangeCallback?: (status: GameStateStatus, coinsCollected: number) => void;
+  private onStateChangeCallback?: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void;
+  private statsBonus: Partial<PlayerStats>;
 
   // Single-hit combat tracking
   private lastAttackId: number = -1;
@@ -47,6 +49,9 @@ export class GameEngine {
       throw new Error('Failed to acquire 2D canvas context');
     }
     this.ctx = context;
+
+    this.startingCoins = saveData.coins || 0;
+    this.collectedCoinsCount = 0;
 
     this.levelDef = getLevelDefinition(levelId);
     this.tileMap = new TileMap(
@@ -62,20 +67,26 @@ export class GameEngine {
     this.activeSpawn = { ...this.levelDef.playerSpawn };
 
     // Create Player BLAZE with upgrade stats bonus
-    const hpBonus = (saveData.upgrades.maxHealth || 0) * 15;
-    const dmgBonus = (saveData.upgrades.attackPower || 0) * 5;
-    const speedBonus = (saveData.upgrades.moveSpeed || 0) * 0.3;
+    const hpBonus = (saveData.upgrades?.maxHealth || 0) * 15;
+    const dmgBonus = (saveData.upgrades?.attackPower || 0) * 5;
+    const speedBonus = (saveData.upgrades?.moveSpeed || 0) * 0.3;
 
-    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, {
+    this.statsBonus = {
       maxHp: hpBonus,
       attackDamage: dmgBonus,
       moveSpeed: speedBonus,
-    });
+    };
+
+    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus);
 
     this.initLevelEntities();
   }
 
-  public setOnStateChange(cb: (status: GameStateStatus, coinsCollected: number) => void) {
+  public get totalCoins(): number {
+    return this.startingCoins + this.collectedCoinsCount;
+  }
+
+  public setOnStateChange(cb: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void) {
     this.onStateChangeCallback = cb;
   }
 
@@ -120,7 +131,7 @@ export class GameEngine {
     if (this.status === 'RUNNING') {
       this.status = 'PAUSED';
       if (this.onStateChangeCallback) {
-        this.onStateChangeCallback('PAUSED', this.collectedCoinsCount);
+        this.onStateChangeCallback('PAUSED', this.collectedCoinsCount, this.totalCoins);
       }
     }
   }
@@ -130,7 +141,7 @@ export class GameEngine {
       this.status = 'RUNNING';
       this.lastTime = performance.now();
       if (this.onStateChangeCallback) {
-        this.onStateChangeCallback('RUNNING', this.collectedCoinsCount);
+        this.onStateChangeCallback('RUNNING', this.collectedCoinsCount, this.totalCoins);
       }
     }
   }
@@ -139,14 +150,14 @@ export class GameEngine {
     this.status = 'RUNNING';
     this.particles.clear();
     this.activeSpawn = { ...this.levelDef.playerSpawn };
-    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y);
+    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus);
     this.collectedCoinsCount = 0;
     this.initLevelEntities();
     this.camera.x = 0;
     this.camera.y = 0;
     this.lastTime = performance.now();
     if (this.onStateChangeCallback) {
-      this.onStateChangeCallback('RUNNING', 0);
+      this.onStateChangeCallback('RUNNING', 0, this.totalCoins);
     }
   }
 
@@ -164,7 +175,7 @@ export class GameEngine {
 
     this.lastTime = performance.now();
     if (this.onStateChangeCallback) {
-      this.onStateChangeCallback('RUNNING', this.collectedCoinsCount);
+      this.onStateChangeCallback('RUNNING', this.collectedCoinsCount, this.totalCoins);
     }
   }
 
@@ -191,7 +202,7 @@ export class GameEngine {
       this.status = 'GAME_OVER';
       audioEngine.playGameOver();
       if (this.onStateChangeCallback) {
-        this.onStateChangeCallback('GAME_OVER', this.collectedCoinsCount);
+        this.onStateChangeCallback('GAME_OVER', this.collectedCoinsCount, this.totalCoins);
       }
       return;
     }
@@ -240,6 +251,9 @@ export class GameEngine {
       if (collected) {
         this.collectedCoinsCount += coin.value;
         this.coins.splice(i, 1);
+        if (this.onStateChangeCallback) {
+          this.onStateChangeCallback(this.status, this.collectedCoinsCount, this.totalCoins);
+        }
       }
     }
 
@@ -267,7 +281,7 @@ export class GameEngine {
       SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
 
       if (this.onStateChangeCallback) {
-        this.onStateChangeCallback('VICTORY', this.collectedCoinsCount);
+        this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
       }
     }
 

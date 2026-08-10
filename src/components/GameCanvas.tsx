@@ -31,7 +31,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     current: 100,
     max: 100,
   });
-  const [coinsCollected, setCoinsCollected] = useState<number>(0);
+  const [levelCoins, setLevelCoins] = useState<number>(0);
+  const [totalCoins, setTotalCoins] = useState<number>(saveData.coins || 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,10 +51,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       current: engine.player.stats.currentHp,
       max: engine.player.stats.maxHp,
     });
+    setTotalCoins(engine.totalCoins);
+    setLevelCoins(engine.collectedCoinsCount);
 
-    engine.setOnStateChange((status, coins) => {
+    engine.setOnStateChange((status, lCoins, tCoins) => {
       setGameStatus(status);
-      setCoinsCollected(coins);
+      setLevelCoins(lCoins);
+      setTotalCoins(tCoins);
       const updatedSave = SaveSystem.load();
       onSaveUpdate(updatedSave);
     });
@@ -67,7 +71,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           current: engineRef.current.player.stats.currentHp,
           max: engineRef.current.player.stats.maxHp,
         });
-        setCoinsCollected(engineRef.current.collectedCoinsCount);
+        setLevelCoins(engineRef.current.collectedCoinsCount);
+        setTotalCoins(engineRef.current.totalCoins);
       }
     }, 100);
 
@@ -96,7 +101,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (engineRef.current) {
       engineRef.current.restart();
       setGameStatus('RUNNING');
-      setCoinsCollected(0);
+      setLevelCoins(0);
+      setTotalCoins(engineRef.current.totalCoins);
       setPlayerHp({
         current: engineRef.current.player.stats.currentHp,
         max: engineRef.current.player.stats.maxHp,
@@ -108,6 +114,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (engineRef.current) {
       engineRef.current.respawnAtCheckpoint();
       setGameStatus('RUNNING');
+      setLevelCoins(engineRef.current.collectedCoinsCount);
+      setTotalCoins(engineRef.current.totalCoins);
       setPlayerHp({
         current: engineRef.current.player.stats.currentHp,
         max: engineRef.current.player.stats.maxHp,
@@ -139,7 +147,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <HUD
           currentHp={playerHp.current}
           maxHp={playerHp.max}
-          coins={coinsCollected}
+          coins={totalCoins}
           levelTitle={currentLevelTitle}
           onPauseClick={handlePause}
         />
@@ -163,7 +171,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         {gameStatus === 'GAME_OVER' && (
           <GameOverModal
-            coinsCollected={coinsCollected}
+            coinsCollected={totalCoins}
             hasCheckpoint={hasActiveCheckpoint}
             onRespawnCheckpoint={handleRespawnCheckpoint}
             onRetry={handleRestart}
@@ -174,11 +182,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         {gameStatus === 'VICTORY' && (
           <VictoryModal
             levelTitle={currentLevelTitle}
-            coinsCollected={coinsCollected}
+            coinsCollected={levelCoins}
             starsEarned={
               (() => {
                 const total = engineRef.current?.totalCoinsInLevel || 1;
-                const ratio = coinsCollected / total;
+                const ratio = levelCoins / total;
                 return ratio >= 0.8 ? 3 : ratio >= 0.4 ? 2 : 1;
               })()
             }
