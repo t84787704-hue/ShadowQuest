@@ -16,22 +16,47 @@ export class ForestGoblin extends Entity {
   public animFrame: number = 0;
   public animTime: number = 0;
   public isBoss: boolean = false;
+  public levelId: string = '1-1';
 
   private patrolMinX: number;
   private patrolMaxX: number;
   private patrolDirection: number = 1;
 
-  constructor(x: number, y: number, patrolRange: number = 120, isBoss: boolean = false) {
-    const width = isBoss ? 54 : 32;
-    const height = isBoss ? 60 : 40;
+  constructor(
+    x: number,
+    y: number,
+    patrolRange: number = 120,
+    isBoss: boolean = false,
+    levelId: string = '1-1'
+  ) {
+    const isFinalBoss = isBoss && levelId === '6-5';
+    const width = isFinalBoss ? 68 : isBoss ? 54 : 32;
+    const height = isFinalBoss ? 72 : isBoss ? 60 : 40;
     super(x, y, width, height);
+
     this.isBoss = isBoss;
-    this.maxHp = isBoss ? 250 : 50;
+    this.levelId = levelId;
+
+    const [wStr] = levelId.split('-');
+    const w = parseInt(wStr, 10) || 1;
+
+    if (isFinalBoss) {
+      this.maxHp = 500; // Final Goblin King
+      this.attackDamage = 18;
+      this.moveSpeed = 1.9;
+    } else if (isBoss) {
+      this.maxHp = 220 + w * 35;
+      this.attackDamage = 14 + Math.floor(w * 0.8);
+      this.moveSpeed = 1.8;
+    } else {
+      this.maxHp = 45 + w * 5;
+      this.attackDamage = 10 + Math.floor(w * 0.6);
+      this.moveSpeed = 1.9 + (w % 2 === 0 ? 0.3 : 0);
+    }
+
     this.hp = this.maxHp;
-    this.attackDamage = isBoss ? 15 : 12;
-    this.moveSpeed = isBoss ? 1.8 : 2.0;
-    this.detectionRadius = isBoss ? 300 : 220;
-    this.attackRange = isBoss ? 48 : 36;
+    this.detectionRadius = isBoss ? 340 : 220;
+    this.attackRange = isBoss ? 52 : 36;
 
     this.patrolMinX = x - patrolRange / 2;
     this.patrolMaxX = x + patrolRange / 2;
@@ -169,9 +194,40 @@ export class ForestGoblin extends Entity {
     ctx.ellipse(0, -2, 12, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Color theme: White flash on hit, else forest goblin bright lime green for high visibility
-    const mainSkin = this.hitFlashTimer > 0 ? '#ffffff' : '#22c55e'; // Bright Lime Green
-    const darkSkin = this.hitFlashTimer > 0 ? '#e2e8f0' : '#15803d'; // Forest Dark Green
+    // Color theme by world
+    const [wStr] = this.levelId.split('-');
+    const w = parseInt(wStr, 10) || 1;
+
+    let mainSkin = '#22c55e'; // Default Forest Lime
+    let darkSkin = '#15803d';
+    let tunicColor = '#78350f';
+
+    if (w === 2) {
+      mainSkin = '#facc15'; // Desert Tan
+      darkSkin = '#a16207';
+      tunicColor = '#b45309';
+    } else if (w === 3) {
+      mainSkin = '#38bdf8'; // Ice Cyan
+      darkSkin = '#0284c7';
+      tunicColor = '#1e3a8a';
+    } else if (w === 4) {
+      mainSkin = '#ef4444'; // Volcano Fiery Red
+      darkSkin = '#b91c1c';
+      tunicColor = '#18181b';
+    } else if (w === 5) {
+      mainSkin = '#c084fc'; // Dark Lands Shadow Purple
+      darkSkin = '#7e22ce';
+      tunicColor = '#1e1b4b';
+    } else if (w === 6) {
+      mainSkin = '#64748b'; // Citadel Slate
+      darkSkin = '#334155';
+      tunicColor = '#7f1d1d';
+    }
+
+    if (this.hitFlashTimer > 0) {
+      mainSkin = '#ffffff';
+      darkSkin = '#e2e8f0';
+    }
 
     // 2. Pointed Goblin Ears (Back & Front)
     ctx.fillStyle = mainSkin;

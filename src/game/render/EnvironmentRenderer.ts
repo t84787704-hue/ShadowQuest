@@ -88,6 +88,23 @@ export function getTilePalette(levelId: string): TilePalette {
         woodNails: '#38bdf8',
       };
 
+    case 6: // GOBLIN KING CITADEL
+      return {
+        topBase: '#0f172a',
+        topCover: '#1e293b',
+        topBlades: '#f59e0b',
+        flowerColor: '#fbbf24',
+        middleDirt: '#0f172a',
+        middlePebble1: '#020617',
+        middlePebble2: '#475569',
+        stoneMain: '#1e293b',
+        stoneStroke: '#020617',
+        stoneAccent: '#fbbf24',
+        woodMain: '#78350f',
+        woodGap: '#020617',
+        woodNails: '#f59e0b',
+      };
+
     case 1: // NATURE
     default:
       return {
@@ -136,6 +153,9 @@ export class EnvironmentRenderer {
         break;
       case 5:
         this.renderWorld5(ctx, l, offsetX, offsetY, width, height);
+        break;
+      case 6:
+        this.renderWorld6(ctx, l, offsetX, offsetY, width, height);
         break;
       default:
         this.renderWorld1(ctx, 1, offsetX, offsetY, width, height);
@@ -849,6 +869,119 @@ export class EnvironmentRenderer {
       ctx.fillStyle = '#e11d48';
       ctx.beginPath();
       ctx.arc(moonX, 90, 32, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ==================== WORLD 6: GOBLIN KING'S CITADEL ====================
+  private static renderWorld6(
+    ctx: CanvasRenderingContext2D,
+    levelNum: number,
+    offsetX: number,
+    offsetY: number,
+    width: number,
+    height: number
+  ) {
+    if (levelNum === 1) {
+      // 6-1 Citadel Gates: Stormy crimson/violet sky, iron gates
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#020617');
+      skyGrad.addColorStop(0.5, '#1e1b4b');
+      skyGrad.addColorStop(1, '#831843');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Iron Gate Towers
+      const gateX = width * 0.5 - offsetX * 0.15;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(gateX - 40, height - 260, 50, 180);
+      ctx.fillRect(gateX + 110, height - 260, 50, 180);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(gateX + 20, height - 200, 80, 10);
+    } else if (levelNum === 2) {
+      // 6-2 Ancient Citadel Ruins: Weathered arches, gargoyle battlements
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#090d16');
+      skyGrad.addColorStop(0.5, '#1e293b');
+      skyGrad.addColorStop(1, '#475569');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Ruined Stone Pillars
+      for (let x = 100; x < width + 100; x += 200) {
+        const px = x - (offsetX * 0.2) % 200;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(px, height - 240, 26, 170);
+      }
+    } else if (levelNum === 3) {
+      // 6-3 Inner Keep: Towering peak spires, lightning sky flashes
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#020617');
+      skyGrad.addColorStop(0.5, '#311b92');
+      skyGrad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Distant Spire
+      const spireX = width * 0.5 - offsetX * 0.1;
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.moveTo(spireX - 40, height);
+      ctx.lineTo(spireX, height - 310);
+      ctx.lineTo(spireX + 40, height);
+      ctx.fill();
+    } else if (levelNum === 4) {
+      // 6-4 Royal Chambers: Royal purple & golden hall banners
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#1e1b4b');
+      skyGrad.addColorStop(0.5, '#581c87');
+      skyGrad.addColorStop(1, '#831843');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Royal Banners in background
+      for (let x = 80; x < width + 100; x += 160) {
+        const bx = x - (offsetX * 0.15) % 160;
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(bx, 40, 30, 100);
+        ctx.fillStyle = '#be123c';
+        ctx.fillRect(bx + 4, 44, 22, 90);
+      }
+    } else {
+      // 6-5 GOBLIN KING'S THRONE ROOM (FINAL BATTLE): Royal Gold & Crimson Throne Room
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#450a0a');
+      skyGrad.addColorStop(0.4, '#7f1d1d');
+      skyGrad.addColorStop(0.8, '#f59e0b');
+      skyGrad.addColorStop(1, '#fef08a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Colossal Golden Throne in background
+      const throneX = width * 0.5 - offsetX * 0.05;
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(throneX - 50, height - 220, 100, 140);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(throneX - 40, height - 210, 80, 120);
+      ctx.fillStyle = '#be123c'; // Ruby back cushion
+      ctx.fillRect(throneX - 30, height - 190, 60, 90);
+
+      // Crown ornament atop throne
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.moveTo(throneX - 25, height - 220);
+      ctx.lineTo(throneX - 15, height - 245);
+      ctx.lineTo(throneX, height - 225);
+      ctx.lineTo(throneX + 15, height - 245);
+      ctx.lineTo(throneX + 25, height - 220);
+      ctx.fill();
+
+      // Burning Golden Braziers
+      const brazierShift = Math.sin(Date.now() / 150) * 4;
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.arc(throneX - 110, height - 130 + brazierShift, 16, 0, Math.PI * 2);
+      ctx.arc(throneX + 110, height - 130 + brazierShift, 16, 0, Math.PI * 2);
       ctx.fill();
     }
   }
