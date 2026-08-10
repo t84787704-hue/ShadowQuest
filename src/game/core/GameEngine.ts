@@ -44,6 +44,11 @@ export class GameEngine {
   private lastAttackId: number = -1;
   private hitEnemiesThisAttack: Set<ForestGoblin> = new Set();
 
+  // Combat Combo Counter & Inactivity Timer
+  public comboHits: number = 0;
+  public comboTimer: number = 0;
+  public readonly maxComboTimer: number = 2.5;
+
   constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1', isResume: boolean = false) {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
@@ -83,6 +88,7 @@ export class GameEngine {
 
     const equippedWeapon = SaveSystem.getEquippedWeapon(saveData, levelId);
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, equippedWeapon);
+    this.player.onDamage = () => this.resetCombo();
 
     // Quick save restoration check
     const qs = (isResume && saveData.quickSave && saveData.quickSave.levelId === levelId) ? saveData.quickSave : null;
@@ -111,6 +117,38 @@ export class GameEngine {
 
   public setOnStateChange(cb: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void) {
     this.onStateChangeCallback = cb;
+  }
+
+  public registerComboHit(x: number, y: number) {
+    this.comboHits++;
+    this.comboTimer = this.maxComboTimer;
+
+    if (this.comboHits >= 2) {
+      let label = `x${this.comboHits}`;
+      let color = '#facc15';
+      let size = 14 + Math.min(8, this.comboHits);
+
+      if (this.comboHits >= 12) {
+        label = `x${this.comboHits} FEVER!`;
+        color = '#e879f9';
+      } else if (this.comboHits >= 8) {
+        label = `x${this.comboHits} MONSTER!`;
+        color = '#fb7185';
+      } else if (this.comboHits >= 5) {
+        label = `x${this.comboHits} HYPER!`;
+        color = '#fb923c';
+      } else if (this.comboHits >= 3) {
+        label = `x${this.comboHits} STRIKE!`;
+        color = '#facc15';
+      }
+
+      this.particles.createFloatingText(x, y - 18, label, color, size);
+    }
+  }
+
+  public resetCombo() {
+    this.comboHits = 0;
+    this.comboTimer = 0;
   }
 
   private initLevelEntities(qs?: QuickSaveData | null) {
@@ -220,8 +258,10 @@ export class GameEngine {
     SaveSystem.clearQuickSave();
     this.status = 'RUNNING';
     this.particles.clear();
+    this.resetCombo();
     this.activeSpawn = { ...this.levelDef.playerSpawn };
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, this.player.equippedWeapon);
+    this.player.onDamage = () => this.resetCombo();
     this.collectedCoinsCount = 0;
     this.initLevelEntities();
     this.camera.x = 0;
@@ -235,6 +275,7 @@ export class GameEngine {
   public respawnAtCheckpoint() {
     this.status = 'RUNNING';
     this.particles.clear();
+    this.resetCombo();
     this.player.x = this.activeSpawn.x;
     this.player.y = this.activeSpawn.y;
     this.player.vx = 0;
@@ -265,6 +306,15 @@ export class GameEngine {
   private update(dt: number) {
     const inputState = this.input.getState();
 
+    // Update Combat Combo Inactivity Timer
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) {
+        this.comboTimer = 0;
+        this.comboHits = 0;
+      }
+    }
+
     // 1. Update Player
     this.player.update(dt, inputState, this.tileMap, this.particles, this.camera);
 
@@ -294,6 +344,7 @@ export class GameEngine {
           const damage = Math.round(this.player.stats.attackDamage * comboMult);
 
           goblin.takeDamage(damage, this.particles);
+          this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
 
           // Physical Knockback and Hit Reactions
           if (this.player.attackType === 'SPIN_KICK') {

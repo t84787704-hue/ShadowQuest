@@ -23,6 +23,7 @@ export class Player extends Entity {
   public attackDuration: number = 0.16;
   public currentComboMultiplier: number = 1.0;
   public spinKickCooldownTimer: number = 0;
+  public onDamage?: () => void;
 
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
@@ -348,6 +349,10 @@ export class Player extends Entity {
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
     this.invulnerableTimer = 0.85; // 0.85s (850ms) damage invulnerability period
     this.state = 'HURT';
+
+    if (this.onDamage) {
+      this.onDamage();
+    }
 
     // Knockback
     this.vy = -4;

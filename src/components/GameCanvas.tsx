@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GameEngine } from '../game/core/GameEngine';
 import { GameStateStatus, SaveData } from '../types/game';
 import { HUD } from './HUD';
+import { ComboOverlay } from './ComboOverlay';
 import { MobileControls } from './MobileControls';
 import { PauseModal } from './PauseModal';
 import { GameOverModal } from './GameOverModal';
@@ -36,6 +37,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   });
   const [levelCoins, setLevelCoins] = useState<number>(0);
   const [totalCoins, setTotalCoins] = useState<number>(saveData.coins || 0);
+  const [comboState, setComboState] = useState<{ hits: number; timer: number; maxTimer: number }>({
+    hits: 0,
+    timer: 0,
+    maxTimer: 2.5,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,8 +82,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         });
         setLevelCoins(engineRef.current.collectedCoinsCount);
         setTotalCoins(engineRef.current.totalCoins);
+        setComboState({
+          hits: engineRef.current.comboHits,
+          timer: engineRef.current.comboTimer,
+          maxTimer: engineRef.current.maxComboTimer,
+        });
       }
-    }, 100);
+    }, 50);
 
     return () => {
       clearInterval(statsInterval);
@@ -174,6 +185,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           weaponName={engineRef.current?.player?.equippedWeapon?.name}
           weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
           onPauseClick={handlePause}
+        />
+
+        {/* Combat Combo Overlay */}
+        <ComboOverlay
+          comboHits={comboState.hits}
+          comboTimer={comboState.timer}
+          maxComboTimer={comboState.maxTimer}
         />
 
         {/* On-Screen Mobile Touch Controls Overlay */}
