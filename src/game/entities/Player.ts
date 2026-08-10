@@ -149,7 +149,7 @@ export class Player extends Entity {
     // Hazard Spikes check
     const footTile = tileMap.getTileAtPixel(this.x + this.width / 2, this.y + this.height - 4);
     if (footTile === TileType.HAZARD_SPIKES) {
-      this.takeDamage(10, particles);
+      this.takeDamage(12, particles);
     }
 
     // Hazard Pit check
@@ -180,7 +180,7 @@ export class Player extends Entity {
     if (this.invulnerableTimer > 0 || !this.isAlive) return false;
 
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
-    this.invulnerableTimer = 1.2; // 1200ms invulnerability frames
+    this.invulnerableTimer = 0.85; // 0.85s (850ms) damage invulnerability period
     this.state = 'HURT';
 
     // Knockback
@@ -201,9 +201,9 @@ export class Player extends Entity {
     const px = Math.round(this.x - offsetX);
     const py = Math.round(this.y - offsetY);
 
-    // Invulnerability Flashing
-    if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 60) % 2 === 0) {
-      ctx.globalAlpha = 0.4;
+    // Invulnerability Flashing / Blinking
+    if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
+      ctx.globalAlpha = 0.3;
     }
 
     ctx.save();
