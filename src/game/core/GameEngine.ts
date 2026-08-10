@@ -85,7 +85,7 @@ export class GameEngine {
 
     // Populate Coins
     this.coins = this.levelDef.coins.map((c) => new Coin(c.x, c.y, c.value || 1));
-    this.totalCoinsInLevel = this.coins.length;
+    this.totalCoinsInLevel = this.coins.reduce((sum, c) => sum + c.value, 0);
 
     // Populate Health Pickups
     this.healthPickups = (this.levelDef.healthPickups || []).map(
@@ -237,12 +237,17 @@ export class GameEngine {
       const collected = coin.update(dt, this.player, this.particles);
       if (collected) {
         this.collectedCoinsCount += coin.value;
+        this.coins.splice(i, 1);
       }
     }
 
     // Health Pickups
-    for (const hpPickup of this.healthPickups) {
-      hpPickup.update(dt, this.player, this.particles);
+    for (let i = this.healthPickups.length - 1; i >= 0; i--) {
+      const hpPickup = this.healthPickups[i];
+      const collected = hpPickup.update(dt, this.player, this.particles);
+      if (collected) {
+        this.healthPickups.splice(i, 1);
+      }
     }
 
     // 6. Check Goal Post (Level Complete)

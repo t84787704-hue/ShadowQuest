@@ -16,7 +16,7 @@ export class Coin extends Entity {
   }
 
   public update(dt: number, player: Player, particles: ParticleSystem): boolean {
-    if (this.isCollected) return true;
+    if (this.isCollected) return false;
 
     // Gentle floating bobbing animation
     this.bobTime += dt * 4;
@@ -98,7 +98,7 @@ export class HealthPickup extends Entity {
   }
 
   public update(dt: number, player: Player, particles: ParticleSystem): boolean {
-    if (this.isCollected) return true;
+    if (this.isCollected) return false;
 
     this.bobTime += dt * 3.5;
     this.y = this.originalY + Math.sin(this.bobTime) * 3.5;
