@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { GameScreen, SaveData } from './types/game';
 import { SaveSystem } from './game/save/SaveSystem';
 import { audioEngine } from './game/audio/AudioEngine';
@@ -68,101 +69,169 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-slate-950 flex items-center justify-center overflow-hidden font-sans">
       <div className="w-full h-full max-w-[1280px] max-h-[720px] relative flex flex-col bg-slate-950">
-        {currentScreen === 'MAIN_MENU' && (
-          <MainMenu
-            saveData={saveData}
-            onNavigate={setCurrentScreen}
-            onSelectLevel={(lvl, isResume) => {
-              setSelectedLevelId(lvl);
-              setIsResumeRun(Boolean(isResume));
-              setCurrentScreen('PLAYING');
-            }}
-            onClearQuickSave={handleClearQuickSave}
-            onSoundToggle={handleSoundToggle}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {currentScreen === 'MAIN_MENU' && (
+            <motion.div
+              key="MAIN_MENU"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <MainMenu
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSelectLevel={(lvl, isResume) => {
+                  setSelectedLevelId(lvl);
+                  setIsResumeRun(Boolean(isResume));
+                  setCurrentScreen('PLAYING');
+                }}
+                onClearQuickSave={handleClearQuickSave}
+                onSoundToggle={handleSoundToggle}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'WORLD_MAP' && (
-          <WorldMap
-            saveData={saveData}
-            onNavigate={setCurrentScreen}
-            onSelectLevel={handleLevelSelect}
-          />
-        )}
+          {currentScreen === 'WORLD_MAP' && (
+            <motion.div
+              key="WORLD_MAP"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <WorldMap
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSelectLevel={handleLevelSelect}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'STORY' && (
-          <StoryModal
-            onComplete={() => {
-              SaveSystem.markStorySeen();
-              setSaveData(SaveSystem.load());
-              setCurrentScreen('WORLD_MAP');
-            }}
-            onClose={() => {
-              SaveSystem.markStorySeen();
-              setSaveData(SaveSystem.load());
-              setCurrentScreen('WORLD_MAP');
-            }}
-          />
-        )}
+          {currentScreen === 'STORY' && (
+            <motion.div
+              key="STORY"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <StoryModal
+                onComplete={() => {
+                  SaveSystem.markStorySeen();
+                  setSaveData(SaveSystem.load());
+                  setCurrentScreen('WORLD_MAP');
+                }}
+                onClose={() => {
+                  SaveSystem.markStorySeen();
+                  setSaveData(SaveSystem.load());
+                  setCurrentScreen('WORLD_MAP');
+                }}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'LEVELS' && (
-          <LevelsMenu
-            saveData={saveData}
-            onNavigate={setCurrentScreen}
-            onSelectLevel={(levelId) => {
-              setSelectedLevelId(levelId);
-              setCurrentScreen('PLAYING');
-            }}
-          />
-        )}
+          {currentScreen === 'LEVELS' && (
+            <motion.div
+              key="LEVELS"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <LevelsMenu
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSelectLevel={(levelId) => {
+                  setSelectedLevelId(levelId);
+                  setCurrentScreen('PLAYING');
+                }}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'UPGRADES' && (
-          <UpgradesMenu
-            saveData={saveData}
-            onNavigate={setCurrentScreen}
-            onSaveUpdate={handleSaveUpdate}
-          />
-        )}
+          {currentScreen === 'UPGRADES' && (
+            <motion.div
+              key="UPGRADES"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <UpgradesMenu
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSaveUpdate={handleSaveUpdate}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'SETTINGS' && (
-          <SettingsMenu
-            saveData={saveData}
-            onNavigate={setCurrentScreen}
-            onSaveUpdate={handleSaveUpdate}
-            onSoundToggle={handleSoundToggle}
-          />
-        )}
+          {currentScreen === 'SETTINGS' && (
+            <motion.div
+              key="SETTINGS"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <SettingsMenu
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSaveUpdate={handleSaveUpdate}
+                onSoundToggle={handleSoundToggle}
+              />
+            </motion.div>
+          )}
 
-        {currentScreen === 'PLAYING' && (
-          <GameCanvas
-            key={`${selectedLevelId}-${isResumeRun}`}
-            saveData={saveData}
-            levelId={selectedLevelId}
-            isResume={isResumeRun}
-            onSaveUpdate={handleSaveUpdate}
-            onSelectNextLevel={(nextLevelId) => {
-              setIsResumeRun(false);
-              const freshSave = SaveSystem.load();
-              setSaveData(freshSave);
-              setSelectedLevelId(nextLevelId);
-            }}
-            onReturnToMainMenu={() => {
-              setIsResumeRun(false);
-              const freshSave = SaveSystem.load();
-              setSaveData(freshSave);
-              setCurrentScreen('WORLD_MAP');
-            }}
-          />
-        )}
+          {currentScreen === 'PLAYING' && (
+            <motion.div
+              key={`PLAYING-${selectedLevelId}-${isResumeRun}`}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <GameCanvas
+                key={`${selectedLevelId}-${isResumeRun}`}
+                saveData={saveData}
+                levelId={selectedLevelId}
+                isResume={isResumeRun}
+                onSaveUpdate={handleSaveUpdate}
+                onSelectNextLevel={(nextLevelId) => {
+                  setIsResumeRun(false);
+                  const freshSave = SaveSystem.load();
+                  setSaveData(freshSave);
+                  setSelectedLevelId(nextLevelId);
+                }}
+                onReturnToMainMenu={() => {
+                  setIsResumeRun(false);
+                  const freshSave = SaveSystem.load();
+                  setSaveData(freshSave);
+                  setCurrentScreen('WORLD_MAP');
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* World Intro Modal overlay when selecting level from World Map */}
-        {pendingLevelId && (
-          <WorldIntroModal
-            levelId={pendingLevelId}
-            onStart={handleConfirmStartLevel}
-            onBack={() => setPendingLevelId(null)}
-          />
-        )}
+        <AnimatePresence>
+          {pendingLevelId && (
+            <WorldIntroModal
+              key="intro-modal"
+              levelId={pendingLevelId}
+              onStart={handleConfirmStartLevel}
+              onBack={() => setPendingLevelId(null)}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

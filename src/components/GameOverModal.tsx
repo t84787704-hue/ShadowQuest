@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { RotateCcw, Home, Skull, Flag } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 
@@ -18,8 +19,20 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onMainMenu,
 }) => {
   return (
-    <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex items-center justify-center p-4 select-none">
-      <div className="bg-slate-900 border-2 border-rose-600/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-[0_0_40px_rgba(225,29,72,0.3)] flex flex-col items-center">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex items-center justify-center p-4 select-none"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="bg-slate-900 border-2 border-rose-600/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-[0_0_40px_rgba(225,29,72,0.3)] flex flex-col items-center"
+      >
         <div className="w-14 h-14 bg-rose-500/20 text-rose-500 border border-rose-500/40 rounded-2xl flex items-center justify-center mb-3 animate-bounce">
           <Skull className="w-8 h-8" />
         </div>
@@ -72,7 +85,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             MAIN MENU
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

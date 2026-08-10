@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { Play, Compass, Mountain, Shield, Flame, Skull, X } from 'lucide-react';
 import { WORLD_NAMES } from '../game/world/LevelData';
 import { audioEngine } from '../game/audio/AudioEngine';
@@ -77,8 +78,18 @@ export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex items-center justify-center p-4 select-none">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex items-center justify-center p-4 select-none"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
         className={`w-full max-w-sm bg-gradient-to-b ${worldInfo.color} border-2 rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center relative`}
       >
         {onBack && (
@@ -125,7 +136,7 @@ export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
             START LEVEL
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

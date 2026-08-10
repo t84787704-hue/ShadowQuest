@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { GameEngine } from '../game/core/GameEngine';
 import { GameStateStatus, SaveData } from '../types/game';
 import { HUD } from './HUD';
@@ -152,6 +153,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       <div className="relative w-full max-w-[900px] aspect-[16/9] bg-slate-900 border-2 border-slate-800 rounded-xl overflow-hidden shadow-2xl">
         <canvas ref={canvasRef} className="w-full h-full block bg-sky-900" />
 
+        {/* Level Fade-In Transition Curtain */}
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="absolute inset-0 bg-slate-950 pointer-events-none z-20 flex items-center justify-center"
+        >
+          <div className="text-amber-400 text-xs font-mono font-bold tracking-widest uppercase animate-pulse">
+            LOADING {currentLevelTitle}...
+          </div>
+        </motion.div>
+
         {/* HUD Bar */}
         <HUD
           currentHp={playerHp.current}
@@ -172,47 +185,49 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         )}
 
         {/* Modals based on Game Engine Status */}
-        {gameStatus === 'PAUSED' && (
-          <PauseModal
-            onResume={handleResume}
-            onQuickSave={handleQuickSave}
-            onRestart={handleRestart}
-            onMainMenu={onReturnToMainMenu}
-          />
-        )}
+        <AnimatePresence>
+          {gameStatus === 'PAUSED' && (
+            <PauseModal
+              onResume={handleResume}
+              onQuickSave={handleQuickSave}
+              onRestart={handleRestart}
+              onMainMenu={onReturnToMainMenu}
+            />
+          )}
 
-        {gameStatus === 'GAME_OVER' && (
-          <GameOverModal
-            coinsCollected={totalCoins}
-            hasCheckpoint={hasActiveCheckpoint}
-            onRespawnCheckpoint={handleRespawnCheckpoint}
-            onRetry={handleRestart}
-            onMainMenu={onReturnToMainMenu}
-          />
-        )}
+          {gameStatus === 'GAME_OVER' && (
+            <GameOverModal
+              coinsCollected={totalCoins}
+              hasCheckpoint={hasActiveCheckpoint}
+              onRespawnCheckpoint={handleRespawnCheckpoint}
+              onRetry={handleRestart}
+              onMainMenu={onReturnToMainMenu}
+            />
+          )}
 
-        {gameStatus === 'VICTORY' && (
-          <VictoryModal
-            levelTitle={currentLevelTitle}
-            coinsCollected={levelCoins}
-            starsEarned={
-              (() => {
-                const total = engineRef.current?.totalCoinsInLevel || 1;
-                const ratio = levelCoins / total;
-                return ratio >= 0.8 ? 3 : ratio >= 0.4 ? 2 : 1;
-              })()
-            }
-            hasNextLevel={Boolean(nextLevelId)}
-            onNextLevel={() => {
-              if (nextLevelId && onSelectNextLevel) {
-                onSelectNextLevel(nextLevelId);
-              } else {
-                onReturnToMainMenu();
+          {gameStatus === 'VICTORY' && (
+            <VictoryModal
+              levelTitle={currentLevelTitle}
+              coinsCollected={levelCoins}
+              starsEarned={
+                (() => {
+                  const total = engineRef.current?.totalCoinsInLevel || 1;
+                  const ratio = levelCoins / total;
+                  return ratio >= 0.8 ? 3 : ratio >= 0.4 ? 2 : 1;
+                })()
               }
-            }}
-            onMainMenu={onReturnToMainMenu}
-          />
-        )}
+              hasNextLevel={Boolean(nextLevelId)}
+              onNextLevel={() => {
+                if (nextLevelId && onSelectNextLevel) {
+                  onSelectNextLevel(nextLevelId);
+                } else {
+                  onReturnToMainMenu();
+                }
+              }}
+              onMainMenu={onReturnToMainMenu}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

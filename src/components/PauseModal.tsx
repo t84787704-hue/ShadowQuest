@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { Play, RotateCcw, Home, Pause, HelpCircle, Volume2, VolumeX, Music, Save, CheckCircle2 } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 
@@ -46,8 +47,20 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex items-center justify-center p-4 select-none overflow-y-auto">
-      <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl p-5 max-w-sm w-full text-center shadow-2xl flex flex-col items-center my-auto">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex items-center justify-center p-4 select-none overflow-y-auto"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="bg-slate-900 border-2 border-slate-700 rounded-2xl p-5 max-w-sm w-full text-center shadow-2xl flex flex-col items-center my-auto"
+      >
         <div className="w-12 h-12 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center mb-2">
           <Pause className="w-6 h-6 fill-amber-400" />
         </div>
@@ -144,7 +157,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             SAVE & MAIN MENU
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* How to Play Modal Overlay */}
       {showHowToPlay && (
@@ -185,7 +198,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
