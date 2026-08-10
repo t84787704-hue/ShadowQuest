@@ -28,7 +28,7 @@ export interface BossInfo {
 
 export const BOSS_SPECS: Record<number, BossInfo> = {
   1: {
-    name: 'FOREST GUARDIAN — ELDER TREANT',
+    name: 'FOREST WARLORD — COMMANDER RODERICK',
     worldId: 1,
     maxHp: 280,
     attackDamage: 8,
@@ -38,7 +38,7 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     glowColor: '#4ade80',
   },
   2: {
-    name: 'DESERT BEHEMOTH — SAND TITAN',
+    name: 'DESERT OVERLORD — GENERAL MALIK',
     worldId: 2,
     maxHp: 360,
     attackDamage: 10,
@@ -48,7 +48,7 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     glowColor: '#facc15',
   },
   3: {
-    name: 'FROST COLOSSUS — GLACIER GOLEM',
+    name: 'FROST WARLORD — CAPTAIN GUNNAR',
     worldId: 3,
     maxHp: 440,
     attackDamage: 11,
@@ -58,7 +58,7 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     glowColor: '#38bdf8',
   },
   4: {
-    name: 'VOLCANIC MAGMA DEMON — OBSIDIAN TITAN',
+    name: 'VOLCANIC OVERLORD — WARLORD IGNIS',
     worldId: 4,
     maxHp: 540,
     attackDamage: 13,
@@ -68,7 +68,7 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     glowColor: '#f97316',
   },
   5: {
-    name: 'SHADOW VOID MONARCH — NIGHTMARE SPECTRE',
+    name: 'VOID SHADOW MASTER — ARCH-DUKE MALAKOR',
     worldId: 5,
     maxHp: 650,
     attackDamage: 14,
@@ -78,7 +78,7 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     glowColor: '#c084fc',
   },
   6: {
-    name: 'GOBLIN OVERLORD KING — CHAOS SOVEREIGN',
+    name: 'CITADEL SOVEREIGN — GRAND OVERLORD MARCUS',
     worldId: 6,
     maxHp: 800,
     attackDamage: 15,
@@ -581,9 +581,9 @@ export class BossMonster extends Entity {
     ctx.restore();
   }
 
-  // --- UNIQUE WORLD BOSS ARTWORK GENERATORS ---
+  // --- UNIQUE WORLD HUMAN BOSS ARTWORK GENERATORS ---
 
-  // World 1: Ancient Treant Guardian Warlord
+  // World 1: Commander Roderick (Forest Warlord)
   private renderForestGuardian(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -591,61 +591,62 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const bark = isFlash ? '#ffffff' : '#3f2305';
-    const darkBark = isFlash ? '#e2e8f0' : '#271202';
-    const leaf = isFlash ? '#ffffff' : '#15803d';
-    const eye = isFlash ? '#ffffff' : '#facc15';
+    const skin = isFlash ? '#ffffff' : '#fed7aa'; // Human skin
+    const armor = isFlash ? '#ffffff' : '#15803d'; // Oak-green steel plate
+    const gold = isFlash ? '#ffffff' : '#f59e0b'; // Gold trim
+    const hair = isFlash ? '#ffffff' : '#451a03'; // Brown hair/beard
 
-    // Mossy Canopy Pauldrons
-    ctx.fillStyle = leaf;
+    // Green Commander Cape
+    ctx.fillStyle = armor;
+    ctx.fillRect(-28, -62 + bob, 56, 58);
+
+    // Human Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(-28, -62 + bob, 22, 0, Math.PI * 2);
-    ctx.arc(28, -62 + bob, 22, 0, Math.PI * 2);
-    ctx.arc(0, -86 + bob, 26, 0, Math.PI * 2);
+    ctx.arc(0, -70 + bob, 18, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ancient Bark Body
-    ctx.fillStyle = bark;
-    ctx.fillRect(-26, -58 + bob, 52, 54);
-    ctx.fillStyle = darkBark;
-    ctx.fillRect(-18, -48 + bob, 36, 38);
-
-    // Root Beard / Tendrils
-    ctx.fillStyle = darkBark;
+    // Human Facial Features & Braided Beard
+    ctx.fillStyle = hair; // Hair
     ctx.beginPath();
-    ctx.moveTo(-16, -50 + bob);
-    ctx.lineTo(-10, -32 + bob);
-    ctx.lineTo(-4, -50 + bob);
-    ctx.lineTo(4, -50 + bob);
-    ctx.lineTo(10, -32 + bob);
-    ctx.lineTo(16, -50 + bob);
+    ctx.arc(0, -74 + bob, 19, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Glowing Yellow Eyes
-    ctx.fillStyle = eye;
-    ctx.fillRect(4, -68 + bob, 8, 7);
-    ctx.fillRect(-12, -68 + bob, 8, 7);
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(7, -66 + bob, 3, 3);
-    ctx.fillRect(-9, -66 + bob, 3, 3);
+    ctx.fillStyle = hair; // Beard
+    ctx.beginPath();
+    ctx.moveTo(-12, -68 + bob);
+    ctx.lineTo(0, -48 + bob);
+    ctx.lineTo(12, -68 + bob);
+    ctx.fill();
 
-    // Heavy Spiked Wooden War Hammer
+    // Eyes
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, -73 + bob, 5, 4);
+
+    // Heavy Pauldrons & Plate Armor
+    ctx.fillStyle = armor;
+    ctx.fillRect(-26, -56 + bob, 52, 50);
+    ctx.fillStyle = gold;
+    ctx.fillRect(-30, -56 + bob, 10, 20); // Shoulder pauldrons
+    ctx.fillRect(20, -56 + bob, 10, 20);
+
+    // Heavy Spiked Wooden/Steel War Hammer
     ctx.save();
     ctx.translate(22, -45 + bob);
     if (isWindup) {
-      ctx.rotate(-1.4); // Raised far back
+      ctx.rotate(-1.4);
     } else if (isAttacking) {
-      ctx.rotate(0.9); // Ground slam
+      ctx.rotate(0.9);
     } else {
       ctx.rotate(-0.2);
     }
 
     ctx.fillStyle = '#78350f';
     ctx.fillRect(-4, -54, 10, 68); // Handle
-    ctx.fillStyle = '#451a03';
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(-18, -68, 38, 22); // Hammer head
 
-    // Glowing Rune Engraving
+    // Glowing Rune
     ctx.fillStyle = '#4ade80';
     ctx.fillRect(-10, -62, 22, 4);
 
@@ -660,7 +661,7 @@ export class BossMonster extends Entity {
     ctx.restore();
   }
 
-  // World 2: Desert Sand Titan
+  // World 2: General Malik (Desert Overlord)
   private renderDesertTitan(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -668,38 +669,42 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const sand = isFlash ? '#ffffff' : '#d97706';
+    const skin = isFlash ? '#ffffff' : '#e0a96d'; // Bronze human skin tone
     const gold = isFlash ? '#ffffff' : '#facc15';
-    const bronze = isFlash ? '#ffffff' : '#78350f';
+    const crimson = isFlash ? '#ffffff' : '#b91c1c';
 
-    // Ancient Egyptian Gold Pharaoh Crest
+    // Crimson Cape
+    ctx.fillStyle = crimson;
+    ctx.fillRect(-30, -64 + bob, 60, 60);
+
+    // Human Head
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, -72 + bob, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Desert Turban / Crown
+    ctx.fillStyle = crimson;
+    ctx.beginPath();
+    ctx.arc(0, -78 + bob, 20, Math.PI * 0.8, Math.PI * 2.2);
+    ctx.fill();
+
     ctx.fillStyle = gold;
-    ctx.beginPath();
-    ctx.moveTo(0, -92 + bob);
-    ctx.lineTo(-32, -70 + bob);
-    ctx.lineTo(32, -70 + bob);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillRect(-8, -88 + bob, 16, 8); // Gold Crown Brooch
 
-    // Ruby Crown Gem
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(-4, -84 + bob, 8, 8);
+    // Human Face Details (Beard & Eye Scar)
+    ctx.fillStyle = '#1c1917'; // Dark beard
+    ctx.fillRect(-12, -68 + bob, 24, 10);
+    ctx.fillStyle = '#0f172a'; // Eye
+    ctx.fillRect(4, -74 + bob, 5, 4);
 
-    // Sandstone Body
-    ctx.fillStyle = sand;
-    ctx.fillRect(-28, -66 + bob, 56, 58);
-
-    // Sun Scarab Amber Medallion Core
-    ctx.fillStyle = '#f97316';
-    ctx.beginPath();
-    ctx.arc(0, -42 + bob, 14, 0, Math.PI * 2);
-    ctx.fill();
+    // Gold Chestplate & Armor
     ctx.fillStyle = gold;
-    ctx.beginPath();
-    ctx.arc(0, -42 + bob, 8, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(-26, -56 + bob, 52, 52);
+    ctx.fillStyle = crimson;
+    ctx.fillRect(-12, -48 + bob, 24, 30); // Belt sash
 
-    // Stone Fists
+    // Giant Golden Scimitar
     ctx.save();
     ctx.translate(26, -40 + bob);
     if (isWindup) {
@@ -708,23 +713,30 @@ export class BossMonster extends Entity {
       ctx.rotate(0.8);
     }
 
-    ctx.fillStyle = bronze;
-    ctx.fillRect(-6, -16, 24, 28);
+    ctx.fillStyle = '#78350f'; // Handle
+    ctx.fillRect(-4, -10, 8, 30);
+
+    // Curved Executioner Blade
     ctx.fillStyle = gold;
-    ctx.fillRect(10, -18, 10, 32); // Spiked knuckles
+    ctx.beginPath();
+    ctx.moveTo(4, -50);
+    ctx.quadraticCurveTo(28, -30, 32, 0);
+    ctx.quadraticCurveTo(12, 10, 4, 10);
+    ctx.closePath();
+    ctx.fill();
 
     if (isAttacking && !isFlash) {
       ctx.strokeStyle = 'rgba(250, 204, 21, 0.9)';
       ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.arc(6, 0, 36, -0.8, 0.8);
+      ctx.arc(12, -20, 42, -0.8, 0.8);
       ctx.stroke();
     }
 
     ctx.restore();
   }
 
-  // World 3: Frost Glacier Colossus
+  // World 3: Captain Gunnar (Frost Warlord)
   private renderFrostColossus(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -732,36 +744,42 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const ice = isFlash ? '#ffffff' : '#0284c7';
-    const crystal = isFlash ? '#ffffff' : '#38bdf8';
-    const coreGlow = isFlash ? '#ffffff' : '#7dd3fc';
+    const skin = isFlash ? '#ffffff' : '#ffedd5'; // Fair human skin tone
+    const coat = isFlash ? '#ffffff' : '#0284c7'; // Blue winter coat
+    const fur = isFlash ? '#ffffff' : '#f8fafc'; // White fur
+    const steel = isFlash ? '#ffffff' : '#e2e8f0';
 
-    // Massive Jagged Icicle Horn Crown
-    ctx.fillStyle = crystal;
+    // Fur-Lined Winter Coat Body
+    ctx.fillStyle = coat;
+    ctx.fillRect(-30, -64 + bob, 60, 60);
+
+    // Human Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.moveTo(-18, -72 + bob);
-    ctx.lineTo(-32, -98 + bob);
-    ctx.lineTo(-10, -72 + bob);
-
-    ctx.moveTo(18, -72 + bob);
-    ctx.lineTo(32, -98 + bob);
-    ctx.lineTo(10, -72 + bob);
+    ctx.arc(0, -72 + bob, 18, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ice Armor Body
-    ctx.fillStyle = ice;
-    ctx.fillRect(-28, -68 + bob, 56, 60);
+    // Braided Blonde/White Beard & Hair
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(0, -78 + bob, 19, Math.PI, Math.PI * 2);
+    ctx.fill();
 
-    // Spiked Ice Pauldrons
-    ctx.fillStyle = crystal;
-    ctx.fillRect(-34, -66 + bob, 10, 24);
-    ctx.fillRect(24, -66 + bob, 10, 24);
+    ctx.beginPath(); // Beard
+    ctx.moveTo(-14, -70 + bob);
+    ctx.lineTo(0, -46 + bob);
+    ctx.lineTo(14, -70 + bob);
+    ctx.fill();
 
-    // Glowing Cyan Core Crystal
-    ctx.fillStyle = coreGlow;
-    ctx.fillRect(-10, -46 + bob, 20, 20);
+    // Cold Blue Eyes
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(4, -75 + bob, 5, 4);
 
-    // Ice Hammer Fist
+    // White Fur Pauldrons & Collar
+    ctx.fillStyle = fur;
+    ctx.fillRect(-34, -62 + bob, 68, 12);
+
+    // Giant Frost Battleaxe
     ctx.save();
     ctx.translate(26, -42 + bob);
     if (isWindup) {
@@ -770,21 +788,31 @@ export class BossMonster extends Entity {
       ctx.rotate(0.9);
     }
 
-    ctx.fillStyle = crystal;
-    ctx.fillRect(-10, -24, 30, 48);
+    ctx.fillStyle = '#451a03'; // Handle
+    ctx.fillRect(-4, -50, 8, 70);
+
+    // Double Axe Head
+    ctx.fillStyle = steel;
+    ctx.beginPath();
+    ctx.moveTo(4, -40);
+    ctx.lineTo(32, -30);
+    ctx.lineTo(32, -10);
+    ctx.lineTo(4, 0);
+    ctx.closePath();
+    ctx.fill();
 
     if (isAttacking && !isFlash) {
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.95)';
       ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.arc(8, 0, 38, -0.8, 0.8);
+      ctx.arc(16, -20, 42, -0.8, 0.8);
       ctx.stroke();
     }
 
     ctx.restore();
   }
 
-  // World 4: Volcanic Magma Demon Lord
+  // World 4: Warlord Ignis (Volcanic Overlord)
   private renderVolcanicDemon(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -792,37 +820,40 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const obsidian = isFlash ? '#ffffff' : '#18181b';
-    const magma = isFlash ? '#ffffff' : '#ef4444';
+    const skin = isFlash ? '#ffffff' : '#d97706'; // Tanned ash human skin
+    const obsidian = isFlash ? '#ffffff' : '#18181b'; // Dark obsidian armor
     const flame = isFlash ? '#ffffff' : '#f97316';
 
-    // Burning Curved Demon Horns
+    // Fiery Red/Orange Cape
     ctx.fillStyle = flame;
-    ctx.beginPath();
-    ctx.moveTo(-16, -72 + bob);
-    ctx.lineTo(-38 + (isWindup ? -5 : 0), -102 + bob);
-    ctx.lineTo(-8, -72 + bob);
+    ctx.fillRect(-32, -66 + bob, 64, 62);
 
-    ctx.moveTo(16, -72 + bob);
-    ctx.lineTo(38 + (isWindup ? 5 : 0), -102 + bob);
-    ctx.lineTo(8, -72 + bob);
+    // Human Head
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, -72 + bob, 18, 0, Math.PI * 2);
     ctx.fill();
 
-    // Obsidian Plate Body
+    // Dark Spiky Hair
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(0, -78 + bob, 19, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Red War Paint & Stern Human Face
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-10, -76 + bob, 20, 4);
+
+    ctx.fillStyle = '#0f172a'; // Eye
+    ctx.fillRect(4, -73 + bob, 5, 4);
+
+    // Obsidian Plate Armor with Lava Trims
     ctx.fillStyle = obsidian;
-    ctx.fillRect(-30, -70 + bob, 60, 62);
-
-    // Glowing Lava Veins
+    ctx.fillRect(-28, -58 + bob, 56, 54);
     ctx.fillStyle = flame;
-    ctx.fillRect(-22, -52 + bob, 44, 6);
-    ctx.fillRect(-16, -38 + bob, 32, 6);
+    ctx.fillRect(-28, -44 + bob, 56, 6); // Lava sash
 
-    // Fiery Yellow Eyes
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(6, -66 + bob, 8, 7);
-    ctx.fillRect(-14, -66 + bob, 8, 7);
-
-    // Giant Flaming Sword
+    // Giant Obsidian Greatsword
     ctx.save();
     ctx.translate(28, -44 + bob);
     if (isWindup) {
@@ -831,7 +862,7 @@ export class BossMonster extends Entity {
       ctx.rotate(1.0);
     }
 
-    ctx.fillStyle = magma;
+    ctx.fillStyle = obsidian;
     ctx.fillRect(-6, -72, 14, 90);
     ctx.fillStyle = flame;
     ctx.fillRect(-2, -68, 6, 82);
@@ -847,7 +878,7 @@ export class BossMonster extends Entity {
     ctx.restore();
   }
 
-  // World 5: Shadow Void Monarch
+  // World 5: Arch-Duke Malakor (Void Shadow Master)
   private renderShadowMonarch(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -855,34 +886,41 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const shadow = isFlash ? '#ffffff' : '#3b0764';
-    const voidGlow = isFlash ? '#ffffff' : '#c084fc';
-    const eyeRed = isFlash ? '#ffffff' : '#ef4444';
+    const skin = isFlash ? '#ffffff' : '#ffedd5'; // Pale human skin tone
+    const coat = isFlash ? '#ffffff' : '#3b0764'; // Dark violet noble coat
+    const accent = isFlash ? '#ffffff' : '#c084fc';
 
-    // Floating Obsidian Crown
-    ctx.fillStyle = voidGlow;
+    // Noble Dark Cloak
+    ctx.fillStyle = coat;
+    ctx.fillRect(-30, -68 + bob, 60, 64);
+
+    // Human Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.moveTo(-22, -84 + bob);
-    ctx.lineTo(0, -102 + bob);
-    ctx.lineTo(22, -84 + bob);
-    ctx.closePath();
+    ctx.arc(0, -74 + bob, 17, 0, Math.PI * 2);
     ctx.fill();
 
-    // Phantom Robe
-    ctx.fillStyle = shadow;
+    // Silver Hair
+    ctx.fillStyle = '#e2e8f0';
     ctx.beginPath();
-    ctx.moveTo(0, -78 + bob);
-    ctx.lineTo(-32, -6 + bob);
-    ctx.lineTo(32, -6 + bob);
-    ctx.closePath();
+    ctx.arc(0, -79 + bob, 18, Math.PI * 0.8, Math.PI * 2.2);
     ctx.fill();
 
-    // Crimson Void Eyes
-    ctx.fillStyle = eyeRed;
-    ctx.fillRect(5, -64 + bob, 7, 7);
-    ctx.fillRect(-12, -64 + bob, 7, 7);
+    // Sharp Human Facial Features
+    ctx.fillStyle = '#c084fc'; // Violet Eyes
+    ctx.fillRect(4, -75 + bob, 5, 4);
 
-    // Spectral Void Orbs / Scythe
+    ctx.fillStyle = '#78350f'; // Mouth
+    ctx.fillRect(3, -67 + bob, 6, 2);
+
+    // High Collar Noble Coat
+    ctx.fillStyle = coat;
+    ctx.fillRect(-26, -58 + bob, 52, 54);
+    ctx.fillStyle = accent;
+    ctx.fillRect(-28, -60 + bob, 8, 20); // High collar flaps
+    ctx.fillRect(20, -60 + bob, 8, 20);
+
+    // Shadow Blade
     ctx.save();
     ctx.translate(28, -46 + bob);
     if (isWindup) {
@@ -891,23 +929,21 @@ export class BossMonster extends Entity {
       ctx.rotate(0.9);
     }
 
-    ctx.fillStyle = voidGlow;
-    ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.fillRect(-3, -60, 6, 80);
 
     if (isAttacking && !isFlash) {
       ctx.strokeStyle = 'rgba(192, 132, 252, 0.95)';
       ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.arc(0, 0, 44, -0.9, 0.9);
+      ctx.arc(0, -20, 48, -0.9, 0.9);
       ctx.stroke();
     }
 
     ctx.restore();
   }
 
-  // World 6: Goblin Overlord King Chaos Sovereign
+  // World 6: Grand Overlord Marcus (Citadel Sovereign)
   private renderGoblinKing(
     ctx: CanvasRenderingContext2D,
     bob: number,
@@ -915,25 +951,31 @@ export class BossMonster extends Entity {
     isWindup: boolean,
     isAttacking: boolean
   ) {
-    const armor = isFlash ? '#ffffff' : '#334155';
-    const gold = isFlash ? '#ffffff' : '#facc15';
-    const cape = isFlash ? '#ffffff' : '#991b1b';
+    const skin = isFlash ? '#ffffff' : '#fed7aa'; // Human skin
+    const armor = isFlash ? '#ffffff' : '#1e293b'; // Slate black armor
+    const gold = isFlash ? '#ffffff' : '#facc15'; // Imperial gold
     const ruby = isFlash ? '#ffffff' : '#dc2626';
 
-    // Royal Red Cape with Fur Collar
-    ctx.fillStyle = cape;
+    // Royal Red Velvet Cape
+    ctx.fillStyle = '#991b1b';
     ctx.fillRect(-38, -66 + bob, 76, 62);
 
-    // Regal Royal Ruby Crown
+    // Human Head
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, -74 + bob, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Regal Golden Crown
     ctx.fillStyle = gold;
     ctx.beginPath();
-    ctx.moveTo(-24, -80 + bob);
-    ctx.lineTo(-18, -102 + bob);
-    ctx.lineTo(-8, -88 + bob);
-    ctx.lineTo(0, -106 + bob);
-    ctx.lineTo(8, -88 + bob);
-    ctx.lineTo(18, -102 + bob);
-    ctx.lineTo(24, -80 + bob);
+    ctx.moveTo(-18, -84 + bob);
+    ctx.lineTo(-14, -100 + bob);
+    ctx.lineTo(-6, -88 + bob);
+    ctx.lineTo(0, -104 + bob);
+    ctx.lineTo(6, -88 + bob);
+    ctx.lineTo(14, -100 + bob);
+    ctx.lineTo(18, -84 + bob);
     ctx.closePath();
     ctx.fill();
 
@@ -941,19 +983,20 @@ export class BossMonster extends Entity {
     ctx.fillStyle = ruby;
     ctx.fillRect(-4, -92 + bob, 8, 8);
 
-    // Golden Dragon Armor Plate
+    // Human Goatee Beard & Fierce Eyes
+    ctx.fillStyle = '#1c1917'; // Dark hair/beard
+    ctx.fillRect(-6, -68 + bob, 12, 8);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, -75 + bob, 5, 4);
+
+    // Golden Imperial Dragon Armor
     ctx.fillStyle = armor;
-    ctx.fillRect(-30, -72 + bob, 60, 66);
+    ctx.fillRect(-30, -58 + bob, 60, 56);
     ctx.fillStyle = gold;
-    ctx.fillRect(-34, -70 + bob, 8, 18); // Spiked shoulders
-    ctx.fillRect(26, -70 + bob, 8, 18);
+    ctx.fillRect(-34, -58 + bob, 8, 20); // Spiked gold pauldrons
+    ctx.fillRect(26, -58 + bob, 8, 20);
 
-    // Piercing Crimson Eyes
-    ctx.fillStyle = ruby;
-    ctx.fillRect(6, -68 + bob, 8, 7);
-    ctx.fillRect(-14, -68 + bob, 8, 7);
-
-    // Fiery Royal Greatsword
+    // Fiery Royal Sovereign Greatsword
     ctx.save();
     ctx.translate(32, -48 + bob);
     if (isWindup) {

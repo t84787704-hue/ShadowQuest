@@ -270,7 +270,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 1 — FOREST: WILD GOBLIN BERSERKER
+  // WORLD 1 — FOREST: HUMAN FOREST ROGUE
   // ==========================================
   private renderForestGoblinWarrior(
     ctx: CanvasRenderingContext2D,
@@ -279,105 +279,91 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#15803d';
-    const darkSkin = hit ? '#e2e8f0' : '#166534';
-    const tunic = hit ? '#ffffff' : '#78350f';
-    const steel = hit ? '#ffffff' : '#94a3b8';
+    const skin = hit ? '#ffffff' : '#fed7aa'; // Human skin tone
+    const hair = hit ? '#ffffff' : '#27272a'; // Dark hair
+    const vest = hit ? '#ffffff' : '#15803d'; // Forest green tactical vest
+    const shirt = hit ? '#ffffff' : '#78350f'; // Tan inner shirt
+    const steel = hit ? '#ffffff' : '#94a3b8'; // Steel blade
 
-    // Jagged Ears
+    // Human Head & Face
     ctx.fillStyle = skin;
-    ctx.beginPath(); // Back ear
-    ctx.moveTo(-6, -28 + bob);
-    ctx.lineTo(-24, -36 + bob);
-    ctx.lineTo(-8, -20 + bob);
-    ctx.fill();
-
-    ctx.beginPath(); // Front ear
-    ctx.moveTo(6, -28 + bob);
-    ctx.lineTo(24, -36 + bob);
-    ctx.lineTo(8, -20 + bob);
-    ctx.fill();
-
-    // Muscular Head
     ctx.beginPath();
-    ctx.arc(0, -28 + bob, 12, 0, Math.PI * 2);
+    ctx.arc(0, -28 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Snarl Brow & Snout
-    ctx.fillStyle = darkSkin;
-    ctx.fillRect(-2, -33 + bob, 12, 4); // Angry Brow
-    ctx.fillRect(4, -28 + bob, 8, 5); // Pointed Snout
+    // Human Messy Hair & Headband
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.arc(0, -31 + bob, 12, Math.PI, Math.PI * 2);
+    ctx.fill();
 
-    // Red War Paint Stripe
-    if (!hit) {
-      ctx.fillStyle = '#dc2626';
-      ctx.fillRect(2, -31 + bob, 8, 2);
-    }
-
-    // Glowing Yellow/Red Eye
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(3, -32 + bob, 4, 3);
+    // Red Headband Stripe
     ctx.fillStyle = '#dc2626';
-    ctx.fillRect(5, -31 + bob, 2, 2);
+    ctx.fillRect(-10, -32 + bob, 20, 3);
 
-    // Mouth with Sharp Fangs
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(2, -24 + bob, 8, 4);
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(3, -24 + bob);
-    ctx.lineTo(5, -20 + bob);
-    ctx.lineTo(7, -24 + bob);
-    ctx.fill();
+    // Human Face Details (Eyes, Nose, Brow)
+    ctx.fillStyle = '#0f172a'; // Eye
+    ctx.fillRect(3, -29 + bob, 3, 3);
+    ctx.fillStyle = '#9a3412'; // Mouth/Stubble
+    ctx.fillRect(2, -22 + bob, 4, 1.5);
 
-    // Muscular Body & Leather Harness
-    ctx.fillStyle = darkSkin;
-    ctx.fillRect(-8, -19 + bob, 16, 15);
+    // Human Neck & Torso (Inner Shirt + Forest Vest)
+    ctx.fillStyle = skin;
+    ctx.fillRect(-3, -19 + bob, 6, 3); // Neck
 
-    // Harness Straps
-    ctx.fillStyle = tunic;
-    ctx.fillRect(-8, -17 + bob, 16, 8);
-    ctx.fillStyle = '#fef08a'; // Bone Buckle
-    ctx.fillRect(-2, -16 + bob, 4, 4);
+    ctx.fillStyle = shirt;
+    ctx.fillRect(-8, -16 + bob, 16, 12); // Inner shirt
 
-    // Legs
-    ctx.fillStyle = darkSkin;
-    ctx.fillRect(-7 + walk * 4, -5, 6, 6);
-    ctx.fillRect(1 - walk * 4, -5, 6, 6);
+    ctx.fillStyle = vest; // Green Vest Lapels
+    ctx.fillRect(-9, -16 + bob, 4, 12);
+    ctx.fillRect(5, -16 + bob, 4, 12);
 
-    // Weapon Arm (Jagged Bone Blade)
+    // Belt
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(-9, -5 + bob, 18, 3);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(-2, -5 + bob, 4, 3);
+
+    // Human Trousers & Boots
+    ctx.fillStyle = '#3f3f46';
+    ctx.fillRect(-7 + walk * 4, -4, 6, 6);
+    ctx.fillRect(1 - walk * 4, -4, 6, 6);
+
+    ctx.fillStyle = '#27272a'; // Boots
+    ctx.fillRect(-8 + walk * 4, -1, 7, 3);
+    ctx.fillRect(1 - walk * 4, -1, 7, 3);
+
+    // Weapon Arm (Human Fighter Dagger)
     ctx.save();
-    ctx.translate(6, -15 + bob);
+    ctx.translate(5, -12 + bob);
     if (attacking) {
-      ctx.rotate(-0.9); // Deep strike forward
+      ctx.rotate(-0.9);
     } else {
       ctx.rotate(0.2);
     }
 
-    ctx.fillStyle = skin;
-    ctx.fillRect(-2, -2, 6, 6);
+    ctx.fillStyle = skin; // Human Arm
+    ctx.fillRect(-2, -2, 6, 5);
 
     ctx.fillStyle = '#451a03'; // Handle
-    ctx.fillRect(4, -2, 5, 3);
+    ctx.fillRect(4, -2, 4, 3);
 
-    // Jagged Bone Blade
+    // Steel Dagger Blade
     ctx.fillStyle = steel;
     ctx.beginPath();
-    ctx.moveTo(9, -4);
-    ctx.lineTo(22, -2);
-    ctx.lineTo(26, 0); // Tip
-    ctx.lineTo(20, 3);
-    ctx.lineTo(14, 1);
-    ctx.lineTo(9, 4);
+    ctx.moveTo(8, -3);
+    ctx.lineTo(20, -1);
+    ctx.lineTo(24, 0); // Tip
+    ctx.lineTo(20, 2);
+    ctx.lineTo(8, 3);
     ctx.closePath();
     ctx.fill();
 
-    // Attack Slash Arc Overlay
     if (attacking && !hit) {
       ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(12, 0, 20, -0.6, 0.6);
+      ctx.arc(12, 0, 18, -0.6, 0.6);
       ctx.stroke();
     }
 
@@ -385,7 +371,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 2 — DESERT: DUNE RAIDER
+  // WORLD 2 — DESERT: HUMAN DESERT RAIDER
   // ==========================================
   private renderDesertRaider(
     ctx: CanvasRenderingContext2D,
@@ -394,60 +380,67 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#d97706';
-    const wrap = hit ? '#ffffff' : '#b45309';
-    const bronze = hit ? '#ffffff' : '#78350f';
-    const steel = hit ? '#ffffff' : '#e2e8f0';
+    const skin = hit ? '#ffffff' : '#e0a96d'; // Bronze human skin tone
+    const wrap = hit ? '#ffffff' : '#d97706'; // Desert tunic wrap
+    const scarf = hit ? '#ffffff' : '#78350f'; // Dark brown scarf
+    const steel = hit ? '#ffffff' : '#f1f5f9'; // Scimitar steel
 
-    // Head in Desert Wrap/Cowl
-    ctx.fillStyle = wrap;
+    // Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(0, -28 + bob, 13, 0, Math.PI * 2);
+    ctx.arc(0, -28 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Desert Goggles / Eye Slit
+    // Desert Head Scarf / Hood
+    ctx.fillStyle = wrap;
+    ctx.beginPath();
+    ctx.arc(0, -30 + bob, 12, Math.PI * 0.8, Math.PI * 2.2);
+    ctx.fill();
+
+    // Dark Human Hair Bangs
+    ctx.fillStyle = '#1c1917';
+    ctx.fillRect(-4, -33 + bob, 8, 3);
+
+    // Human Eyes
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(2, -31 + bob, 9, 5);
+    ctx.fillRect(3, -29 + bob, 3, 3);
 
-    // Glowing Amber Eyes
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(4, -30 + bob, 3, 3);
-    ctx.fillRect(8, -30 + bob, 3, 3);
-
-    // Bronze Shoulder Pauldrons
-    ctx.fillStyle = bronze;
-    ctx.fillRect(-10, -20 + bob, 6, 6);
-    ctx.fillRect(4, -20 + bob, 6, 6);
+    // Face Scarf / Draped Cloth
+    ctx.fillStyle = scarf;
+    ctx.fillRect(-6, -24 + bob, 12, 6);
 
     // Muscular Wrapped Body
     ctx.fillStyle = skin;
-    ctx.fillRect(-8, -18 + bob, 16, 14);
+    ctx.fillRect(-8, -17 + bob, 16, 13);
     ctx.fillStyle = wrap;
-    ctx.fillRect(-9, -12 + bob, 18, 7);
+    ctx.fillRect(-9, -11 + bob, 18, 6);
 
-    // Legs with Sand Wraps
-    ctx.fillStyle = bronze;
+    // Legs
+    ctx.fillStyle = scarf;
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Curved Scimitar Blade
+    // Curved Scimitar
     ctx.save();
-    ctx.translate(6, -14 + bob);
+    ctx.translate(6, -12 + bob);
     if (attacking) {
-      ctx.rotate(-1.1); // Slash
+      ctx.rotate(-1.1);
     } else {
       ctx.rotate(0.3);
     }
 
-    ctx.fillStyle = bronze;
-    ctx.fillRect(0, -2, 5, 3); // Hilt
+    ctx.fillStyle = skin;
+    ctx.fillRect(-2, -2, 5, 4);
 
-    // Curved Scimitar Steel Blade
+    ctx.fillStyle = '#78350f'; // Hilt
+    ctx.fillRect(3, -2, 3, 4);
+
+    // Steel Blade
     ctx.fillStyle = steel;
     ctx.beginPath();
-    ctx.moveTo(5, -2);
+    ctx.moveTo(6, -2);
     ctx.quadraticCurveTo(16, -10, 26, -4);
-    ctx.quadraticCurveTo(18, 2, 5, 3);
+    ctx.quadraticCurveTo(18, 2, 6, 3);
     ctx.closePath();
     ctx.fill();
 
@@ -463,7 +456,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 3 — ICE: FROST GLACIER STALKER
+  // WORLD 3 — ICE: HUMAN WINTER MERCENARY
   // ==========================================
   private renderIceStalker(
     ctx: CanvasRenderingContext2D,
@@ -472,60 +465,67 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const ice = hit ? '#ffffff' : '#0284c7';
-    const crystal = hit ? '#ffffff' : '#38bdf8';
-    const coreGlow = hit ? '#ffffff' : '#7dd3fc';
+    const skin = hit ? '#ffffff' : '#ffedd5'; // Fair human skin tone
+    const coat = hit ? '#ffffff' : '#0284c7'; // Blue winter parka
+    const fur = hit ? '#ffffff' : '#f8fafc'; // White fur trim
+    const steel = hit ? '#ffffff' : '#e2e8f0';
 
-    // Icicle Horns
-    ctx.fillStyle = crystal;
+    // Hooded Head
+    ctx.fillStyle = coat;
     ctx.beginPath();
-    ctx.moveTo(-6, -30 + bob);
-    ctx.lineTo(-14, -44 + bob);
-    ctx.lineTo(-2, -30 + bob);
-
-    ctx.moveTo(2, -30 + bob);
-    ctx.lineTo(10, -44 + bob);
-    ctx.lineTo(6, -30 + bob);
+    ctx.arc(0, -28 + bob, 13, 0, Math.PI * 2);
     ctx.fill();
 
-    // Crystal Head
-    ctx.fillStyle = ice;
+    // Fur Hood Trim around Face
+    ctx.fillStyle = fur;
     ctx.beginPath();
-    ctx.arc(0, -28 + bob, 12, 0, Math.PI * 2);
+    ctx.arc(0, -28 + bob, 13, -Math.PI / 3, Math.PI / 3);
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Human Face
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(1, -28 + bob, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Glowing Cold Cyan Eyes
-    ctx.fillStyle = coreGlow;
-    ctx.fillRect(2, -31 + bob, 4, 3);
-    ctx.fillRect(7, -31 + bob, 4, 3);
+    // Human Facial Features
+    ctx.fillStyle = '#0f172a'; // Eye
+    ctx.fillRect(3, -29 + bob, 3, 3);
+    ctx.fillStyle = '#3f3f46'; // Beard/stubble
+    ctx.fillRect(1, -23 + bob, 6, 2.5);
 
-    // Jagged Frost Body
-    ctx.fillStyle = ice;
-    ctx.fillRect(-8, -18 + bob, 16, 14);
+    // Thick Winter Coat Body
+    ctx.fillStyle = coat;
+    ctx.fillRect(-9, -18 + bob, 18, 14);
 
-    // Frozen Core
-    ctx.fillStyle = crystal;
-    ctx.fillRect(-4, -14 + bob, 8, 8);
+    // White Fur Collar
+    ctx.fillStyle = fur;
+    ctx.fillRect(-10, -19 + bob, 20, 4);
 
-    // Frozen Legs
-    ctx.fillStyle = ice;
+    // Thermal Pants & Boots
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Ice Claw / Icicle Spear
+    // Ice Hatchet / Axe
     ctx.save();
-    ctx.translate(6, -14 + bob);
+    ctx.translate(6, -12 + bob);
     if (attacking) {
-      ctx.rotate(-0.8);
+      ctx.rotate(-0.9);
     } else {
-      ctx.rotate(0.1);
+      ctx.rotate(0.2);
     }
 
-    ctx.fillStyle = crystal;
+    ctx.fillStyle = '#451a03'; // Wooden handle
+    ctx.fillRect(0, -2, 16, 3);
+
+    ctx.fillStyle = steel; // Axe head
     ctx.beginPath();
-    ctx.moveTo(0, -3);
-    ctx.lineTo(24, 0); // Tip
-    ctx.lineTo(0, 3);
+    ctx.moveTo(12, -8);
+    ctx.lineTo(20, -5);
+    ctx.lineTo(20, 5);
+    ctx.lineTo(12, 8);
     ctx.closePath();
     ctx.fill();
 
@@ -533,7 +533,7 @@ export class ForestGoblin extends Entity {
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(12, 0, 18, -0.7, 0.7);
+      ctx.arc(14, 0, 18, -0.7, 0.7);
       ctx.stroke();
     }
 
@@ -541,7 +541,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 4 — VOLCANO: INFERNAL MAGMA BRUTE
+  // WORLD 4 — VOLCANO: HUMAN ASH BRAWLER
   // ==========================================
   private renderVolcanicBrute(
     ctx: CanvasRenderingContext2D,
@@ -550,73 +550,69 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const obsidian = hit ? '#ffffff' : '#18181b';
-    const magma = hit ? '#ffffff' : '#ef4444';
-    const flame = hit ? '#ffffff' : '#f97316';
+    const skin = hit ? '#ffffff' : '#d97706'; // Tanned olive human skin
+    const jacket = hit ? '#ffffff' : '#18181b'; // Dark charcoal jacket
+    const accent = hit ? '#ffffff' : '#f97316'; // Orange accent
+    const steel = hit ? '#ffffff' : '#71717a';
 
-    // Demon Obsidian Horns
-    ctx.fillStyle = magma;
+    // Human Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.moveTo(-6, -30 + bob);
-    ctx.lineTo(-15, -46 + bob);
-    ctx.lineTo(-2, -32 + bob);
-
-    ctx.moveTo(2, -32 + bob);
-    ctx.lineTo(15, -46 + bob);
-    ctx.lineTo(6, -30 + bob);
+    ctx.arc(0, -28 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Rocky Head
-    ctx.fillStyle = obsidian;
+    // Dark Hair & Tactical Forehead Goggles
+    ctx.fillStyle = '#111827';
     ctx.beginPath();
-    ctx.arc(0, -28 + bob, 13, 0, Math.PI * 2);
+    ctx.arc(0, -31 + bob, 12, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Fiery Yellow Eyes
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(3, -31 + bob, 4, 4);
-    ctx.fillRect(8, -31 + bob, 4, 4);
+    // Goggles resting on forehead
+    ctx.fillStyle = accent;
+    ctx.fillRect(-8, -33 + bob, 16, 4);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(-5, -32 + bob, 4, 2);
+    ctx.fillRect(1, -32 + bob, 4, 2);
 
-    // Magma Chest Veins
-    ctx.fillStyle = obsidian;
-    ctx.fillRect(-9, -18 + bob, 18, 15);
+    // Human Eyes & Mouth
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(3, -29 + bob, 3, 3);
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(2, -23 + bob, 4, 2);
 
-    ctx.fillStyle = flame;
-    ctx.fillRect(-6, -15 + bob, 12, 3);
-    ctx.fillRect(-4, -10 + bob, 8, 3);
+    // Heat-Resistant Vest
+    ctx.fillStyle = jacket;
+    ctx.fillRect(-9, -17 + bob, 18, 13);
+    ctx.fillStyle = accent;
+    ctx.fillRect(-9, -13 + bob, 18, 3);
 
-    // Legs
-    ctx.fillStyle = obsidian;
+    // Trousers
+    ctx.fillStyle = '#27272a';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Magma Battleaxe
+    // Steel Baton / Mace
     ctx.save();
-    ctx.translate(6, -14 + bob);
+    ctx.translate(6, -12 + bob);
     if (attacking) {
-      ctx.rotate(-1.2);
+      ctx.rotate(-1.1);
     } else {
       ctx.rotate(0.2);
     }
 
-    ctx.fillStyle = '#451a03'; // Handle
-    ctx.fillRect(0, -2, 18, 4);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-2, -2, 5, 4);
 
-    // Fiery Axe Head
-    ctx.fillStyle = magma;
-    ctx.beginPath();
-    ctx.moveTo(14, -12);
-    ctx.lineTo(24, -6);
-    ctx.lineTo(24, 6);
-    ctx.lineTo(14, 12);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillStyle = steel;
+    ctx.fillRect(3, -2, 16, 4);
+    ctx.fillStyle = accent;
+    ctx.fillRect(14, -4, 6, 8); // Flanged head
 
     if (attacking && !hit) {
       ctx.strokeStyle = 'rgba(249, 115, 22, 0.9)';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(18, 0, 22, -0.8, 0.8);
+      ctx.arc(14, 0, 20, -0.8, 0.8);
       ctx.stroke();
     }
 
@@ -624,7 +620,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 5 — DARK LANDS: SHADOW VOID WRAITH
+  // WORLD 5 — DARK LANDS: HUMAN SHADOW ASSASSIN
   // ==========================================
   private renderShadowWraith(
     ctx: CanvasRenderingContext2D,
@@ -633,55 +629,62 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const shadow = hit ? '#ffffff' : '#3b0764';
-    const voidGlow = hit ? '#ffffff' : '#c084fc';
-    const eyeRed = hit ? '#ffffff' : '#ef4444';
+    const skin = hit ? '#ffffff' : '#ffedd5'; // Pale human skin tone
+    const coat = hit ? '#ffffff' : '#3b0764'; // Midnight purple coat
+    const accent = hit ? '#ffffff' : '#c084fc';
+    const steel = hit ? '#ffffff' : '#f1f5f9';
 
-    // Floating Void Hood
-    ctx.fillStyle = shadow;
+    // Human Head & Dark Hair
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(0, -30 + bob, 14, 0, Math.PI * 2);
+    ctx.arc(0, -29 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Spectral Void Face
+    // Slicked Dark Hair
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.arc(0, -29 + bob, 9, 0, Math.PI * 2);
+    ctx.arc(0, -32 + bob, 12, Math.PI * 0.9, Math.PI * 2.1);
     ctx.fill();
 
-    // 3 Piercing Crimson Eyes
-    ctx.fillStyle = eyeRed;
-    ctx.fillRect(-3, -32 + bob, 3, 3);
-    ctx.fillRect(2, -32 + bob, 3, 3);
-    ctx.fillRect(6, -32 + bob, 3, 3);
+    // Fierce Human Eyes
+    ctx.fillStyle = '#c084fc';
+    ctx.fillRect(3, -30 + bob, 3, 3);
 
-    // Tattered Phantom Cloak
-    ctx.fillStyle = shadow;
-    ctx.beginPath();
-    ctx.moveTo(-10, -18 + bob);
-    ctx.lineTo(10, -18 + bob);
-    ctx.lineTo(14 + walk * 3, 0);
-    ctx.lineTo(-14 - walk * 3, 0);
-    ctx.closePath();
-    ctx.fill();
+    // Assassin Face Bandana / Lower Mask
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fillRect(-6, -26 + bob, 12, 6);
 
-    // Void Scythe
+    // High-Collared Trench Coat Body
+    ctx.fillStyle = coat;
+    ctx.fillRect(-9, -18 + bob, 18, 14);
+
+    // Collar
+    ctx.fillStyle = accent;
+    ctx.fillRect(-10, -19 + bob, 4, 6);
+    ctx.fillRect(6, -19 + bob, 4, 6);
+
+    // Trousers
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(-7 + walk * 4, -5, 6, 6);
+    ctx.fillRect(1 - walk * 4, -5, 6, 6);
+
+    // Tactical Dagger
     ctx.save();
-    ctx.translate(6, -14 + bob);
+    ctx.translate(6, -12 + bob);
     if (attacking) {
       ctx.rotate(-1.0);
     } else {
       ctx.rotate(0.3);
     }
 
-    ctx.fillStyle = voidGlow;
-    ctx.fillRect(0, -2, 20, 3);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-2, -2, 5, 4);
 
-    // Crescent Scythe Blade
+    ctx.fillStyle = steel;
     ctx.beginPath();
-    ctx.moveTo(18, -12);
-    ctx.quadraticCurveTo(28, 0, 18, 12);
-    ctx.lineTo(22, 0);
+    ctx.moveTo(3, -2);
+    ctx.lineTo(20, 0); // Tip
+    ctx.lineTo(3, 2);
     ctx.closePath();
     ctx.fill();
 
@@ -689,7 +692,7 @@ export class ForestGoblin extends Entity {
       ctx.strokeStyle = 'rgba(192, 132, 252, 0.9)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(20, 0, 24, -0.8, 0.8);
+      ctx.arc(14, 0, 20, -0.8, 0.8);
       ctx.stroke();
     }
 
@@ -697,7 +700,7 @@ export class ForestGoblin extends Entity {
   }
 
   // ==========================================
-  // WORLD 6 — FINAL WORLD: CITADEL ELITE WARLORD
+  // WORLD 6 — FINAL WORLD: ELITE HUMAN ENFORCER
   // ==========================================
   private renderCitadelWarlord(
     ctx: CanvasRenderingContext2D,
@@ -706,73 +709,65 @@ export class ForestGoblin extends Entity {
     attacking: boolean,
     hit: boolean
   ) {
-    const steel = hit ? '#ffffff' : '#334155';
-    const gold = hit ? '#ffffff' : '#facc15';
-    const cape = hit ? '#ffffff' : '#7f1d1d';
-    const redGlow = hit ? '#ffffff' : '#dc2626';
+    const skin = hit ? '#ffffff' : '#fed7aa'; // Human skin
+    const armor = hit ? '#ffffff' : '#1e293b'; // Slate armor
+    const gold = hit ? '#ffffff' : '#facc15'; // Gold trims
+    const steel = hit ? '#ffffff' : '#e2e8f0';
 
-    // Crimson Cape
-    ctx.fillStyle = cape;
-    ctx.fillRect(-12, -22 + bob, 24, 20);
-
-    // Heavy Horned Helm
-    ctx.fillStyle = steel;
+    // Human Head with Tactical Visor
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(0, -30 + bob, 13, 0, Math.PI * 2);
+    ctx.arc(0, -29 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Helm Horns
-    ctx.fillStyle = gold;
+    // Helmet / Cap with Visor
+    ctx.fillStyle = armor;
     ctx.beginPath();
-    ctx.moveTo(-8, -34 + bob);
-    ctx.lineTo(-16, -46 + bob);
-    ctx.lineTo(-3, -34 + bob);
-
-    ctx.moveTo(3, -34 + bob);
-    ctx.lineTo(16, -46 + bob);
-    ctx.lineTo(8, -34 + bob);
+    ctx.arc(0, -32 + bob, 12, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Visor Slit with Glowing Red Eyes
+    // Visor covering upper eyes (showing human chin/lips)
+    ctx.fillStyle = '#ef4444'; // Red visor strip
+    ctx.fillRect(-2, -31 + bob, 10, 3);
+
+    // Human Mouth/Jaw
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(-4, -32 + bob, 12, 4);
-    ctx.fillStyle = redGlow;
-    ctx.fillRect(2, -31 + bob, 5, 2);
+    ctx.fillRect(2, -23 + bob, 4, 1.5);
 
-    // Heavy Plate Armor & Spiked Pauldrons
-    ctx.fillStyle = steel;
-    ctx.fillRect(-10, -18 + bob, 20, 15);
+    // Elite Tactical Armor Vest
+    ctx.fillStyle = armor;
+    ctx.fillRect(-10, -18 + bob, 20, 14);
     ctx.fillStyle = gold;
-    ctx.fillRect(-12, -20 + bob, 5, 6);
-    ctx.fillRect(7, -20 + bob, 5, 6);
+    ctx.fillRect(-10, -18 + bob, 3, 14);
+    ctx.fillRect(7, -18 + bob, 3, 14);
 
-    // Legs
-    ctx.fillStyle = steel;
+    // Trousers
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Heavy Jagged Greatsword
+    // Energy Baton
     ctx.save();
-    ctx.translate(8, -14 + bob);
+    ctx.translate(6, -12 + bob);
     if (attacking) {
       ctx.rotate(-1.1);
     } else {
       ctx.rotate(0.2);
     }
 
-    ctx.fillStyle = gold; // Crossguard
-    ctx.fillRect(-2, -6, 4, 12);
+    ctx.fillStyle = skin;
+    ctx.fillRect(-2, -2, 5, 4);
 
-    ctx.fillStyle = steel; // Blade
-    ctx.fillRect(2, -4, 22, 8);
-    ctx.fillStyle = redGlow; // Rune Core
-    ctx.fillRect(4, -1, 18, 2);
+    ctx.fillStyle = steel;
+    ctx.fillRect(3, -2, 18, 4);
+    ctx.fillStyle = gold;
+    ctx.fillRect(18, -3, 3, 6);
 
     if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(220, 38, 38, 0.9)';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(16, 0, 24, -0.8, 0.8);
+      ctx.arc(14, 0, 22, -0.8, 0.8);
       ctx.stroke();
     }
 
