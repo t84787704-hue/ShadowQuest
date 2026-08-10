@@ -55,6 +55,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   } | null>(null);
 
   const [impactEffect, setImpactEffect] = useState<{ id: number; type: 'HEAVY' | 'BOSS' | 'LIGHT' } | null>(null);
+  const impactTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,7 +72,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     engine.onImpactCallback = (type) => {
       if (type === 'HEAVY' || type === 'BOSS') {
+        if (impactTimeoutRef.current) {
+          window.clearTimeout(impactTimeoutRef.current);
+        }
         setImpactEffect({ id: Date.now(), type });
+        impactTimeoutRef.current = window.setTimeout(() => {
+          setImpactEffect(null);
+        }, type === 'BOSS' ? 300 : 200);
       }
     };
 
@@ -126,6 +133,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }, 50);
 
     return () => {
+      if (impactTimeoutRef.current) {
+        window.clearTimeout(impactTimeoutRef.current);
+      }
       clearInterval(statsInterval);
       if (engineRef.current) {
         engineRef.current.stop();
@@ -198,7 +208,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       {/* 800x450 Scaled Canvas Wrapper */}
       <div className="relative w-full max-w-[900px] aspect-[16/9] bg-slate-900 border-2 border-slate-800 rounded-xl overflow-hidden shadow-2xl">
         <motion.div
-          key={impactEffect ? `shake-${impactEffect.id}` : 'canvas-normal'}
           animate={
             impactEffect?.type === 'BOSS'
               ? {
@@ -212,7 +221,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                   y: [0, 5, -5, 3, -3, 0],
                   scale: [1, 1.015, 1],
                 }
-              : {}
+              : { x: 0, y: 0, scale: 1 }
           }
           transition={{ duration: impactEffect?.type === 'BOSS' ? 0.3 : 0.2, ease: 'easeOut' }}
           className="w-full h-full relative"
