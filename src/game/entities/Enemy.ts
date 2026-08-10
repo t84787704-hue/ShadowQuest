@@ -47,15 +47,15 @@ export class ForestGoblin extends Entity {
 
     if (isFinalBoss) {
       this.maxHp = 500; // Final Goblin King
-      this.attackDamage = 14;
+      this.attackDamage = 10;
       this.moveSpeed = 1.9;
     } else if (isBoss) {
       this.maxHp = 220 + w * 35;
-      this.attackDamage = 11 + Math.floor(w * 0.6);
+      this.attackDamage = 8 + Math.floor(w * 0.4);
       this.moveSpeed = 1.8;
     } else {
       this.maxHp = 45 + w * 5;
-      this.attackDamage = 8 + Math.floor(w * 0.4);
+      this.attackDamage = 5 + Math.floor(w * 0.3);
       this.moveSpeed = 1.9 + (w % 2 === 0 ? 0.3 : 0);
     }
 
