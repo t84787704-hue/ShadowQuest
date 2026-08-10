@@ -42,6 +42,7 @@ export class GameEngine {
 
   private lastTime: number = 0;
   private animFrameId: number | null = null;
+  public onImpactCallback?: (type: 'HEAVY' | 'BOSS' | 'LIGHT') => void;
   private onStateChangeCallback?: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void;
   private statsBonus: Partial<PlayerStats>;
 
@@ -382,6 +383,7 @@ export class GameEngine {
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
 
         this.camera.addShake(0.15, 6);
+        this.onImpactCallback?.('BOSS');
 
         // Apply weapon stance effects
         const effect = this.player.equippedWeapon.specialEffect;
@@ -429,18 +431,22 @@ export class GameEngine {
             goblin.vx = (goblin.x > this.player.x) ? 7.5 : -7.5;
             goblin.vy = -4.5;
             this.camera.addShake(0.14, 6);
+            this.onImpactCallback?.('HEAVY');
           } else if (this.player.attackType === 'FINISHER' || this.player.attackType === 'KICK') {
             goblin.vx = this.player.facingRight ? 8 : -8;
             goblin.vy = -4.5;
             this.camera.addShake(0.16, 7);
+            this.onImpactCallback?.('HEAVY');
           } else if (this.player.attackType === 'JUMP_KICK') {
             goblin.vx = this.player.facingRight ? 6.5 : -6.5;
             goblin.vy = -2;
             this.camera.addShake(0.12, 5);
+            this.onImpactCallback?.('HEAVY');
           } else {
             goblin.vx = this.player.facingRight ? 4.5 : -4.5;
             goblin.vy = -2.5;
             this.camera.addShake(0.1, 3.5);
+            this.onImpactCallback?.('LIGHT');
           }
 
           // Apply stance special effects

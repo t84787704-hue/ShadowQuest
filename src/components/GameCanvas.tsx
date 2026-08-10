@@ -54,6 +54,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     isTriggered: boolean;
   } | null>(null);
 
+  const [impactEffect, setImpactEffect] = useState<{ id: number; type: 'HEAVY' | 'BOSS' | 'LIGHT' } | null>(null);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -66,6 +68,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const currentSave = SaveSystem.load();
     const engine = new GameEngine(canvas, currentSave, levelId, isResume);
     engineRef.current = engine;
+
+    engine.onImpactCallback = (type) => {
+      if (type === 'HEAVY' || type === 'BOSS') {
+        setImpactEffect({ id: Date.now(), type });
+      }
+    };
 
     setPlayerHp({
       current: engine.player.stats.currentHp,
@@ -189,7 +197,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     <div className="relative w-full h-full min-h-[450px] bg-slate-950 flex items-center justify-center overflow-hidden select-none">
       {/* 800x450 Scaled Canvas Wrapper */}
       <div className="relative w-full max-w-[900px] aspect-[16/9] bg-slate-900 border-2 border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-        <canvas ref={canvasRef} className="w-full h-full block bg-sky-900" />
+        <motion.div
+          key={impactEffect ? `shake-${impactEffect.id}` : 'canvas-normal'}
+          animate={
+            impactEffect?.type === 'BOSS'
+              ? {
+                  x: [0, -12, 12, -8, 8, -4, 4, 0],
+                  y: [0, 8, -8, 5, -5, 2, 0],
+                  scale: [1, 1.025, 1],
+                }
+              : impactEffect?.type === 'HEAVY'
+              ? {
+                  x: [0, -8, 8, -5, 5, -2, 2, 0],
+                  y: [0, 5, -5, 3, -3, 0],
+                  scale: [1, 1.015, 1],
+                }
+              : {}
+          }
+          transition={{ duration: impactEffect?.type === 'BOSS' ? 0.3 : 0.2, ease: 'easeOut' }}
+          className="w-full h-full relative"
+        >
+          <canvas ref={canvasRef} className="w-full h-full block bg-sky-900" />
+        </motion.div>
+
+        {/* Impact Flash Effect Overlay */}
+        <AnimatePresence>
+          {impactEffect && (
+            <motion.div
+              key={`flash-${impactEffect.id}`}
+              initial={{ opacity: impactEffect.type === 'BOSS' ? 0.85 : 0.6 }}
+              animate={{ opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: impactEffect.type === 'BOSS' ? 0.28 : 0.2, ease: 'easeOut' }}
+              className={`absolute inset-0 pointer-events-none z-10 flex items-center justify-center overflow-hidden ${
+                impactEffect.type === 'BOSS'
+                  ? 'bg-amber-400/25 backdrop-brightness-125'
+                  : 'bg-red-500/20 backdrop-brightness-110'
+              }`}
+            >
+              {/* Shockwave Radial Ring */}
+              <motion.div
+                initial={{ scale: 0.2, opacity: 1 }}
+                animate={{ scale: 2.2, opacity: 0 }}
+                transition={{ duration: impactEffect.type === 'BOSS' ? 0.32 : 0.22, ease: 'easeOut' }}
+                className={`w-72 h-72 rounded-full border-4 ${
+                  impactEffect.type === 'BOSS'
+                    ? 'border-amber-300 shadow-[0_0_60px_#facc15]'
+                    : 'border-red-400 shadow-[0_0_40px_#f87171]'
+                }`}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Level Fade-In Transition Curtain */}
         <motion.div
