@@ -3,6 +3,7 @@ import { PlayerActionState, PlayerStats, Rect } from '../../types/game';
 import { InputState } from '../../types/game';
 import { TileMap, TileType } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
+import { Camera } from '../core/Camera';
 import { audioEngine } from '../audio/AudioEngine';
 import { WeaponDef, WEAPONS } from '../weapons/WeaponData';
 
@@ -54,7 +55,7 @@ export class Player extends Entity {
     this.stats.attackDamage = weapon.baseDamage + attackBonus;
   }
 
-  public update(dt: number, input: InputState, tileMap: TileMap, particles: ParticleSystem) {
+  public update(dt: number, input: InputState, tileMap: TileMap, particles: ParticleSystem, camera?: Camera) {
     if (!this.isAlive) {
       this.state = 'DEAD';
       return;
@@ -249,6 +250,9 @@ export class Player extends Entity {
       this.vy *= 0.6; // Variable height damping
     }
 
+    const wasGrounded = this.isGrounded;
+    const preLandingVy = this.vy;
+
     // Apply Gravity
     this.vy += this.GRAVITY;
     if (this.vy > this.TERMINAL_VELOCITY) {
@@ -261,6 +265,20 @@ export class Player extends Entity {
 
     // TileMap Physics & Collision Check
     tileMap.resolveEntityCollision(this);
+
+    // High Jump Landing effect check
+    if (!wasGrounded && this.isGrounded) {
+      if (preLandingVy >= 7.0) {
+        const impactX = this.x + this.width / 2;
+        const impactY = this.y + this.height;
+        particles.createLandingImpact(impactX, impactY, preLandingVy);
+        audioEngine.playLand();
+        if (camera) {
+          const shakeIntensity = Math.min(6, (preLandingVy - 5) * 0.85);
+          camera.addShake(0.12, shakeIntensity);
+        }
+      }
+    }
 
     // World Boundary Clamp
     if (this.x < 0) {

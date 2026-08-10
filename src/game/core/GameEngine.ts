@@ -262,7 +262,7 @@ export class GameEngine {
     const inputState = this.input.getState();
 
     // 1. Update Player
-    this.player.update(dt, inputState, this.tileMap, this.particles);
+    this.player.update(dt, inputState, this.tileMap, this.particles, this.camera);
 
     // Check Player Death
     if (!this.player.isAlive && this.status !== 'GAME_OVER') {
@@ -331,7 +331,17 @@ export class GameEngine {
 
           // Drop coin on goblin death
           if (!goblin.isAlive) {
-            this.coins.push(new Coin(goblin.x, goblin.y, 2));
+            this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
+
+            if (goblin.isBoss) {
+              const bossCenterX = goblin.x + goblin.width / 2;
+              const bossCenterY = goblin.y + goblin.height / 2;
+
+              this.camera.addShake(0.38, 11);
+              this.particles.createBossDefeatExplosion(bossCenterX, bossCenterY);
+              this.particles.createFloatingText(bossCenterX, bossCenterY - 24, 'BOSS DEFEATED! 👑', '#facc15', 20);
+              audioEngine.playVictory();
+            }
           }
         }
       }

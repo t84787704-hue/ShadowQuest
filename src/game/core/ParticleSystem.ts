@@ -105,6 +105,59 @@ export class ParticleSystem {
     });
   }
 
+  public createLandingImpact(x: number, y: number, impactVy: number = 10) {
+    const particleCount = Math.min(24, Math.floor(impactVy * 1.8));
+    const dustColors = ['#e2e8f0', '#cbd5e1', '#94a3b8', '#38bdf8'];
+
+    // Left and Right ground impact dust clouds
+    for (let i = 0; i < particleCount; i++) {
+      const isRight = i % 2 === 0;
+      const speed = (Math.random() * 3.5 + 1.2) * (impactVy / 10);
+      const vx = isRight ? speed : -speed;
+      const vy = -Math.random() * 2.0 - 0.5;
+      const color = dustColors[i % dustColors.length];
+
+      this.particles.push({
+        x: x + (isRight ? 4 : -4),
+        y: y - 2,
+        vx,
+        vy,
+        size: Math.random() * 3.5 + 2.5,
+        color,
+        alpha: 0.9,
+        life: 0,
+        maxLife: 0.35 + Math.random() * 0.25,
+        shape: i % 3 === 0 ? 'spark' : 'circle',
+      });
+    }
+  }
+
+  public createBossDefeatExplosion(x: number, y: number) {
+    const colors = ['#facc15', '#f97316', '#ef4444', '#38bdf8', '#a855f7', '#ffffff'];
+    // Huge radial explosion of stars and sparks
+    for (let i = 0; i < 45; i++) {
+      const angle = (Math.PI * 2 * i) / 45 + (Math.random() - 0.5) * 0.2;
+      const speed = Math.random() * 8.5 + 2.5;
+      const color = colors[i % colors.length];
+
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        size: Math.random() * 5 + 3,
+        color,
+        alpha: 1.0,
+        life: 0,
+        maxLife: 0.6 + Math.random() * 0.4,
+        shape: i % 3 === 0 ? 'star' : i % 2 === 0 ? 'spark' : 'circle',
+      });
+    }
+
+    // Add extra victory confetti around the defeated boss
+    this.createVictoryConfetti(x, y);
+  }
+
   public createJumpDust(x: number, y: number) {
     for (let i = 0; i < 8; i++) {
       this.particles.push({
