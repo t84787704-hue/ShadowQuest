@@ -12,6 +12,7 @@ interface GameCanvasProps {
   saveData: SaveData;
   levelId?: string;
   onSaveUpdate: (updatedSave: SaveData) => void;
+  onSelectNextLevel?: (nextLevelId: string) => void;
   onReturnToMainMenu: () => void;
 }
 
@@ -19,6 +20,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   saveData,
   levelId = '1-1',
   onSaveUpdate,
+  onSelectNextLevel,
   onReturnToMainMenu,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -114,6 +116,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   };
 
   const hasActiveCheckpoint = Boolean(engineRef.current?.checkpoint?.isActive);
+  const currentLevelTitle = engineRef.current?.levelDef?.config?.title || `${levelId} LEVEL`;
+
+  const getNextLevelId = (currentId: string): string | null => {
+    const [wStr, lStr] = currentId.split('-');
+    const w = parseInt(wStr, 10) || 1;
+    const l = parseInt(lStr, 10) || 1;
+    if (l < 5) return `${w}-${l + 1}`;
+    if (w < 6) return `${w + 1}-1`;
+    return null;
+  };
+
+  const nextLevelId = getNextLevelId(levelId);
 
   return (
     <div className="relative w-full h-full min-h-[450px] bg-slate-950 flex items-center justify-center overflow-hidden select-none">
@@ -126,7 +140,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           currentHp={playerHp.current}
           maxHp={playerHp.max}
           coins={coinsCollected}
-          levelTitle="1-1 GREEN FOREST"
+          levelTitle={currentLevelTitle}
           onPauseClick={handlePause}
         />
 
@@ -159,6 +173,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         {gameStatus === 'VICTORY' && (
           <VictoryModal
+            levelTitle={currentLevelTitle}
             coinsCollected={coinsCollected}
             starsEarned={
               (() => {
@@ -167,8 +182,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 return ratio >= 0.8 ? 3 : ratio >= 0.4 ? 2 : 1;
               })()
             }
+            hasNextLevel={Boolean(nextLevelId)}
             onNextLevel={() => {
-              // Level victory next action
+              if (nextLevelId && onSelectNextLevel) {
+                onSelectNextLevel(nextLevelId);
+              } else {
+                onReturnToMainMenu();
+              }
             }}
             onMainMenu={onReturnToMainMenu}
           />

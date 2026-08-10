@@ -87,11 +87,24 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
       </div>
 
       {/* Levels Grid */}
-      {selectedWorld === 1 ? (
+      {selectedWorld ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {ALL_LEVELS_METADATA.map((lvl) => {
+          {ALL_LEVELS_METADATA.filter((lvl) => lvl.worldId === selectedWorld).map((lvl) => {
             const isCompleted = saveData.completedLevels.includes(lvl.id);
-            const isUnlocked = lvl.id === '1-1' || isCompleted;
+            
+            let isUnlocked = lvl.id === '1-1';
+            if (!isUnlocked) {
+              const [wStr, lStr] = lvl.id.split('-');
+              const w = parseInt(wStr, 10);
+              const l = parseInt(lStr, 10);
+              if (l === 1) {
+                isUnlocked = (saveData.unlockedWorlds || [1]).includes(w);
+              } else {
+                const prevLvlId = `${w}-${l - 1}`;
+                isUnlocked = saveData.completedLevels.includes(prevLvlId);
+              }
+            }
+
             const stars = saveData.levelStars[lvl.id] || 0;
 
             return (

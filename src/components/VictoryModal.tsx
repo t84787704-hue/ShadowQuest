@@ -1,24 +1,27 @@
-import React, { useState } from 'react';
-import { Trophy, Star, Home, ArrowRight, Sparkles } from 'lucide-react';
+import React from 'react';
+import { Trophy, Star, Home, ArrowRight } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 
 interface VictoryModalProps {
+  levelTitle?: string;
   coinsCollected: number;
   starsEarned?: number;
+  hasNextLevel?: boolean;
   onNextLevel: () => void;
   onMainMenu: () => void;
 }
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
+  levelTitle,
   coinsCollected,
   starsEarned = 3,
+  hasNextLevel = true,
+  onNextLevel,
   onMainMenu,
 }) => {
-  const [showNextLevelNotice, setShowNextLevelNotice] = useState(false);
-
   const handleNextLevelClick = () => {
     audioEngine.playButtonClick();
-    setShowNextLevelNotice(true);
+    onNextLevel();
   };
 
   return (
@@ -32,7 +35,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           LEVEL COMPLETE!
         </h2>
         <p className="text-xs text-slate-300 font-medium mb-4">
-          World 1-1 Green Forest Conquered!
+          {levelTitle ? `${levelTitle} Conquered!` : 'Level Conquered!'}
         </p>
 
         {/* Dynamic Stars */}
@@ -59,22 +62,16 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           <span className="text-amber-300 font-black text-sm">🪙 +{coinsCollected}</span>
         </div>
 
-        {/* Coming Soon Alert if Next Level Clicked */}
-        {showNextLevelNotice && (
-          <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3 w-full mb-4 text-xs text-sky-300 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 shrink-0 text-sky-400" />
-            <span>Levels 1-2 through 6-5 open in Phase 2 Expansion!</span>
-          </div>
-        )}
-
         <div className="flex flex-col gap-3 w-full">
-          <button
-            onClick={handleNextLevelClick}
-            className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-lg transition"
-          >
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
-            NEXT LEVEL
-          </button>
+          {hasNextLevel && (
+            <button
+              onClick={handleNextLevelClick}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-lg transition"
+            >
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
+              NEXT LEVEL
+            </button>
+          )}
 
           <button
             onClick={() => {

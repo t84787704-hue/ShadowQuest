@@ -130,6 +130,11 @@ export default function App() {
             saveData={saveData}
             levelId={selectedLevelId}
             onSaveUpdate={handleSaveUpdate}
+            onSelectNextLevel={(nextLevelId) => {
+              const freshSave = SaveSystem.load();
+              setSaveData(freshSave);
+              setSelectedLevelId(nextLevelId);
+            }}
             onReturnToMainMenu={() => {
               const freshSave = SaveSystem.load();
               setSaveData(freshSave);
