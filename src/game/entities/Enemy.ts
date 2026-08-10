@@ -9,9 +9,9 @@ export class ForestGoblin extends Entity {
   public hp: number = 50;
   public maxHp: number = 50;
   public attackDamage: number = 8;
-  public moveSpeed: number = 2.0;
-  public detectionRadius: number = 220;
-  public attackRange: number = 36;
+  public moveSpeed: number = 3.5;
+  public detectionRadius: number = 240;
+  public attackRange: number = 42;
   public attackCooldown: number = 0;
   public hitFlashTimer: number = 0;
   public animFrame: number = 0;
@@ -28,6 +28,19 @@ export class ForestGoblin extends Entity {
   public abilityCooldown: number = 2.0;
   public warningTimer: number = 0;
   public warningType: string | null = null;
+
+  // Martial Arts Fighter State & Style
+  public martialStyle: 'STRIKER' | 'BRAWLER' | 'ACROBAT' | 'BALANCED' = 'BALANCED';
+  public combatState: 'IDLE' | 'APPROACH' | 'TELEGRAPH' | 'ATTACK' | 'RECOVERY' | 'RETREAT' | 'DODGE' = 'IDLE';
+  public activeAttack: 'FAST_PUNCH' | 'HEAVY_PUNCH' | 'FRONT_KICK' | 'LOW_KICK' | 'ROUNDHOUSE_KICK' | 'JUMP_KICK' = 'FAST_PUNCH';
+  public attackStateTimer: number = 0;
+  public comboStep: number = 0;
+  public maxComboSteps: number = 1;
+  public retreatTimer: number = 0;
+  public dodgeTimer: number = 0;
+
+  // Shared Multi-Enemy Attack Stagger Cooldown
+  private static groupAttackCooldown: number = 0;
 
   // World 1 (Forest)
   public hasBlockShield: boolean = false;
@@ -76,25 +89,33 @@ export class ForestGoblin extends Entity {
     const w = parseInt(wStr, 10) || 1;
 
     if (isFinalBoss) {
-      this.maxHp = 500; // Final Goblin King
+      this.maxHp = 500;
       this.attackDamage = 10;
-      this.moveSpeed = 1.9;
+      this.moveSpeed = 2.4;
     } else if (isBoss) {
       this.maxHp = 220 + w * 35;
       this.attackDamage = 8 + Math.floor(w * 0.4);
-      this.moveSpeed = 1.8;
+      this.moveSpeed = 2.2;
     } else {
       this.maxHp = 45 + w * 5;
       this.attackDamage = 5 + Math.floor(w * 0.3);
-      this.moveSpeed = 1.9 + (w % 2 === 0 ? 0.3 : 0);
+      // Target enemy move speed: ~90-95% of player speed (3.84)
+      this.moveSpeed = 3.50 + (w % 3) * 0.08;
     }
 
     this.hp = this.maxHp;
-    this.detectionRadius = isBoss ? 340 : 220;
-    this.attackRange = isBoss ? 52 : 36;
+    this.detectionRadius = isBoss ? 340 : 240;
+    this.attackRange = isBoss ? 52 : 42;
 
     this.patrolMinX = x - patrolRange / 2;
     this.patrolMaxX = x + patrolRange / 2;
+
+    // Assign Martial Arts Fighter Style for normal enemies
+    const seed = Math.abs(Math.floor(x * 3 + y * 7)) % 4;
+    if (seed === 0) this.martialStyle = 'STRIKER';
+    else if (seed === 1) this.martialStyle = 'BRAWLER';
+    else if (seed === 2) this.martialStyle = 'ACROBAT';
+    else this.martialStyle = 'BALANCED';
 
     // World 1 Guard Shield Assignment for 50% of regular enemies
     if (w === 1 && !isBoss && Math.floor(x + y) % 2 === 0) {
@@ -112,6 +133,11 @@ export class ForestGoblin extends Entity {
   ) {
     if (!this.isAlive) return;
 
+    // Decrement shared group attack stagger cooldown
+    if (ForestGoblin.groupAttackCooldown > 0) {
+      ForestGoblin.groupAttackCooldown -= dt;
+    }
+
     // Handle Shadow Clone Lifespan
     if (this.isShadowClone) {
       this.cloneLifetime -= dt;
@@ -128,6 +154,8 @@ export class ForestGoblin extends Entity {
     if (this.stoneShieldTimer > 0) this.stoneShieldTimer -= dt;
     if (this.iceShieldTimer > 0) this.iceShieldTimer -= dt;
     if (this.abilityCooldown > 0) this.abilityCooldown -= dt;
+    if (this.retreatTimer > 0) this.retreatTimer -= dt;
+    if (this.dodgeTimer > 0) this.dodgeTimer -= dt;
 
     if (this.dashTimer > 0) {
       this.dashTimer -= dt;
@@ -153,12 +181,12 @@ export class ForestGoblin extends Entity {
       particles.createSlashSparks(this.x + this.width / 2, this.y, true, ['#ef4444', '#f97316']);
     }
 
-    const baseSpeed = this.isRageMode ? this.moveSpeed * 1.35 : this.moveSpeed;
+    const baseSpeed = this.isRageMode ? this.moveSpeed * 1.15 : this.moveSpeed;
     const currentSpeed = this.slowTimer > 0 ? baseSpeed * 0.5 : baseSpeed;
 
     // Animation frames
     this.animTime += dt;
-    if (this.animTime >= 0.1) {
+    if (this.animTime >= 0.08) {
       this.animTime = 0;
       this.animFrame = (this.animFrame + 1) % 4;
     }
@@ -168,16 +196,14 @@ export class ForestGoblin extends Entity {
     const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
     // ------------------------------------
-    // TELEGRAPHED ATTACK EXECUTION CHECK
+    // SPECIAL POWERS WARNING TELEGRAPH
     // ------------------------------------
     if (this.warningTimer > 0) {
       this.warningTimer -= dt;
-      this.vx = 0; // Pause during warning telegraph
+      this.vx = 0;
 
       if (this.warningTimer <= 0) {
-        // Warning finished -> Execute Special Move!
         if (this.warningType === 'SMASH' && projectiles) {
-          // Ground Shockwave
           projectiles.push(
             new BossProjectile({
               x: this.x + (this.facingRight ? this.width : -24),
@@ -196,7 +222,6 @@ export class ForestGoblin extends Entity {
           audioEngine.playCustomSFX('finisher');
           particles.createLandingImpact(this.x + this.width / 2, this.y + this.height, 8);
         } else if (this.warningType === 'SAND_THROW' && projectiles) {
-          // Sand Projectile
           projectiles.push(
             new BossProjectile({
               x: this.x + (this.facingRight ? this.width : -20),
@@ -213,7 +238,6 @@ export class ForestGoblin extends Entity {
           );
           particles.createFloatingText(this.x + this.width / 2, this.y - 10, 'SAND THROW! ⌛', '#f59e0b', 13);
         } else if (this.warningType === 'ICE_BLAST' && projectiles) {
-          // Ice Blast Projectile
           projectiles.push(
             new BossProjectile({
               x: this.x + (this.facingRight ? this.width : -20),
@@ -230,7 +254,6 @@ export class ForestGoblin extends Entity {
           );
           particles.createFloatingText(this.x + this.width / 2, this.y - 10, 'ICE BLAST! ❄️', '#38bdf8', 13);
         } else if (this.warningType === 'SHADOW_STRIKE') {
-          // Heavy Lunge Strike
           this.vx = this.facingRight ? 8.5 : -8.5;
           this.vy = -3;
           if (distToPlayer < 48 && player.isAlive) {
@@ -253,14 +276,119 @@ export class ForestGoblin extends Entity {
     }
 
     // ------------------------------------
-    // WORLD SPECIAL POWER AI TRIGGERS
+    // MARTIAL ARTS COMBAT STATE MACHINE
+    // ------------------------------------
+    if (this.combatState === 'TELEGRAPH') {
+      this.attackStateTimer -= dt;
+      this.vx = 0; // Pause during telegraph pose
+
+      if (this.attackStateTimer <= 0) {
+        // Transition to ATTACK
+        this.combatState = 'ATTACK';
+        this.attackStateTimer = 0.18;
+
+        // Play Martial Arts Vocal / SFX
+        if (this.activeAttack === 'FAST_PUNCH') {
+          audioEngine.playPunch('light');
+        } else if (this.activeAttack === 'HEAVY_PUNCH') {
+          audioEngine.playPunch('heavy');
+        } else if (this.activeAttack === 'FRONT_KICK' || this.activeAttack === 'LOW_KICK') {
+          audioEngine.playKick();
+        } else if (this.activeAttack === 'ROUNDHOUSE_KICK') {
+          audioEngine.playSpinKick();
+        } else if (this.activeAttack === 'JUMP_KICK') {
+          audioEngine.playJumpKick();
+          if (this.isGrounded) {
+            this.vy = -5.5; // Mid-air leap for jump kick
+          }
+        }
+
+        // Check Hit Range against Player
+        const strikeRange = this.activeAttack === 'JUMP_KICK' ? 52 : 46;
+        if (distToPlayer <= strikeRange && player.isAlive) {
+          const hitDamage = this.activeAttack === 'HEAVY_PUNCH' || this.activeAttack === 'ROUNDHOUSE_KICK' ? 9 : 6;
+          player.takeDamage(hitDamage, particles);
+          audioEngine.playHitImpact('enemy', this.activeAttack);
+
+          // Impact Particles
+          const impactX = this.x + (this.facingRight ? this.width + 10 : -10);
+          particles.createSlashSparks(impactX, this.y + 12, this.facingRight, ['#f59e0b', '#ef4444']);
+        }
+      }
+
+      this.applyPhysics(tileMap);
+      return;
+    }
+
+    if (this.combatState === 'ATTACK') {
+      this.attackStateTimer -= dt;
+
+      if (this.attackStateTimer <= 0) {
+        // Combo Check
+        if (this.comboStep < this.maxComboSteps) {
+          this.comboStep++;
+          // Pick next combo strike
+          this.activeAttack = this.comboStep % 2 === 0 ? 'ROUNDHOUSE_KICK' : 'HEAVY_PUNCH';
+          this.combatState = 'ATTACK';
+          this.attackStateTimer = 0.16;
+
+          audioEngine.playKick();
+          if (distToPlayer <= 48 && player.isAlive) {
+            player.takeDamage(7, particles);
+            audioEngine.playHitImpact('enemy', 'KICK');
+          }
+        } else {
+          // Finished attack / combo sequence
+          this.combatState = 'RECOVERY';
+          this.attackStateTimer = 0.22;
+          this.attackCooldown = this.isRageMode ? 0.7 : 1.2;
+
+          // 40% Chance to do a tactical backstep retreat
+          if (Math.random() < 0.4) {
+            this.retreatTimer = 0.28;
+          }
+
+          // Set shared group attack cooldown so other surrounding enemies take turns
+          ForestGoblin.groupAttackCooldown = 0.32;
+        }
+      }
+
+      this.applyPhysics(tileMap);
+      return;
+    }
+
+    if (this.combatState === 'RECOVERY') {
+      this.attackStateTimer -= dt;
+      if (this.attackStateTimer <= 0) {
+        this.combatState = 'IDLE';
+      }
+    }
+
+    // Tactical Retreat / Backstep
+    if (this.retreatTimer > 0) {
+      this.vx = this.facingRight ? -currentSpeed * 0.9 : currentSpeed * 0.9;
+      this.applyPhysics(tileMap);
+      return;
+    }
+
+    // Defensive Dodge Step if Player Attacks nearby
+    if (player.state === 'ATTACK' && distToPlayer < 55 && this.isGrounded && Math.random() < 0.3 && this.dodgeTimer <= 0) {
+      this.dodgeTimer = 0.22;
+      this.vy = -3.5;
+      this.vx = dx > 0 ? -currentSpeed * 1.5 : currentSpeed * 1.5;
+      particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'DODGE! ⚡', '#38bdf8', 12);
+      this.applyPhysics(tileMap);
+      return;
+    }
+
+    // ------------------------------------
+    // WORLD SPECIAL POWERS (SECONDARY MOVES)
     // ------------------------------------
     if (distToPlayer <= this.detectionRadius && player.isAlive) {
       this.facingRight = dx > 0;
 
       if (this.abilityCooldown <= 0) {
         if (w === 1) {
-          // World 1: Fast Dash or Quick Leap
           if (distToPlayer > 80 && distToPlayer < 180 && Math.random() < 0.5) {
             this.isDashing = true;
             this.dashTimer = 0.38;
@@ -268,12 +396,11 @@ export class ForestGoblin extends Entity {
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'DASH! 💨', '#4ade80', 13);
           } else if (distToPlayer > 70 && distToPlayer < 150 && this.isGrounded) {
             this.vy = -7.5;
-            this.vx = this.facingRight ? currentSpeed * 2.6 : -currentSpeed * 2.6;
+            this.vx = this.facingRight ? currentSpeed * 1.8 : -currentSpeed * 1.8;
             this.abilityCooldown = 4.5;
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'LEAP! 🦅', '#22c55e', 13);
           }
         } else if (w === 2) {
-          // World 2: Stone Shield or Ground Smash
           if (distToPlayer < 120 && this.stoneShieldTimer <= 0 && Math.random() < 0.45) {
             this.stoneShieldTimer = 3.2;
             this.abilityCooldown = 5.5;
@@ -284,53 +411,43 @@ export class ForestGoblin extends Entity {
             particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SMASH! ⚠️', '#f97316', 14);
           }
         } else if (w === 3) {
-          // World 3: Sand Dash, Sand Throw, or Burrow
           const roll = Math.random();
           if (roll < 0.35 && distToPlayer < 100) {
-            // Sand Dash behind player
             this.isSandDashing = true;
             this.x = player.x + (this.facingRight ? -50 : 50);
             this.abilityCooldown = 4.5;
             particles.createSlashSparks(this.x, this.y, true, ['#f59e0b', '#d97706']);
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'SAND DASH! ⏳', '#f59e0b', 13);
           } else if (roll < 0.7 && distToPlayer < 110) {
-            // Sand Throw Telegraph
             this.warningTimer = 0.4;
             this.warningType = 'SAND_THROW';
             particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SAND PREP! ⏳', '#f59e0b', 13);
           } else if (this.isGrounded) {
-            // Burrow Underground
             this.isBurrowed = true;
             this.burrowTimer = 1.2;
             this.abilityCooldown = 6.5;
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'BURROW! 🌪️', '#d97706', 13);
           }
         } else if (w === 4) {
-          // World 4: Ice Blast, Flying Leap, or Ice Shield
           const roll = Math.random();
           if (roll < 0.4) {
-            // Ice Blast Telegraph
             this.warningTimer = 0.5;
             this.warningType = 'ICE_BLAST';
             particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'ICE CHARGE! ❄️', '#38bdf8', 14);
           } else if (roll < 0.75 && this.isGrounded) {
-            // Flying Flip Leap over player
             this.vy = -10.5;
             this.vx = this.facingRight ? 6.5 : -6.5;
             this.abilityCooldown = 4.5;
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'FLIP LEAP! 🦅', '#38bdf8', 13);
           } else {
-            // Ice Shield
             this.iceShieldHits = 2;
             this.iceShieldTimer = 3.0;
             this.abilityCooldown = 6.5;
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'ICE SHIELD! 🧊', '#0ea5e9', 13);
           }
         } else if (w === 5) {
-          // World 5: Shadow Clone, Teleport Dash, or Shadow Strike
           const roll = Math.random();
           if (roll < 0.35 && goblins && goblins.length < 12) {
-            // Shadow Clone
             const clone = new ForestGoblin(this.x + (this.facingRight ? 36 : -36), this.y, 100, false, this.levelId);
             clone.isShadowClone = true;
             clone.maxHp = 15;
@@ -339,19 +456,16 @@ export class ForestGoblin extends Entity {
             this.abilityCooldown = 7.0;
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'SHADOW CLONE! 👥', '#c084fc', 13);
           } else if (roll < 0.7) {
-            // Teleport Void Dash
             this.x = player.x + (this.facingRight ? -60 : 60);
             this.abilityCooldown = 4.0;
             particles.createSlashSparks(this.x, this.y, true, ['#c084fc', '#3b0764']);
             particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'VOID DASH! 🔮', '#c084fc', 13);
           } else {
-            // Shadow Strike Telegraph
             this.warningTimer = 0.7;
             this.warningType = 'SHADOW_STRIKE';
             particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SHADOW CHARGE! 🔮', '#c084fc', 14);
           }
         } else if (w === 6) {
-          // World 6: Combined Elite Moves
           const roll = Math.random();
           if (roll < 0.4 && this.isGrounded) {
             this.warningTimer = 0.45;
@@ -378,32 +492,87 @@ export class ForestGoblin extends Entity {
         }
         if (this.burrowTimer <= 0 || distToPlayer < 24) {
           this.isBurrowed = false;
-          this.vy = -6.5; // Pop up!
+          this.vy = -6.5;
           if (distToPlayer < 36 && player.isAlive) {
             player.takeDamage(6, particles);
           }
           particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'BURROW POP! 🌪️', '#d97706', 14);
         }
-      } else if (distToPlayer > this.attackRange) {
-        // Normal Pursuit
-        const speedMultiplier = this.isDashing ? 3.2 : 1.0;
-        this.vx = (this.facingRight ? currentSpeed : -currentSpeed) * speedMultiplier;
       } else {
-        // Attack Range reached
-        this.vx = 0;
-        if (this.attackCooldown <= 0) {
-          const attackSpeed = this.isRageMode ? 0.8 : 1.2;
-          this.attackCooldown = attackSpeed;
-          player.takeDamage(this.attackDamage, particles);
+        // Multi-Enemy Repositioning & Coordinated Pursuit
+        let targetX = player.x;
 
-          // World 6 Combo Strike
-          if (w === 6 && Math.random() < 0.5) {
-            setTimeout(() => {
-              if (this.isAlive && player.isAlive && this.intersects(player)) {
-                player.takeDamage(Math.round(this.attackDamage * 0.8), particles);
-                particles.createFloatingText(player.x, player.y - 10, 'COMBO STRIKE!', '#ef4444', 14);
+        // Group Positioning Check
+        if (goblins && goblins.length > 1) {
+          const livingGoblins = goblins.filter((g) => g.isAlive && !g.isBoss);
+          const myIndex = livingGoblins.indexOf(this);
+          if (myIndex >= 0) {
+            if (myIndex === 0) {
+              targetX = player.x; // Primary attacker
+            } else if (myIndex === 1) {
+              targetX = player.x + (dx > 0 ? -52 : 52); // Opposite side flanker
+            } else if (myIndex === 2) {
+              targetX = player.x + (dx > 0 ? 68 : -68); // Secondary side flanker
+            } else {
+              targetX = player.x + (myIndex % 2 === 0 ? -90 : 90); // Waiting secondary line
+            }
+          }
+        }
+
+        const dxTarget = targetX - this.x;
+        const distToTargetX = Math.abs(dxTarget);
+
+        if (distToPlayer > this.attackRange || distToTargetX > 15) {
+          // Rapid pursuit toward target position
+          const speedMult = this.isDashing ? 2.4 : 1.0;
+          this.vx = (dxTarget > 0 ? currentSpeed : -currentSpeed) * speedMult;
+
+          // Auto-jump over obstacles
+          if (this.isGrounded && this.isSolidTileAtPixel(tileMap, this.x + (this.facingRight ? 36 : -8), this.y + 20)) {
+            this.vy = -8.2;
+          }
+        } else {
+          // Within Martial Arts Strike Distance
+          this.vx = 0;
+
+          // Check if this enemy can initiate an attack
+          if (this.attackCooldown <= 0 && ForestGoblin.groupAttackCooldown <= 0 && this.combatState === 'IDLE') {
+            // Initiate Martial Arts Attack Sequence
+            this.combatState = 'TELEGRAPH';
+            this.attackStateTimer = 0.16; // Clear readable telegraph window
+            ForestGoblin.groupAttackCooldown = 0.30; // Stagger group attack timer
+
+            // Select Attack based on Fighter Style
+            if (this.martialStyle === 'STRIKER') {
+              const roll = Math.random();
+              if (roll < 0.45) this.activeAttack = 'FAST_PUNCH';
+              else if (roll < 0.8) this.activeAttack = 'LOW_KICK';
+              else {
+                this.activeAttack = 'FAST_PUNCH';
+                this.comboStep = 1;
+                this.maxComboSteps = 2;
               }
-            }, 220);
+            } else if (this.martialStyle === 'BRAWLER') {
+              const roll = Math.random();
+              if (roll < 0.4) this.activeAttack = 'HEAVY_PUNCH';
+              else if (roll < 0.8) this.activeAttack = 'ROUNDHOUSE_KICK';
+              else this.activeAttack = 'FAST_PUNCH';
+              this.maxComboSteps = 1;
+            } else if (this.martialStyle === 'ACROBAT') {
+              const roll = Math.random();
+              if (roll < 0.4) this.activeAttack = 'JUMP_KICK';
+              else if (roll < 0.75) this.activeAttack = 'FRONT_KICK';
+              else this.activeAttack = 'ROUNDHOUSE_KICK';
+              this.maxComboSteps = 1;
+            } else {
+              // BALANCED
+              const roll = Math.random();
+              if (roll < 0.25) this.activeAttack = 'FAST_PUNCH';
+              else if (roll < 0.5) this.activeAttack = 'HEAVY_PUNCH';
+              else if (roll < 0.75) this.activeAttack = 'FRONT_KICK';
+              else this.activeAttack = 'LOW_KICK';
+              this.maxComboSteps = 1;
+            }
           }
         }
       }
@@ -421,7 +590,6 @@ export class ForestGoblin extends Entity {
 
     this.applyPhysics(tileMap);
 
-    // Hazard Pit check
     if (this.y > tileMap.heightInPixels + 100) {
       this.isAlive = false;
     }
@@ -433,28 +601,33 @@ export class ForestGoblin extends Entity {
     tileMap.resolveEntityCollision(this);
   }
 
+  private isSolidTileAtPixel(tileMap: TileMap, px: number, py: number): boolean {
+    const tile = tileMap.getTileAtPixel(px, py);
+    return tileMap.isSolidTile(tile);
+  }
+
   public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
     if (!this.isAlive) return false;
 
-    // 1. Guard Block Check
+    // Guard Block Check
     if (this.hasBlockShield) {
       this.hasBlockShield = false;
       audioEngine.playEnemyHit(attackType);
       particles.createSlashSparks(this.x + this.width / 2, this.y + 10, this.facingRight, ['#e2e8f0', '#94a3b8']);
       particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'BLOCK! 🛡️', '#e2e8f0', 15);
-      return true; // Attack absorbed
+      return true;
     }
 
-    // 2. Ice Shield Check
+    // Ice Shield Check
     if (this.iceShieldHits > 0 && this.iceShieldTimer > 0) {
       this.iceShieldHits--;
       audioEngine.playEnemyHit(attackType);
       particles.createSlashSparks(this.x + this.width / 2, this.y + 10, this.facingRight, ['#38bdf8', '#0ea5e9']);
       particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'ICE SHIELD! 🧊', '#38bdf8', 14);
-      return true; // Attack absorbed
+      return true;
     }
 
-    // 3. Stone Shield Damage Reduction (60% reduction)
+    // Stone Shield Damage Reduction
     if (this.stoneShieldTimer > 0) {
       damage = Math.max(1, Math.round(damage * 0.4));
       particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'STONE SHIELD! 🪨', '#94a3b8', 13);
@@ -464,6 +637,12 @@ export class ForestGoblin extends Entity {
     this.hitFlashTimer = 0.2;
     this.vy = -3;
     this.vx = this.facingRight ? -4 : 4; // Knockback
+
+    // Interrupt attack if hit during telegraph/attack
+    if (this.combatState === 'TELEGRAPH' || this.combatState === 'ATTACK') {
+      this.combatState = 'RECOVERY';
+      this.attackStateTimer = 0.25;
+    }
 
     audioEngine.playEnemyHit(attackType);
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
@@ -489,12 +668,10 @@ export class ForestGoblin extends Entity {
     const px = Math.round(this.x - offsetX);
     const py = Math.round(this.y - offsetY);
 
-    // If Shadow Clone, translucent render
     if (this.isShadowClone) {
       ctx.globalAlpha = 0.55;
     }
 
-    // If Burrowed, render sand mound moving along floor
     if (this.isBurrowed) {
       ctx.save();
       ctx.fillStyle = '#d97706';
@@ -508,14 +685,12 @@ export class ForestGoblin extends Entity {
     }
 
     ctx.save();
-    // Anchor at feet center for ground alignment
     ctx.translate(px + this.width / 2, py + this.height);
 
     const baseScale = this.isBoss ? 1.85 : 1.25;
     const scaleX = this.facingRight ? baseScale : -baseScale;
     ctx.scale(scaleX, baseScale);
 
-    const isAttacking = this.attackCooldown > 0.9;
     const isHit = this.hitFlashTimer > 0;
     const isMoving = Math.abs(this.vx) > 0.1;
     const walkCycle = isMoving ? Math.sin(this.animFrame * 1.2) : 0;
@@ -557,26 +732,26 @@ export class ForestGoblin extends Entity {
       ctx.stroke();
     }
 
-    // Render World-Specific Visuals
+    // Render World Martial Artist Body
     switch (w) {
       case 2:
-        this.renderDesertRaider(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderDesertRaider(ctx, bob, walkCycle, isHit);
         break;
       case 3:
-        this.renderIceStalker(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderIceStalker(ctx, bob, walkCycle, isHit);
         break;
       case 4:
-        this.renderVolcanicBrute(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderVolcanicBrute(ctx, bob, walkCycle, isHit);
         break;
       case 5:
-        this.renderShadowWraith(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderShadowWraith(ctx, bob, walkCycle, isHit);
         break;
       case 6:
-        this.renderCitadelWarlord(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderCitadelWarlord(ctx, bob, walkCycle, isHit);
         break;
       case 1:
       default:
-        this.renderForestGoblinWarrior(ctx, bob, walkCycle, isAttacking, isHit);
+        this.renderForestGoblinWarrior(ctx, bob, walkCycle, isHit);
         break;
     }
 
@@ -615,52 +790,187 @@ export class ForestGoblin extends Entity {
     ctx.globalAlpha = 1.0;
   }
 
+  // =========================================================
+  // MARTIAL ARTS LIMBS & ATTACK POSES RENDERER HELPER
+  // =========================================================
+  private renderMartialArtsLimbs(
+    ctx: CanvasRenderingContext2D,
+    bob: number,
+    skinColor: string,
+    gloveColor: string,
+    wrapColor: string
+  ) {
+    const state = this.combatState;
+    const atk = this.activeAttack;
+
+    // Telegraph Charge Spark
+    if (state === 'TELEGRAPH') {
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(atk.includes('KICK') ? 14 : 12, -22 + bob, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(atk.includes('KICK') ? 14 : 12, -22 + bob, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 1. PUNCH POSES (FAST_PUNCH / HEAVY_PUNCH)
+    if (state === 'ATTACK' && (atk === 'FAST_PUNCH' || atk === 'HEAVY_PUNCH')) {
+      const isHeavy = atk === 'HEAVY_PUNCH';
+      const reach = isHeavy ? 22 : 16;
+
+      // Extended Lead Arm (Punching Arm)
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(4, -20 + bob, reach, 5);
+
+      // Taped Wrist & Glove
+      ctx.fillStyle = wrapColor;
+      ctx.fillRect(4 + reach - 6, -21 + bob, 5, 7);
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(4 + reach, -22 + bob, 7, 8); // Fist
+
+      // Punch Impact Arc
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(4 + reach + 3, -18 + bob, 10, -0.6, 0.6);
+      ctx.stroke();
+
+      // Rear Arm Guarding Face
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(-6, -22 + bob, 5, 6);
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(-8, -23 + bob, 5, 5);
+      return;
+    }
+
+    // 2. FRONT KICK / LOW KICK POSES
+    if (state === 'ATTACK' && (atk === 'FRONT_KICK' || atk === 'LOW_KICK')) {
+      const isLow = atk === 'LOW_KICK';
+      const kickY = isLow ? -6 : -18;
+      const kickX = 20;
+
+      // Kicking Leg
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(2, kickY + bob, kickX, 6);
+
+      // Boot / Foot Strike
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(2 + kickX, kickY - 1 + bob, 7, 8);
+
+      // Kick Sweep Trail
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(2 + kickX, kickY + 3 + bob, 12, -0.7, 0.7);
+      ctx.stroke();
+
+      // Guard Fists
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(-2, -22 + bob, 5, 5);
+      ctx.fillRect(4, -20 + bob, 5, 5);
+      return;
+    }
+
+    // 3. ROUNDHOUSE KICK POSE
+    if (state === 'ATTACK' && atk === 'ROUNDHOUSE_KICK') {
+      // High Arc Crescent Kick
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(0, -26 + bob, 22, 6);
+
+      // Foot
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(20, -28 + bob, 8, 8);
+
+      // Spinning Crescent Arc
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.9)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(12, -24 + bob, 18, -1.2, 0.8);
+      ctx.stroke();
+
+      // Guard Fists
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(-6, -20 + bob, 5, 5);
+      return;
+    }
+
+    // 4. JUMP KICK POSE
+    if (state === 'ATTACK' && atk === 'JUMP_KICK') {
+      // Airborne Diagonal Kick
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(4, -14 + bob, 22, 6);
+
+      ctx.fillStyle = gloveColor;
+      ctx.fillRect(24, -15 + bob, 8, 8);
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(20, -12 + bob, 14, -0.6, 0.6);
+      ctx.stroke();
+      return;
+    }
+
+    // DEFAULT: MARTIAL ARTS GUARD STANCE
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(-3, -20 + bob, 5, 5); // Rear arm
+    ctx.fillRect(3, -18 + bob, 5, 5);  // Lead arm
+
+    // Fingerless Gloves / Fists
+    ctx.fillStyle = wrapColor;
+    ctx.fillRect(-4, -21 + bob, 4, 4);
+    ctx.fillRect(5, -19 + bob, 4, 4);
+
+    ctx.fillStyle = gloveColor;
+    ctx.fillRect(-5, -22 + bob, 5, 5);
+    ctx.fillRect(6, -20 + bob, 5, 5);
+  }
+
   // ==========================================
-  // WORLD 1 — FOREST: HUMAN FOREST ROGUE
+  // WORLD 1 — FOREST: HUMAN FOREST ROGUE MARTIAL ARTIST
   // ==========================================
   private renderForestGoblinWarrior(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#fed7aa'; // Human skin tone
-    const hair = hit ? '#ffffff' : '#27272a'; // Dark hair
-    const vest = hit ? '#ffffff' : '#15803d'; // Forest green tactical vest
-    const shirt = hit ? '#ffffff' : '#78350f'; // Tan inner shirt
-    const steel = hit ? '#ffffff' : '#94a3b8'; // Steel blade
+    const skin = hit ? '#ffffff' : '#fed7aa';
+    const hair = hit ? '#ffffff' : '#27272a';
+    const vest = hit ? '#ffffff' : '#15803d';
+    const shirt = hit ? '#ffffff' : '#78350f';
 
-    // Human Head & Face
+    // Head & Face
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(0, -28 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Human Messy Hair & Headband
+    // Hair & Headband
     ctx.fillStyle = hair;
     ctx.beginPath();
     ctx.arc(0, -31 + bob, 12, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Red Headband Stripe
-    ctx.fillStyle = '#dc2626';
+    ctx.fillStyle = '#dc2626'; // Red Headband
     ctx.fillRect(-10, -32 + bob, 20, 3);
 
-    // Human Face Details (Eyes, Nose, Brow)
-    ctx.fillStyle = '#0f172a'; // Eye
+    // Face Details
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(3, -29 + bob, 3, 3);
-    ctx.fillStyle = '#9a3412'; // Mouth/Stubble
+    ctx.fillStyle = '#9a3412';
     ctx.fillRect(2, -22 + bob, 4, 1.5);
 
-    // Human Neck & Torso (Inner Shirt + Forest Vest)
+    // Neck & Torso
     ctx.fillStyle = skin;
-    ctx.fillRect(-3, -19 + bob, 6, 3); // Neck
+    ctx.fillRect(-3, -19 + bob, 6, 3);
 
     ctx.fillStyle = shirt;
-    ctx.fillRect(-8, -16 + bob, 16, 12); // Inner shirt
+    ctx.fillRect(-8, -16 + bob, 16, 12);
 
-    ctx.fillStyle = vest; // Green Vest Lapels
+    ctx.fillStyle = vest;
     ctx.fillRect(-9, -16 + bob, 4, 12);
     ctx.fillRect(5, -16 + bob, 4, 12);
 
@@ -670,66 +980,31 @@ export class ForestGoblin extends Entity {
     ctx.fillStyle = '#f59e0b';
     ctx.fillRect(-2, -5 + bob, 4, 3);
 
-    // Human Trousers & Boots
+    // Trousers & Boots
     ctx.fillStyle = '#3f3f46';
     ctx.fillRect(-7 + walk * 4, -4, 6, 6);
     ctx.fillRect(1 - walk * 4, -4, 6, 6);
 
-    ctx.fillStyle = '#27272a'; // Boots
+    ctx.fillStyle = '#27272a';
     ctx.fillRect(-8 + walk * 4, -1, 7, 3);
     ctx.fillRect(1 - walk * 4, -1, 7, 3);
 
-    // Weapon Arm (Human Fighter Dagger)
-    ctx.save();
-    ctx.translate(5, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-0.9);
-    } else {
-      ctx.rotate(0.2);
-    }
-
-    ctx.fillStyle = skin; // Human Arm
-    ctx.fillRect(-2, -2, 6, 5);
-
-    ctx.fillStyle = '#451a03'; // Handle
-    ctx.fillRect(4, -2, 4, 3);
-
-    // Steel Dagger Blade
-    ctx.fillStyle = steel;
-    ctx.beginPath();
-    ctx.moveTo(8, -3);
-    ctx.lineTo(20, -1);
-    ctx.lineTo(24, 0); // Tip
-    ctx.lineTo(20, 2);
-    ctx.lineTo(8, 3);
-    ctx.closePath();
-    ctx.fill();
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(12, 0, 18, -0.6, 0.6);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#dc2626', '#fef08a');
   }
 
   // ==========================================
-  // WORLD 2 — DESERT: HUMAN DESERT RAIDER
+  // WORLD 2 — DESERT: HUMAN DESERT RAIDER MARTIAL ARTIST
   // ==========================================
   private renderDesertRaider(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#e0a96d'; // Bronze human skin tone
-    const wrap = hit ? '#ffffff' : '#d97706'; // Desert tunic wrap
-    const scarf = hit ? '#ffffff' : '#78350f'; // Dark brown scarf
-    const steel = hit ? '#ffffff' : '#f1f5f9'; // Scimitar steel
+    const skin = hit ? '#ffffff' : '#e0a96d';
+    const wrap = hit ? '#ffffff' : '#d97706';
+    const scarf = hit ? '#ffffff' : '#78350f';
 
     // Head
     ctx.fillStyle = skin;
@@ -743,15 +1018,12 @@ export class ForestGoblin extends Entity {
     ctx.arc(0, -30 + bob, 12, Math.PI * 0.8, Math.PI * 2.2);
     ctx.fill();
 
-    // Dark Human Hair Bangs
     ctx.fillStyle = '#1c1917';
     ctx.fillRect(-4, -33 + bob, 8, 3);
 
-    // Human Eyes
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(3, -29 + bob, 3, 3);
 
-    // Face Scarf / Draped Cloth
     ctx.fillStyle = scarf;
     ctx.fillRect(-6, -24 + bob, 12, 6);
 
@@ -766,55 +1038,22 @@ export class ForestGoblin extends Entity {
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Curved Scimitar
-    ctx.save();
-    ctx.translate(6, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-1.1);
-    } else {
-      ctx.rotate(0.3);
-    }
-
-    ctx.fillStyle = skin;
-    ctx.fillRect(-2, -2, 5, 4);
-
-    ctx.fillStyle = '#78350f'; // Hilt
-    ctx.fillRect(3, -2, 3, 4);
-
-    // Steel Blade
-    ctx.fillStyle = steel;
-    ctx.beginPath();
-    ctx.moveTo(6, -2);
-    ctx.quadraticCurveTo(16, -10, 26, -4);
-    ctx.quadraticCurveTo(18, 2, 6, 3);
-    ctx.closePath();
-    ctx.fill();
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(14, -4, 22, -0.8, 0.8);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#78350f', '#f59e0b');
   }
 
   // ==========================================
-  // WORLD 3 — ICE: HUMAN WINTER MERCENARY
+  // WORLD 3 — ICE: HUMAN WINTER MERCENARY MARTIAL ARTIST
   // ==========================================
   private renderIceStalker(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#ffedd5'; // Fair human skin tone
-    const coat = hit ? '#ffffff' : '#0284c7'; // Blue winter parka
-    const fur = hit ? '#ffffff' : '#f8fafc'; // White fur trim
-    const steel = hit ? '#ffffff' : '#e2e8f0';
+    const skin = hit ? '#ffffff' : '#ffedd5';
+    const coat = hit ? '#ffffff' : '#0284c7';
+    const fur = hit ? '#ffffff' : '#f8fafc';
 
     // Hooded Head
     ctx.fillStyle = coat;
@@ -822,301 +1061,176 @@ export class ForestGoblin extends Entity {
     ctx.arc(0, -28 + bob, 13, 0, Math.PI * 2);
     ctx.fill();
 
-    // Fur Hood Trim around Face
     ctx.fillStyle = fur;
     ctx.beginPath();
     ctx.arc(0, -28 + bob, 13, -Math.PI / 3, Math.PI / 3);
     ctx.lineWidth = 3.5;
     ctx.stroke();
 
-    // Human Face
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(1, -28 + bob, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Human Facial Features
-    ctx.fillStyle = '#0f172a'; // Eye
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(3, -29 + bob, 3, 3);
-    ctx.fillStyle = '#3f3f46'; // Beard/stubble
+    ctx.fillStyle = '#3f3f46';
     ctx.fillRect(1, -23 + bob, 6, 2.5);
 
-    // Thick Winter Coat Body
+    // Winter Coat Body
     ctx.fillStyle = coat;
     ctx.fillRect(-9, -18 + bob, 18, 14);
 
-    // White Fur Collar
     ctx.fillStyle = fur;
     ctx.fillRect(-10, -19 + bob, 20, 4);
 
-    // Thermal Pants & Boots
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Ice Hatchet / Axe
-    ctx.save();
-    ctx.translate(6, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-0.9);
-    } else {
-      ctx.rotate(0.2);
-    }
-
-    ctx.fillStyle = '#451a03'; // Wooden handle
-    ctx.fillRect(0, -2, 16, 3);
-
-    ctx.fillStyle = steel; // Axe head
-    ctx.beginPath();
-    ctx.moveTo(12, -8);
-    ctx.lineTo(20, -5);
-    ctx.lineTo(20, 5);
-    ctx.lineTo(12, 8);
-    ctx.closePath();
-    ctx.fill();
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(14, 0, 18, -0.7, 0.7);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#0369a1', '#e0f2fe');
   }
 
   // ==========================================
-  // WORLD 4 — VOLCANO: HUMAN ASH BRAWLER
+  // WORLD 4 — VOLCANO: HUMAN ASH BRAWLER MARTIAL ARTIST
   // ==========================================
   private renderVolcanicBrute(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#d97706'; // Tanned olive human skin
-    const jacket = hit ? '#ffffff' : '#18181b'; // Dark charcoal jacket
-    const accent = hit ? '#ffffff' : '#f97316'; // Orange accent
-    const steel = hit ? '#ffffff' : '#71717a';
+    const skin = hit ? '#ffffff' : '#d97706';
+    const jacket = hit ? '#ffffff' : '#18181b';
+    const accent = hit ? '#ffffff' : '#f97316';
 
-    // Human Head
+    // Head
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(0, -28 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Dark Hair & Tactical Forehead Goggles
     ctx.fillStyle = '#111827';
     ctx.beginPath();
     ctx.arc(0, -31 + bob, 12, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Goggles resting on forehead
+    // Forehead Goggles
     ctx.fillStyle = accent;
     ctx.fillRect(-8, -33 + bob, 16, 4);
     ctx.fillStyle = '#38bdf8';
     ctx.fillRect(-5, -32 + bob, 4, 2);
     ctx.fillRect(1, -32 + bob, 4, 2);
 
-    // Human Eyes & Mouth
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(3, -29 + bob, 3, 3);
     ctx.fillStyle = '#7f1d1d';
     ctx.fillRect(2, -23 + bob, 4, 2);
 
-    // Heat-Resistant Vest
+    // Heat Vest Body
     ctx.fillStyle = jacket;
     ctx.fillRect(-9, -17 + bob, 18, 13);
     ctx.fillStyle = accent;
     ctx.fillRect(-9, -13 + bob, 18, 3);
 
-    // Trousers
     ctx.fillStyle = '#27272a';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Steel Baton / Mace
-    ctx.save();
-    ctx.translate(6, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-1.1);
-    } else {
-      ctx.rotate(0.2);
-    }
-
-    ctx.fillStyle = skin;
-    ctx.fillRect(-2, -2, 5, 4);
-
-    ctx.fillStyle = steel;
-    ctx.fillRect(3, -2, 16, 4);
-    ctx.fillStyle = accent;
-    ctx.fillRect(14, -4, 6, 8); // Flanged head
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(249, 115, 22, 0.9)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(14, 0, 20, -0.8, 0.8);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#c2410c', '#fdba74');
   }
 
   // ==========================================
-  // WORLD 5 — DARK LANDS: HUMAN SHADOW ASSASSIN
+  // WORLD 5 — DARK LANDS: HUMAN SHADOW ASSASSIN MARTIAL ARTIST
   // ==========================================
   private renderShadowWraith(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#ffedd5'; // Pale human skin tone
-    const coat = hit ? '#ffffff' : '#3b0764'; // Midnight purple coat
+    const skin = hit ? '#ffffff' : '#ffedd5';
+    const coat = hit ? '#ffffff' : '#3b0764';
     const accent = hit ? '#ffffff' : '#c084fc';
-    const steel = hit ? '#ffffff' : '#f1f5f9';
 
-    // Human Head & Dark Hair
+    // Head & Hair
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(0, -29 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Slicked Dark Hair
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.arc(0, -32 + bob, 12, Math.PI * 0.9, Math.PI * 2.1);
     ctx.fill();
 
-    // Fierce Human Eyes
     ctx.fillStyle = '#c084fc';
     ctx.fillRect(3, -30 + bob, 3, 3);
 
-    // Assassin Face Bandana / Lower Mask
     ctx.fillStyle = '#1e1b4b';
     ctx.fillRect(-6, -26 + bob, 12, 6);
 
-    // High-Collared Trench Coat Body
+    // Trench Coat Body
     ctx.fillStyle = coat;
     ctx.fillRect(-9, -18 + bob, 18, 14);
 
-    // Collar
     ctx.fillStyle = accent;
     ctx.fillRect(-10, -19 + bob, 4, 6);
     ctx.fillRect(6, -19 + bob, 4, 6);
 
-    // Trousers
     ctx.fillStyle = '#020617';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Tactical Dagger
-    ctx.save();
-    ctx.translate(6, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-1.0);
-    } else {
-      ctx.rotate(0.3);
-    }
-
-    ctx.fillStyle = skin;
-    ctx.fillRect(-2, -2, 5, 4);
-
-    ctx.fillStyle = steel;
-    ctx.beginPath();
-    ctx.moveTo(3, -2);
-    ctx.lineTo(20, 0); // Tip
-    ctx.lineTo(3, 2);
-    ctx.closePath();
-    ctx.fill();
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(192, 132, 252, 0.9)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(14, 0, 20, -0.8, 0.8);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#581c87', '#e9d5ff');
   }
 
   // ==========================================
-  // WORLD 6 — FINAL WORLD: ELITE HUMAN ENFORCER
+  // WORLD 6 — FINAL WORLD: ELITE HUMAN ENFORCER MARTIAL ARTIST
   // ==========================================
   private renderCitadelWarlord(
     ctx: CanvasRenderingContext2D,
     bob: number,
     walk: number,
-    attacking: boolean,
     hit: boolean
   ) {
-    const skin = hit ? '#ffffff' : '#fed7aa'; // Human skin
-    const armor = hit ? '#ffffff' : '#1e293b'; // Slate armor
-    const gold = hit ? '#ffffff' : '#facc15'; // Gold trims
-    const steel = hit ? '#ffffff' : '#e2e8f0';
+    const skin = hit ? '#ffffff' : '#fed7aa';
+    const armor = hit ? '#ffffff' : '#1e293b';
+    const gold = hit ? '#ffffff' : '#facc15';
 
-    // Human Head with Tactical Visor
+    // Head with Tactical Visor
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(0, -29 + bob, 11, 0, Math.PI * 2);
     ctx.fill();
 
-    // Helmet / Cap with Visor
     ctx.fillStyle = armor;
     ctx.beginPath();
     ctx.arc(0, -32 + bob, 12, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Visor covering upper eyes (showing human chin/lips)
-    ctx.fillStyle = '#ef4444'; // Red visor strip
+    ctx.fillStyle = '#ef4444'; // Red visor
     ctx.fillRect(-2, -31 + bob, 10, 3);
 
-    // Human Mouth/Jaw
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(2, -23 + bob, 4, 1.5);
 
-    // Elite Tactical Armor Vest
+    // Elite Armor Vest
     ctx.fillStyle = armor;
     ctx.fillRect(-10, -18 + bob, 20, 14);
     ctx.fillStyle = gold;
     ctx.fillRect(-10, -18 + bob, 3, 14);
     ctx.fillRect(7, -18 + bob, 3, 14);
 
-    // Trousers
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(-7 + walk * 4, -5, 6, 6);
     ctx.fillRect(1 - walk * 4, -5, 6, 6);
 
-    // Energy Baton
-    ctx.save();
-    ctx.translate(6, -12 + bob);
-    if (attacking) {
-      ctx.rotate(-1.1);
-    } else {
-      ctx.rotate(0.2);
-    }
-
-    ctx.fillStyle = skin;
-    ctx.fillRect(-2, -2, 5, 4);
-
-    ctx.fillStyle = steel;
-    ctx.fillRect(3, -2, 18, 4);
-    ctx.fillStyle = gold;
-    ctx.fillRect(18, -3, 3, 6);
-
-    if (attacking && !hit) {
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(14, 0, 22, -0.8, 0.8);
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    // Martial Arts Arms, Legs & Strikes
+    this.renderMartialArtsLimbs(ctx, bob, skin, '#991b1b', '#fef08a');
   }
 }
+
