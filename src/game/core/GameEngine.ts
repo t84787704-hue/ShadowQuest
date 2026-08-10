@@ -1,6 +1,8 @@
 import { GameStateStatus, SaveData, PlayerStats, QuickSaveData } from '../../types/game';
 import { Player } from '../entities/Player';
 import { ForestGoblin } from '../entities/Enemy';
+import { BossMonster } from '../entities/BossMonster';
+import { BossProjectile } from '../entities/BossProjectile';
 import { Coin, HealthPickup } from '../entities/Collectible';
 import { Checkpoint } from '../entities/Checkpoint';
 import { TileMap } from '../world/TileMap';
@@ -20,6 +22,9 @@ export class GameEngine {
 
   public player: Player;
   public goblins: ForestGoblin[] = [];
+  public bossMonster?: BossMonster;
+  public bossProjectiles: BossProjectile[] = [];
+  public isBossLevel: boolean = false;
   public coins: Coin[] = [];
   public healthPickups: HealthPickup[] = [];
   public checkpoints: Checkpoint[] = [];
@@ -152,6 +157,9 @@ export class GameEngine {
   }
 
   private initLevelEntities(qs?: QuickSaveData | null) {
+    this.bossProjectiles = [];
+    this.isBossLevel = this.levelDef.config.isBossLevel || false;
+
     // Populate Goblins
     this.goblins = this.levelDef.goblins.map(
       (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false, this.levelDef.config.id)
@@ -160,6 +168,19 @@ export class GameEngine {
       qs.defeatedEnemyIndices.forEach((idx) => {
         if (this.goblins[idx]) this.goblins[idx].isAlive = false;
       });
+    }
+
+    // Initialize World Boss for Boss Levels (Level 5 of each world)
+    if (this.isBossLevel) {
+      const bossSpawn = this.levelDef.goblins.find((g) => g.isBoss);
+      const bossX = bossSpawn ? bossSpawn.x : this.levelDef.config.width - 700;
+      const bossY = bossSpawn ? bossSpawn.y : 300;
+
+      this.bossMonster = new BossMonster(bossX, bossY, this.levelDef.config.id);
+      // Remove generic boss goblin
+      this.goblins = this.goblins.filter((g) => !g.isBoss);
+    } else {
+      this.bossMonster = undefined;
     }
 
     // Populate Coins
@@ -328,7 +349,7 @@ export class GameEngine {
       return;
     }
 
-    // 2. Sword Attack Collisions (Single-hit per attack swing)
+    // 2. Martial Arts Attack Collisions (Single-hit per attack swing)
     if (this.player.currentAttackId !== this.lastAttackId) {
       this.lastAttackId = this.player.currentAttackId;
       this.hitEnemiesThisAttack.clear();
@@ -336,6 +357,49 @@ export class GameEngine {
 
     const attackHitbox = this.player.getAttackHitbox();
     if (attackHitbox) {
+      // Hit Boss Monster
+      if (this.bossMonster && this.bossMonster.isAlive && !this.hitEnemiesThisAttack.has(this.bossMonster as unknown as ForestGoblin) && this.bossMonster.intersects(attackHitbox)) {
+        this.hitEnemiesThisAttack.add(this.bossMonster as unknown as ForestGoblin);
+
+        const comboMult = this.player.currentComboMultiplier || 1.0;
+        const damage = Math.round(this.player.stats.attackDamage * comboMult);
+
+        this.bossMonster.takeDamage(damage, this.particles);
+        this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
+
+        this.camera.addShake(0.15, 6);
+
+        // Apply weapon stance effects
+        const effect = this.player.equippedWeapon.specialEffect;
+        if (effect === 'ICE_SLOW') {
+          this.bossMonster.slowTimer = 1.8;
+        } else if (effect === 'FLAME_BURN') {
+          this.bossMonster.burnTimer = 1.5;
+        }
+
+        // On Boss Death
+        if (!this.bossMonster.isAlive) {
+          SaveSystem.recordEnemyDefeated(true);
+          // Drop large coin reward
+          for (let c = 0; c < 10; c++) {
+            this.coins.push(
+              new Coin(
+                this.bossMonster.x + Math.random() * 60 - 30,
+                this.bossMonster.y - Math.random() * 30,
+                5
+              )
+            );
+          }
+          const bossCenterX = this.bossMonster.x + this.bossMonster.width / 2;
+          const bossCenterY = this.bossMonster.y + this.bossMonster.height / 2;
+          this.camera.addShake(0.45, 12);
+          this.particles.createBossDefeatExplosion(bossCenterX, bossCenterY);
+          this.particles.createFloatingText(bossCenterX, bossCenterY - 30, '👑 BOSS DEFEATED! PORTAL UNLOCKED!', '#22c55e', 22);
+          audioEngine.playVictory();
+        }
+      }
+
+      // Hit Normal Goblins
       for (const goblin of this.goblins) {
         if (goblin.isAlive && !this.hitEnemiesThisAttack.has(goblin) && goblin.intersects(attackHitbox)) {
           this.hitEnemiesThisAttack.add(goblin);
@@ -403,7 +467,20 @@ export class GameEngine {
       }
     }
 
-    // 3. Checkpoint collision check
+    // 3. Update World Boss & Boss Projectiles
+    if (this.bossMonster && this.bossMonster.isAlive) {
+      this.bossMonster.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles);
+    }
+
+    for (let i = this.bossProjectiles.length - 1; i >= 0; i--) {
+      const proj = this.bossProjectiles[i];
+      proj.update(dt, this.player, this.tileMap, this.particles);
+      if (!proj.isAlive) {
+        this.bossProjectiles.splice(i, 1);
+      }
+    }
+
+    // 4. Checkpoint collision check
     for (const cp of this.checkpoints) {
       const activated = cp.update(dt, this.player, this.particles);
       if (activated) {
@@ -411,14 +488,14 @@ export class GameEngine {
       }
     }
 
-    // 4. Update Goblins
+    // 5. Update Goblins
     for (const goblin of this.goblins) {
       if (goblin.isAlive) {
         goblin.update(dt, this.player, this.tileMap, this.particles);
       }
     }
 
-    // 5. Update Collectibles
+    // 6. Update Collectibles
     for (let i = this.coins.length - 1; i >= 0; i--) {
       const coin = this.coins[i];
       const collected = coin.update(dt, this.player, this.particles);
@@ -441,22 +518,28 @@ export class GameEngine {
       }
     }
 
-    // 6. Check Goal Post (Level Complete)
+    // 7. Check Goal Post (Level Complete)
     const goal = this.levelDef.goalPost;
     if (this.player.intersects(goal) && this.status === 'RUNNING') {
-      this.status = 'VICTORY';
-      audioEngine.playVictory();
-      this.particles.createVictoryConfetti(goal.x + 12, goal.y);
+      if (this.isBossLevel && this.bossMonster && this.bossMonster.isAlive) {
+        // Prevent completing level until Boss is defeated!
+        this.player.vx = this.player.facingRight ? -7 : 7;
+        this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — DEFEAT THE BOSS FIRST!', '#ef4444', 16);
+      } else {
+        this.status = 'VICTORY';
+        audioEngine.playVictory();
+        this.particles.createVictoryConfetti(goal.x + 12, goal.y);
 
-      // Star calculation: 3 = excellent (>=80%), 2 = good (>=40%), 1 = completed
-      const totalPossible = Math.max(1, this.totalCoinsInLevel);
-      const coinRatio = this.collectedCoinsCount / totalPossible;
-      const stars = coinRatio >= 0.8 ? 3 : coinRatio >= 0.4 ? 2 : 1;
+        // Star calculation: 3 = excellent (>=80%), 2 = good (>=40%), 1 = completed
+        const totalPossible = Math.max(1, this.totalCoinsInLevel);
+        const coinRatio = this.collectedCoinsCount / totalPossible;
+        const stars = coinRatio >= 0.8 ? 3 : coinRatio >= 0.4 ? 2 : 1;
 
-      SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
+        SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
 
-      if (this.onStateChangeCallback) {
-        this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
+        if (this.onStateChangeCallback) {
+          this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
+        }
       }
     }
 
@@ -512,6 +595,16 @@ export class GameEngine {
     // 7. Enemies (Goblins)
     for (const goblin of this.goblins) {
       goblin.render(this.ctx, offsetX, offsetY);
+    }
+
+    // World Boss
+    if (this.bossMonster) {
+      this.bossMonster.render(this.ctx, offsetX, offsetY);
+    }
+
+    // Boss Projectiles
+    for (const proj of this.bossProjectiles) {
+      proj.render(this.ctx, offsetX, offsetY);
     }
 
     // 8. Player (Blaze)
@@ -581,26 +674,55 @@ export class GameEngine {
     const py = Math.round(goal.y - offsetY);
 
     const ctx = this.ctx;
+    const isLocked = this.isBossLevel && this.bossMonster && this.bossMonster.isAlive;
 
     // Wooden Flag Pole
     ctx.fillStyle = '#78350f';
     ctx.fillRect(px + 4, py, 6, goal.height);
 
-    // Glowing Victory Banner
-    const wave = Math.sin(Date.now() / 200) * 4;
-    ctx.fillStyle = '#38bdf8'; // Glowing Cyan Flag
-    ctx.beginPath();
-    ctx.moveTo(px + 10, py + 4);
-    ctx.lineTo(px + 38 + wave, py + 14);
-    ctx.lineTo(px + 10, py + 26);
-    ctx.closePath();
-    ctx.fill();
+    if (isLocked) {
+      // Locked Red Energy Gate
+      const pulse = Math.sin(Date.now() / 150) * 0.2 + 0.8;
+      ctx.fillStyle = `rgba(239, 68, 68, ${0.4 * pulse})`;
+      ctx.beginPath();
+      ctx.ellipse(px + 7, py + goal.height / 2, 24, 38, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Golden Crest Symbol
-    ctx.fillStyle = '#fef08a';
-    ctx.beginPath();
-    ctx.arc(px + 20, py + 14, 4, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Red Warning Flag
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(px + 10, py + 4);
+      ctx.lineTo(px + 36, py + 14);
+      ctx.lineTo(px + 10, py + 26);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lock Emblem
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔒', px + 7, py - 6);
+    } else {
+      // Glowing Victory Banner
+      const wave = Math.sin(Date.now() / 200) * 4;
+      ctx.fillStyle = '#38bdf8'; // Glowing Cyan Flag
+      ctx.beginPath();
+      ctx.moveTo(px + 10, py + 4);
+      ctx.lineTo(px + 38 + wave, py + 14);
+      ctx.lineTo(px + 10, py + 26);
+      ctx.closePath();
+      ctx.fill();
+
+      // Golden Crest Symbol
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(px + 20, py + 14, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Base Pedestal
     ctx.fillStyle = '#475569';

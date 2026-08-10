@@ -4,6 +4,7 @@ import { GameEngine } from '../game/core/GameEngine';
 import { GameStateStatus, SaveData } from '../types/game';
 import { HUD } from './HUD';
 import { ComboOverlay } from './ComboOverlay';
+import { BossHUD } from './BossHUD';
 import { MobileControls } from './MobileControls';
 import { PauseModal } from './PauseModal';
 import { GameOverModal } from './GameOverModal';
@@ -42,6 +43,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     timer: 0,
     maxTimer: 2.5,
   });
+  const [bossData, setBossData] = useState<{
+    bossName: string;
+    worldId: number;
+    hp: number;
+    maxHp: number;
+    phase: number;
+    maxPhases: number;
+    state: string;
+    isTriggered: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,6 +98,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           timer: engineRef.current.comboTimer,
           maxTimer: engineRef.current.maxComboTimer,
         });
+
+        if (engineRef.current.bossMonster) {
+          const b = engineRef.current.bossMonster;
+          setBossData({
+            bossName: b.bossName,
+            worldId: b.worldId,
+            hp: b.hp,
+            maxHp: b.maxHp,
+            phase: b.currentPhase,
+            maxPhases: b.maxPhases,
+            state: b.state,
+            isTriggered: b.isTriggered,
+          });
+        } else {
+          setBossData(null);
+        }
       }
     }, 50);
 
@@ -186,6 +213,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
           onPauseClick={handlePause}
         />
+
+        {/* Boss Health Bar HUD */}
+        {bossData && (
+          <BossHUD
+            bossName={bossData.bossName}
+            worldId={bossData.worldId}
+            hp={bossData.hp}
+            maxHp={bossData.maxHp}
+            phase={bossData.phase}
+            maxPhases={bossData.maxPhases}
+            state={bossData.state}
+            isTriggered={bossData.isTriggered}
+          />
+        )}
 
         {/* Combat Combo Overlay */}
         <ComboOverlay
