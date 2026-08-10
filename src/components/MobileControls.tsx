@@ -63,11 +63,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     if (normY < upThreshold) {
       if (!upTriggeredRef.current) {
         upTriggeredRef.current = true;
-        inputManager.setTouchState('jump', true);
-        window.setTimeout(() => {
-          inputManager.setTouchState('jump', false);
-        }, 60);
       }
+      inputManager.setTouchState('jump', true);
     } else if (normY >= upThreshold + 0.18) {
       // Returned toward center/neutral: re-arm jump trigger
       upTriggeredRef.current = false;

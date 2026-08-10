@@ -26,10 +26,11 @@ export class Player extends Entity {
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
   private jumpBufferTimer: number = 0;
+  private isJumpConsumed: boolean = false;
 
   // Constants
-  private readonly GRAVITY = 0.52;
-  private readonly TERMINAL_VELOCITY = 12;
+  private readonly GRAVITY = 0.65;
+  private readonly TERMINAL_VELOCITY = 13;
 
   public currentAttackId: number = 0;
 
@@ -43,7 +44,7 @@ export class Player extends Entity {
       currentHp: 100 + (statsBonus?.maxHp || 0),
       attackDamage: this.equippedWeapon.baseDamage + (statsBonus?.attackDamage || 0),
       moveSpeed: 4.8 + (statsBonus?.moveSpeed || 0), // Quick and agile
-      jumpForce: 12.0 + (statsBonus?.jumpForce || 0),
+      jumpForce: 17.0 + (statsBonus?.jumpForce || 0),
       attackCooldownMs: 120, // Fast base combo window
     };
   }
@@ -92,8 +93,13 @@ export class Player extends Entity {
       this.coyoteTimer -= dt;
     }
 
+    // Re-arm jump when jump input is released
+    if (!input.jump) {
+      this.isJumpConsumed = false;
+    }
+
     // Jump buffering tracking (remembers jump press right before landing)
-    if (input.jump) {
+    if (input.jump && !this.isJumpConsumed) {
       this.jumpBufferTimer = 0.14; // 140ms jump buffer window
     } else if (this.jumpBufferTimer > 0) {
       this.jumpBufferTimer -= dt;
@@ -232,6 +238,7 @@ export class Player extends Entity {
       this.isGrounded = false;
       this.coyoteTimer = 0;
       this.jumpBufferTimer = 0;
+      this.isJumpConsumed = true;
       this.state = 'JUMP';
       audioEngine.playJump();
       particles.createJumpDust(this.x + this.width / 2, this.y + this.height);
