@@ -11,6 +11,7 @@ import { SaveSystem } from '../game/save/SaveSystem';
 interface GameCanvasProps {
   saveData: SaveData;
   levelId?: string;
+  isResume?: boolean;
   onSaveUpdate: (updatedSave: SaveData) => void;
   onSelectNextLevel?: (nextLevelId: string) => void;
   onReturnToMainMenu: () => void;
@@ -19,6 +20,7 @@ interface GameCanvasProps {
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   saveData,
   levelId = '1-1',
+  isResume = false,
   onSaveUpdate,
   onSelectNextLevel,
   onReturnToMainMenu,
@@ -44,7 +46,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Load save data & create game engine
     const currentSave = SaveSystem.load();
-    const engine = new GameEngine(canvas, currentSave, levelId);
+    const engine = new GameEngine(canvas, currentSave, levelId, isResume);
     engineRef.current = engine;
 
     setPlayerHp({
@@ -94,6 +96,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const handleResume = () => {
     if (engineRef.current) {
       engineRef.current.resume();
+    }
+  };
+
+  const handleQuickSave = () => {
+    if (engineRef.current) {
+      const updatedSave = engineRef.current.saveQuickSave();
+      onSaveUpdate(updatedSave);
     }
   };
 
@@ -166,6 +175,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         {gameStatus === 'PAUSED' && (
           <PauseModal
             onResume={handleResume}
+            onQuickSave={handleQuickSave}
             onRestart={handleRestart}
             onMainMenu={onReturnToMainMenu}
           />

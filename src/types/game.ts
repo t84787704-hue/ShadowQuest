@@ -45,6 +45,20 @@ export interface LevelConfig {
   isBossLevel?: boolean;
 }
 
+export interface QuickSaveData {
+  levelId: string;
+  playerX: number;
+  playerY: number;
+  playerHp: number;
+  collectedCoinsCount: number;
+  startingCoins: number;
+  collectedCoinIndices?: number[];
+  collectedHealthIndices?: number[];
+  defeatedEnemyIndices?: number[];
+  activeCheckpointIndex?: number;
+  timestamp: number;
+}
+
 export interface SaveData {
   coins: number;
   currentWorld: number;
@@ -54,6 +68,7 @@ export interface SaveData {
   hasSeenStory: boolean;
   levelStars: Record<string, number>;
   equippedWeaponId?: string;
+  quickSave?: QuickSaveData | null;
   upgrades: {
     maxHealth: number; // level 0-5
     attackPower: number;

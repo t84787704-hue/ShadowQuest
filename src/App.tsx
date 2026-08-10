@@ -16,6 +16,7 @@ export default function App() {
   const [saveData, setSaveData] = useState<SaveData>(() => SaveSystem.load());
   const [selectedLevelId, setSelectedLevelId] = useState<string>('1-1');
   const [pendingLevelId, setPendingLevelId] = useState<string | null>(null);
+  const [isResumeRun, setIsResumeRun] = useState<boolean>(false);
 
   useEffect(() => {
     // Synchronize sound settings on initial load
@@ -27,6 +28,11 @@ export default function App() {
     setSaveData(updated);
     audioEngine.setSoundFxEnabled(updated.settings.soundFxEnabled);
     audioEngine.setMusicEnabled(updated.settings.musicEnabled);
+  };
+
+  const handleClearQuickSave = () => {
+    const updated = SaveSystem.clearQuickSave();
+    setSaveData(updated);
   };
 
   const handleSoundToggle = () => {
@@ -53,6 +59,7 @@ export default function App() {
   const handleConfirmStartLevel = () => {
     if (pendingLevelId) {
       setSelectedLevelId(pendingLevelId);
+      setIsResumeRun(false);
       setPendingLevelId(null);
       setCurrentScreen('PLAYING');
     }
@@ -65,10 +72,12 @@ export default function App() {
           <MainMenu
             saveData={saveData}
             onNavigate={setCurrentScreen}
-            onSelectLevel={(lvl) => {
+            onSelectLevel={(lvl, isResume) => {
               setSelectedLevelId(lvl);
+              setIsResumeRun(Boolean(isResume));
               setCurrentScreen('PLAYING');
             }}
+            onClearQuickSave={handleClearQuickSave}
             onSoundToggle={handleSoundToggle}
           />
         )}
@@ -126,16 +135,19 @@ export default function App() {
 
         {currentScreen === 'PLAYING' && (
           <GameCanvas
-            key={selectedLevelId}
+            key={`${selectedLevelId}-${isResumeRun}`}
             saveData={saveData}
             levelId={selectedLevelId}
+            isResume={isResumeRun}
             onSaveUpdate={handleSaveUpdate}
             onSelectNextLevel={(nextLevelId) => {
+              setIsResumeRun(false);
               const freshSave = SaveSystem.load();
               setSaveData(freshSave);
               setSelectedLevelId(nextLevelId);
             }}
             onReturnToMainMenu={() => {
+              setIsResumeRun(false);
               const freshSave = SaveSystem.load();
               setSaveData(freshSave);
               setCurrentScreen('WORLD_MAP');

@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
-import { Play, RotateCcw, Home, Pause, HelpCircle, Volume2, VolumeX, Music } from 'lucide-react';
+import { Play, RotateCcw, Home, Pause, HelpCircle, Volume2, VolumeX, Music, Save, CheckCircle2 } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 
 interface PauseModalProps {
   onResume: () => void;
+  onQuickSave: () => void;
   onRestart: () => void;
   onMainMenu: () => void;
 }
 
 export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
+  onQuickSave,
   onRestart,
   onMainMenu,
 }) => {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(audioEngine.isSoundEnabled());
   const [musicEnabled, setMusicEnabled] = useState(audioEngine.isMusicEnabled());
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -27,6 +30,19 @@ export const PauseModal: React.FC<PauseModalProps> = ({
     const next = !musicEnabled;
     setMusicEnabled(next);
     audioEngine.setMusicEnabled(next);
+  };
+
+  const handleTriggerQuickSave = () => {
+    audioEngine.playButtonClick();
+    onQuickSave();
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
+
+  const handleQuickSaveAndExit = () => {
+    audioEngine.playButtonClick();
+    onQuickSave();
+    onMainMenu();
   };
 
   return (
@@ -42,6 +58,13 @@ export const PauseModal: React.FC<PauseModalProps> = ({
         <p className="text-xs text-slate-400 mb-4">
           Take a breath, Warrior Blaze!
         </p>
+
+        {savedSuccess && (
+          <div className="w-full mb-3 p-2.5 bg-emerald-500/20 border border-emerald-500/50 rounded-xl flex items-center justify-center gap-2 text-emerald-300 font-bold text-xs animate-bounce">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            MID-LEVEL PROGRESS QUICK-SAVED!
+          </div>
+        )}
 
         {/* Audio Quick Toggles */}
         <div className="flex gap-2 w-full mb-4">
@@ -84,6 +107,14 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
+            onClick={handleTriggerQuickSave}
+            className="w-full py-2.5 bg-emerald-600/90 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs uppercase rounded-xl border border-emerald-400/40 flex items-center justify-center gap-2 transition shadow-md"
+          >
+            <Save className="w-4 h-4 text-emerald-200" />
+            QUICK SAVE PROGRESS
+          </button>
+
+          <button
             onClick={() => {
               audioEngine.playButtonClick();
               setShowHowToPlay(true);
@@ -106,14 +137,11 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           </button>
 
           <button
-            onClick={() => {
-              audioEngine.playButtonClick();
-              onMainMenu();
-            }}
-            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-400 hover:text-slate-200 font-semibold text-xs uppercase rounded-xl border border-slate-800 flex items-center justify-center gap-2 transition"
+            onClick={handleQuickSaveAndExit}
+            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 hover:text-white font-semibold text-xs uppercase rounded-xl border border-slate-800 flex items-center justify-center gap-2 transition"
           >
-            <Home className="w-4 h-4" />
-            MAIN MENU
+            <Home className="w-4 h-4 text-slate-400" />
+            SAVE & MAIN MENU
           </button>
         </div>
       </div>

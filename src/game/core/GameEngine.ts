@@ -1,4 +1,4 @@
-import { GameStateStatus, SaveData, PlayerStats } from '../../types/game';
+import { GameStateStatus, SaveData, PlayerStats, QuickSaveData } from '../../types/game';
 import { Player } from '../entities/Player';
 import { ForestGoblin } from '../entities/Enemy';
 import { Coin, HealthPickup } from '../entities/Collectible';
@@ -42,7 +42,7 @@ export class GameEngine {
   private lastAttackId: number = -1;
   private hitEnemiesThisAttack: Set<ForestGoblin> = new Set();
 
-  constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1') {
+  constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1', isResume: boolean = false) {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
     if (!context) {
@@ -80,7 +80,21 @@ export class GameEngine {
     const equippedWeapon = SaveSystem.getEquippedWeapon(saveData, levelId);
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, equippedWeapon);
 
-    this.initLevelEntities();
+    // Quick save restoration check
+    const qs = (isResume && saveData.quickSave && saveData.quickSave.levelId === levelId) ? saveData.quickSave : null;
+
+    if (qs) {
+      this.startingCoins = qs.startingCoins;
+      this.collectedCoinsCount = qs.collectedCoinsCount;
+    }
+
+    this.initLevelEntities(qs);
+
+    if (qs) {
+      this.player.x = qs.playerX;
+      this.player.y = qs.playerY;
+      this.player.stats.currentHp = Math.min(this.player.stats.maxHp, qs.playerHp);
+    }
   }
 
   public get totalCoins(): number {
@@ -95,20 +109,35 @@ export class GameEngine {
     this.onStateChangeCallback = cb;
   }
 
-  private initLevelEntities() {
+  private initLevelEntities(qs?: QuickSaveData | null) {
     // Populate Goblins
     this.goblins = this.levelDef.goblins.map(
       (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false, this.levelDef.config.id)
     );
+    if (qs?.defeatedEnemyIndices) {
+      qs.defeatedEnemyIndices.forEach((idx) => {
+        if (this.goblins[idx]) this.goblins[idx].isAlive = false;
+      });
+    }
 
     // Populate Coins
     this.coins = this.levelDef.coins.map((c) => new Coin(c.x, c.y, c.value || 1));
     this.totalCoinsInLevel = this.coins.reduce((sum, c) => sum + c.value, 0);
+    if (qs?.collectedCoinIndices) {
+      qs.collectedCoinIndices.forEach((idx) => {
+        if (this.coins[idx]) this.coins[idx].isCollected = true;
+      });
+    }
 
     // Populate Health Pickups
     this.healthPickups = (this.levelDef.healthPickups || []).map(
       (h) => new HealthPickup(h.x, h.y, h.healAmount || 25)
     );
+    if (qs?.collectedHealthIndices) {
+      qs.collectedHealthIndices.forEach((idx) => {
+        if (this.healthPickups[idx]) this.healthPickups[idx].isCollected = true;
+      });
+    }
 
     // Populate Checkpoints
     this.checkpoints = [];
@@ -117,6 +146,38 @@ export class GameEngine {
     } else if (this.levelDef.checkpoint) {
       this.checkpoints = [new Checkpoint(this.levelDef.checkpoint.x, this.levelDef.checkpoint.y)];
     }
+
+    if (qs?.activeCheckpointIndex !== undefined && qs.activeCheckpointIndex >= 0) {
+      if (this.checkpoints[qs.activeCheckpointIndex]) {
+        this.checkpoints[qs.activeCheckpointIndex].isActive = true;
+        this.activeSpawn = { x: this.checkpoints[qs.activeCheckpointIndex].x, y: this.checkpoints[qs.activeCheckpointIndex].y };
+      }
+    }
+  }
+
+  public createQuickSaveData(): QuickSaveData {
+    return {
+      levelId: this.levelDef.config.id,
+      playerX: this.player.x,
+      playerY: this.player.y,
+      playerHp: this.player.stats.currentHp,
+      collectedCoinsCount: this.collectedCoinsCount,
+      startingCoins: this.startingCoins,
+      collectedCoinIndices: this.coins.map((c, i) => (c.isCollected ? i : -1)).filter((i) => i >= 0),
+      collectedHealthIndices: this.healthPickups.map((h, i) => (h.isCollected ? i : -1)).filter((i) => i >= 0),
+      defeatedEnemyIndices: this.goblins.map((g, i) => (!g.isAlive ? i : -1)).filter((i) => i >= 0),
+      activeCheckpointIndex: this.checkpoints.findIndex((c) => c.isActive),
+      timestamp: Date.now(),
+    };
+  }
+
+  public saveQuickSave(): SaveData {
+    const qs = this.createQuickSaveData();
+    const updated = SaveSystem.saveQuickSave(qs);
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback(this.status, this.collectedCoinsCount, this.totalCoins);
+    }
+    return updated;
   }
 
   public start() {
@@ -152,10 +213,11 @@ export class GameEngine {
   }
 
   public restart() {
+    SaveSystem.clearQuickSave();
     this.status = 'RUNNING';
     this.particles.clear();
     this.activeSpawn = { ...this.levelDef.playerSpawn };
-    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus);
+    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, this.player.equippedWeapon);
     this.collectedCoinsCount = 0;
     this.initLevelEntities();
     this.camera.x = 0;

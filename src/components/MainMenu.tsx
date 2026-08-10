@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut } from 'lucide-react';
+import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut, BookmarkCheck, Trash2 } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
@@ -7,7 +7,8 @@ import { SaveSystem } from '../game/save/SaveSystem';
 interface MainMenuProps {
   saveData: SaveData;
   onNavigate: (screen: GameScreen) => void;
-  onSelectLevel: (levelId: string) => void;
+  onSelectLevel: (levelId: string, isResume?: boolean) => void;
+  onClearQuickSave?: () => void;
   onSoundToggle: () => void;
 }
 
@@ -15,6 +16,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   saveData,
   onNavigate,
   onSelectLevel,
+  onClearQuickSave,
   onSoundToggle,
 }) => {
   const isSoundOn = audioEngine.isSoundEnabled();
@@ -37,6 +39,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     onSelectLevel('1-1');
     onNavigate('PLAYING');
   };
+
+  const hasQuickSave = Boolean(saveData.quickSave);
 
   return (
     <div className="relative w-full h-full min-h-[450px] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 flex flex-col items-center justify-between p-4 sm:p-6 overflow-hidden select-none">
@@ -78,7 +82,42 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </h1>
 
         {/* Primary Action Navigation Buttons */}
-        <div className="flex flex-col gap-2.5 mt-4 w-full">
+        <div className="flex flex-col gap-2 mt-3 w-full">
+          {/* QUICK SAVE RESUME BUTTON (IF EXISTS) */}
+          {hasQuickSave && saveData.quickSave && (
+            <div className="flex flex-col gap-1 w-full bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-2.5 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+              <button
+                onClick={() => {
+                  audioEngine.playButtonClick();
+                  onSelectLevel(saveData.quickSave!.levelId, true);
+                }}
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-sky-600 hover:from-emerald-400 hover:to-sky-500 active:scale-95 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase rounded-xl border border-emerald-300/60 shadow-lg flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2">
+                  <BookmarkCheck className="w-5 h-5 fill-slate-950" />
+                  <span>RESUME RUN ({saveData.quickSave.levelId})</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs bg-slate-950/40 text-emerald-200 px-2.5 py-1 rounded-lg border border-emerald-400/30">
+                  <span>❤️ {saveData.quickSave.playerHp}</span>
+                  <span>🪙 {saveData.quickSave.startingCoins + saveData.quickSave.collectedCoinsCount}</span>
+                </div>
+              </button>
+
+              {onClearQuickSave && (
+                <button
+                  onClick={() => {
+                    audioEngine.playButtonClick();
+                    onClearQuickSave();
+                  }}
+                  className="self-center flex items-center gap-1 text-[11px] font-semibold text-rose-400/80 hover:text-rose-300 transition mt-0.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Discard Mid-Level Quick Save
+                </button>
+              )}
+            </div>
+          )}
+
           {/* CONTINUE BUTTON */}
           <button
             onClick={handleContinue}

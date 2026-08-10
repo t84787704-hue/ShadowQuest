@@ -90,6 +90,7 @@ export class SaveSystem {
   public static completeLevel(levelId: string, stars: number, coinsEarned: number): SaveData {
     const data = this.load();
     data.coins += coinsEarned;
+    data.quickSave = null; // Clear active quick save on victory
     if (!data.completedLevels.includes(levelId)) {
       data.completedLevels.push(levelId);
     }
@@ -175,6 +176,21 @@ export class SaveSystem {
   public static markStorySeen(): SaveData {
     const data = this.load();
     data.hasSeenStory = true;
+    this.save(data);
+    return data;
+  }
+
+  public static saveQuickSave(quickSave: import('../../types/game').QuickSaveData): SaveData {
+    const data = this.load();
+    data.quickSave = quickSave;
+    data.coins = quickSave.startingCoins + quickSave.collectedCoinsCount;
+    this.save(data);
+    return data;
+  }
+
+  public static clearQuickSave(): SaveData {
+    const data = this.load();
+    data.quickSave = null;
     this.save(data);
     return data;
   }
