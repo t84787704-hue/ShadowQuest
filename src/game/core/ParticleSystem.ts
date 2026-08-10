@@ -121,23 +121,30 @@ export class ParticleSystem {
     }
   }
 
-  public createSlashSparks(x: number, y: number, facingRight: boolean, sparkColors: string[] = ['#38bdf8', '#fef08a']) {
+  public createCombatImpact(x: number, y: number, facingRight: boolean, sparkColors: string[] = ['#fde047', '#38bdf8', '#f97316']) {
     const dir = facingRight ? 1 : -1;
-    for (let i = 0; i < 16; i++) {
+    // Impact ring/burst
+    for (let i = 0; i < 18; i++) {
       const color = sparkColors[i % sparkColors.length];
+      const angle = (Math.PI * 2 * i) / 18 + (Math.random() - 0.5) * 0.3;
+      const speed = Math.random() * 5 + 3;
       this.particles.push({
         x: x,
-        y: y + (Math.random() - 0.5) * 22,
-        vx: dir * (Math.random() * 4.5 + 2),
-        vy: (Math.random() - 0.5) * 4.5,
-        size: Math.random() * 3.5 + 2,
+        y: y,
+        vx: Math.cos(angle) * speed + dir * 2,
+        vy: Math.sin(angle) * speed,
+        size: Math.random() * 4 + 2.5,
         color: color,
         alpha: 1,
         life: 0,
-        maxLife: 0.28 + Math.random() * 0.15,
-        shape: 'spark',
+        maxLife: 0.22 + Math.random() * 0.12,
+        shape: i % 2 === 0 ? 'spark' : 'star',
       });
     }
+  }
+
+  public createSlashSparks(x: number, y: number, facingRight: boolean, sparkColors: string[] = ['#38bdf8', '#fef08a']) {
+    this.createCombatImpact(x, y, facingRight, sparkColors);
   }
 
   public createHitBloodOrSparks(x: number, y: number) {

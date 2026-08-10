@@ -223,10 +223,28 @@ export class GameEngine {
       for (const goblin of this.goblins) {
         if (goblin.isAlive && !this.hitEnemiesThisAttack.has(goblin) && goblin.intersects(attackHitbox)) {
           this.hitEnemiesThisAttack.add(goblin);
-          goblin.takeDamage(this.player.stats.attackDamage, this.particles);
-          this.camera.addShake(0.12, 4);
 
-          // Apply weapon special effects
+          const comboMult = this.player.currentComboMultiplier || 1.0;
+          const damage = Math.round(this.player.stats.attackDamage * comboMult);
+
+          goblin.takeDamage(damage, this.particles);
+
+          // Physical Knockback and Hit Reactions
+          if (this.player.attackType === 'FINISHER' || this.player.attackType === 'KICK') {
+            goblin.vx = this.player.facingRight ? 8 : -8;
+            goblin.vy = -4.5;
+            this.camera.addShake(0.16, 7);
+          } else if (this.player.attackType === 'JUMP_KICK') {
+            goblin.vx = this.player.facingRight ? 6.5 : -6.5;
+            goblin.vy = -2;
+            this.camera.addShake(0.12, 5);
+          } else {
+            goblin.vx = this.player.facingRight ? 4.5 : -4.5;
+            goblin.vy = -2.5;
+            this.camera.addShake(0.1, 3.5);
+          }
+
+          // Apply stance special effects
           const effect = this.player.equippedWeapon.specialEffect;
           if (effect === 'ICE_SLOW') {
             goblin.slowTimer = 2.0;

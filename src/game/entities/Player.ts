@@ -16,6 +16,12 @@ export class Player extends Entity {
   public animTime: number = 0;
   public equippedWeapon: WeaponDef = WEAPONS.basic_sword;
 
+  public comboStep: number = 0; // 1: JAB, 2: CROSS, 3: KICK, 4: FINISHER
+  public attackType: 'JAB' | 'CROSS' | 'KICK' | 'FINISHER' | 'JUMP_KICK' = 'JAB';
+  public comboWindowTimer: number = 0;
+  public attackDuration: number = 0.16;
+  public currentComboMultiplier: number = 1.0;
+
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
   private jumpBufferTimer: number = 0;
@@ -35,9 +41,9 @@ export class Player extends Entity {
       maxHp: 100 + (statsBonus?.maxHp || 0),
       currentHp: 100 + (statsBonus?.maxHp || 0),
       attackDamage: this.equippedWeapon.baseDamage + (statsBonus?.attackDamage || 0),
-      moveSpeed: 4.4 + (statsBonus?.moveSpeed || 0),
+      moveSpeed: 4.8 + (statsBonus?.moveSpeed || 0), // Quick and agile
       jumpForce: 12.0 + (statsBonus?.jumpForce || 0),
-      attackCooldownMs: 320,
+      attackCooldownMs: 120, // Fast base combo window
     };
   }
 
@@ -52,17 +58,26 @@ export class Player extends Entity {
       return;
     }
 
-    // Cooldown & buffer timers
+    // Cooldown & combo window timers
     if (this.invulnerableTimer > 0) {
       this.invulnerableTimer -= dt;
     }
     if (this.attackCooldownTimer > 0) {
       this.attackCooldownTimer -= dt * 1000;
     }
+    if (this.comboWindowTimer > 0) {
+      this.comboWindowTimer -= dt;
+      if (this.comboWindowTimer <= 0) {
+        this.comboStep = 0; // Reset combo if player pauses too long
+      }
+    }
+
     if (this.attackTimer > 0) {
       this.attackTimer -= dt;
       if (this.attackTimer <= 0) {
         this.state = 'IDLE';
+        // Give 0.45s window to chain next combo attack
+        this.comboWindowTimer = 0.45;
       }
     }
 
@@ -87,39 +102,104 @@ export class Player extends Entity {
       this.animFrame = (this.animFrame + 1) % 8;
     }
 
-    // Handle Attack Input
-    if (input.attack && this.attackCooldownTimer <= 0 && this.state !== 'ATTACK') {
+    // Handle Martial Arts Attack Input (Combos + Jump Kick)
+    if (input.attack && this.attackCooldownTimer <= 0 && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
       this.state = 'ATTACK';
       this.currentAttackId++; // Increment unique attack ID for single-hit detection
-      this.attackTimer = 0.25; // 250ms attack animation duration
-      this.attackCooldownTimer = this.stats.attackCooldownMs;
-      audioEngine.playSwordAttack();
-      const slashX = this.facingRight ? this.x + this.width + 10 : this.x - 10;
-      particles.createSlashSparks(slashX, this.y + 20, this.facingRight, this.equippedWeapon.sparkColors);
+
+      if (!this.isGrounded) {
+        // Jump Attack / Flying Side Kick
+        this.attackType = 'JUMP_KICK';
+        this.attackDuration = 0.22;
+        this.attackTimer = 0.22;
+        this.attackCooldownTimer = 160;
+        this.currentComboMultiplier = 1.3;
+        audioEngine.playKick();
+
+        const kickX = this.facingRight ? this.x + this.width + 12 : this.x - 12;
+        particles.createCombatImpact(kickX, this.y + 24, this.facingRight, this.equippedWeapon.sparkColors);
+        particles.createFloatingText(kickX, this.y + 4, 'FLYING KICK!', '#38bdf8', 15);
+      } else {
+        // Ground Martial Arts Combo: Punch -> Punch -> Kick -> Finisher Kick
+        if (this.comboWindowTimer > 0 && this.comboStep >= 1 && this.comboStep < 4) {
+          this.comboStep++;
+        } else {
+          this.comboStep = 1;
+        }
+
+        this.comboWindowTimer = 0; // Consume window
+
+        if (this.comboStep === 1) {
+          // Fast Jab Punch
+          this.attackType = 'JAB';
+          this.attackDuration = 0.14;
+          this.attackTimer = 0.14;
+          this.attackCooldownTimer = 90;
+          this.currentComboMultiplier = 1.0;
+          audioEngine.playPunch();
+
+          const punchX = this.facingRight ? this.x + this.width + 10 : this.x - 10;
+          particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);
+          particles.createFloatingText(punchX, this.y, 'JAB!', '#fef08a', 14);
+        } else if (this.comboStep === 2) {
+          // Heavy Cross Punch
+          this.attackType = 'CROSS';
+          this.attackDuration = 0.16;
+          this.attackTimer = 0.16;
+          this.attackCooldownTimer = 100;
+          this.currentComboMultiplier = 1.25;
+          audioEngine.playPunch();
+
+          const punchX = this.facingRight ? this.x + this.width + 14 : this.x - 14;
+          particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);
+          particles.createFloatingText(punchX, this.y, 'CROSS!', '#fbbf24', 15);
+        } else if (this.comboStep === 3) {
+          // Roundhouse Kick
+          this.attackType = 'KICK';
+          this.attackDuration = 0.20;
+          this.attackTimer = 0.20;
+          this.attackCooldownTimer = 120;
+          this.currentComboMultiplier = 1.5;
+          audioEngine.playKick();
+
+          const kickX = this.facingRight ? this.x + this.width + 18 : this.x - 18;
+          particles.createCombatImpact(kickX, this.y + 22, this.facingRight, this.equippedWeapon.sparkColors);
+          particles.createFloatingText(kickX, this.y - 4, 'KICK!', '#f97316', 16);
+        } else {
+          // Strong Finishing Spinning Heel Kick
+          this.attackType = 'FINISHER';
+          this.attackDuration = 0.26;
+          this.attackTimer = 0.26;
+          this.attackCooldownTimer = 220;
+          this.currentComboMultiplier = 2.2;
+          audioEngine.playFinisher();
+
+          const kickX = this.facingRight ? this.x + this.width + 22 : this.x - 22;
+          particles.createCombatImpact(kickX, this.y + 20, this.facingRight, ['#f43f5e', '#facc15', '#38bdf8']);
+          particles.createFloatingText(kickX, this.y - 8, 'FINISHER! 💥', '#ef4444', 18);
+        }
+      }
     }
 
-    // Handle Horizontal Movement
-    if (this.state !== 'ATTACK') {
-      if (input.left) {
-        this.vx = -this.stats.moveSpeed;
-        this.facingRight = false;
-        if (this.isGrounded) this.state = 'RUN';
-      } else if (input.right) {
-        this.vx = this.stats.moveSpeed;
-        this.facingRight = true;
-        if (this.isGrounded) this.state = 'RUN';
-      } else {
-        this.vx *= 0.65; // Smooth friction
-        if (Math.abs(this.vx) < 0.2) this.vx = 0;
-        if (this.isGrounded) this.state = 'IDLE';
-      }
+    // Handle Horizontal Movement (ALLOW MOVEMENT WHILE FIGHTING FOR FLUIDITY)
+    const moveSpeedMult = this.state === 'ATTACK' ? 0.85 : 1.0;
+
+    if (input.left) {
+      this.vx = -this.stats.moveSpeed * moveSpeedMult;
+      this.facingRight = false;
+      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'RUN';
+    } else if (input.right) {
+      this.vx = this.stats.moveSpeed * moveSpeedMult;
+      this.facingRight = true;
+      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'RUN';
     } else {
-      // Slight movement dampening while swinging sword
-      this.vx *= 0.7;
+      this.vx *= 0.65; // Smooth friction
+      if (Math.abs(this.vx) < 0.2) this.vx = 0;
+      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'IDLE';
     }
 
     // Handle Jump Input with Coyote Time & Jump Buffer
-    if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0 && (this.state as string) !== 'ATTACK') {
+    if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0 && this.state !== 'ATTACK') {
       this.vy = -this.stats.jumpForce;
       this.isGrounded = false;
       this.coyoteTimer = 0;
@@ -169,17 +249,31 @@ export class Player extends Entity {
   }
 
   public getAttackHitbox(): Rect | null {
-    if (this.state === 'ATTACK' && this.attackTimer > 0.05 && this.attackTimer < 0.22) {
-      const reach = 38;
-      const attackWidth = reach;
-      const attackHeight = 44;
-      const attackX = this.facingRight ? this.x + this.width : this.x - attackWidth;
+    if (this.state === 'ATTACK' && this.attackTimer > 0.02) {
+      let reach = 36;
+      let attackHeight = 38;
+
+      if (this.attackType === 'CROSS') {
+        reach = 42;
+        attackHeight = 40;
+      } else if (this.attackType === 'KICK') {
+        reach = 50;
+        attackHeight = 44;
+      } else if (this.attackType === 'FINISHER') {
+        reach = 58;
+        attackHeight = 48;
+      } else if (this.attackType === 'JUMP_KICK') {
+        reach = 48;
+        attackHeight = 44;
+      }
+
+      const attackX = this.facingRight ? this.x + this.width : this.x - reach;
       const attackY = this.y + 2;
 
       return {
         x: attackX,
         y: attackY,
-        width: attackWidth,
+        width: reach,
         height: attackHeight,
       };
     }
@@ -362,89 +456,127 @@ export class Player extends Entity {
     ctx.fill();
 
     // ----------------------------------------------------
-    // 5. SWORD & ARMS ANIMATION
+    // 5. MARTIAL ARTS HAND-TO-HAND & ATTACK ANIMATIONS (EMPTY HANDS)
     // ----------------------------------------------------
     const isAttacking = this.state === 'ATTACK';
-    const attackProgress = isAttacking ? (0.25 - this.attackTimer) / 0.25 : 0; // 0 to 1
+    const attackProgress = isAttacking ? Math.min(1, Math.max(0, (this.attackDuration - this.attackTimer) / this.attackDuration)) : 0;
 
     ctx.save();
     ctx.translate(4, bodyY + 10);
 
     if (isAttacking) {
-      // Dynamic 3-stage slash rotation
-      const slashAngle = -Math.PI / 2 + attackProgress * (Math.PI * 1.2);
-      ctx.rotate(slashAngle);
-    } else if (this.state === 'RUN') {
-      ctx.rotate(Math.sin(this.animFrame * 0.8) * 0.4);
-    } else if (this.state === 'JUMP') {
-      ctx.rotate(-0.5);
+      const auraColor = this.equippedWeapon.glowColor;
+
+      if (this.attackType === 'JAB') {
+        // Fast Jab Punch
+        const reach = Math.sin(attackProgress * Math.PI) * 18;
+        // Lead Arm
+        ctx.fillStyle = '#2563eb';
+        ctx.fillRect(0, -3, 8 + reach, 6);
+        ctx.fillStyle = '#fdba74'; // Bare Fist
+        ctx.beginPath();
+        ctx.arc(8 + reach, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#a16207'; // Martial Hand Wrap
+        ctx.fillRect(6 + reach, -3, 4, 6);
+
+        // Punch Energy Ring
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(12 + reach, 0, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (this.attackType === 'CROSS') {
+        // Heavy Power Cross Punch
+        const reach = Math.sin(attackProgress * Math.PI) * 24;
+        ctx.rotate(0.2);
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(-2, -2, 10 + reach, 7);
+        ctx.fillStyle = '#fdba74'; // Clenched Fist
+        ctx.beginPath();
+        ctx.arc(10 + reach, 1, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#a16207'; // Hand Wrap
+        ctx.fillRect(8 + reach, -2, 4, 7);
+
+        // Power Shockwave
+        ctx.fillStyle = auraColor;
+        ctx.beginPath();
+        ctx.arc(14 + reach, 1, 10 * Math.sin(attackProgress * Math.PI), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.attackType === 'KICK') {
+        // High Roundhouse Kick
+        const kickAngle = -Math.PI / 3 + Math.sin(attackProgress * Math.PI) * (Math.PI / 1.8);
+        ctx.rotate(kickAngle);
+        // Leg Extension
+        ctx.fillStyle = '#1e293b'; // Trousers
+        ctx.fillRect(0, 4, 20, 7);
+        ctx.fillStyle = '#78350f'; // Martial Boot
+        ctx.fillRect(18, 2, 8, 9);
+
+        // Kick Arc Effect
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 6, 26, -Math.PI / 3, Math.PI / 3);
+        ctx.stroke();
+      } else if (this.attackType === 'FINISHER') {
+        // Spinning Heel Kick Finisher
+        const spinAngle = attackProgress * Math.PI * 2;
+        ctx.rotate(spinAngle);
+        // Both legs extended in whirlwind kick
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-16, -3, 32, 6);
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(14, -4, 8, 8);
+        ctx.fillRect(-22, -4, 8, 8);
+
+        // Full Whirlwind Energy Ring
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 28, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (this.attackType === 'JUMP_KICK') {
+        // Flying Side Kick
+        ctx.rotate(0.3);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 2, 22, 7);
+        ctx.fillStyle = '#78350f'; // Boot
+        ctx.fillRect(20, 0, 9, 9);
+
+        // Flying Thrust Energy
+        ctx.fillStyle = auraColor;
+        ctx.beginPath();
+        ctx.moveTo(28, 4);
+        ctx.lineTo(38, -2);
+        ctx.lineTo(38, 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      // Idle / Running Arms (Hand-to-Hand Stance with Visibly Empty Hands)
+      if (this.state === 'RUN') {
+        ctx.rotate(Math.sin(this.animFrame * 0.8) * 0.4);
+      } else if (this.state === 'JUMP') {
+        ctx.rotate(-0.5);
+      } else {
+        // Martial Guard Stance
+        ctx.rotate(-0.2);
+      }
+
+      // Front Arm & Clenched Fist (Empty Hands)
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(-2, -3, 8, 5);
+      ctx.fillStyle = '#a16207'; // Martial Wrist Wrap
+      ctx.fillRect(5, -3, 3, 5);
+      ctx.fillStyle = '#fdba74'; // Empty Hand / Clenched Fist
+      ctx.beginPath();
+      ctx.arc(10, -0.5, 3.5, 0, Math.PI * 2);
+      ctx.fill();
     }
-
-    // Arm (Tunic sleeve + Gloves)
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(-2, -3, 8, 5);
-    ctx.fillStyle = '#78350f'; // Leather Glove
-    ctx.fillRect(5, -3, 4, 5);
-
-    // Fantasy Sword Hilt & Guard
-    ctx.fillStyle = '#f59e0b'; // Gold Crossguard
-    ctx.fillRect(8, -8, 4, 16);
-    ctx.fillStyle = '#78350f'; // Hilt Grip
-    ctx.fillRect(5, -1, 4, 3);
-    ctx.fillStyle = this.equippedWeapon.glowColor; // Pommel Gem
-    ctx.beginPath();
-    ctx.arc(4, 0, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Weapon Blade
-    ctx.fillStyle = this.equippedWeapon.glowColor; // Glowing Blade Edge
-    ctx.beginPath();
-    ctx.moveTo(12, -3);
-    ctx.lineTo(36, -1);
-    ctx.lineTo(40, 0); // Tip
-    ctx.lineTo(36, 1);
-    ctx.lineTo(12, 3);
-    ctx.closePath();
-    ctx.fill();
-
-    // Blade Core
-    ctx.fillStyle = this.equippedWeapon.bladeColor;
-    ctx.fillRect(12, -1, 24, 2);
 
     ctx.restore();
-
-    // ----------------------------------------------------
-    // 6. SWORD SLASH ARC EFFECT (During Attack)
-    // ----------------------------------------------------
-    if (isAttacking) {
-      const slashAlpha = Math.sin(attackProgress * Math.PI);
-      ctx.save();
-      ctx.globalAlpha = slashAlpha;
-
-      // Outer Energy Arc
-      ctx.strokeStyle = this.equippedWeapon.glowColor;
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.arc(8, bodyY + 10, 38, -Math.PI / 2.2, Math.PI / 2);
-      ctx.stroke();
-
-      // Inner Core Arc
-      ctx.strokeStyle = this.equippedWeapon.bladeColor;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(8, bodyY + 10, 37, -Math.PI / 2.2, Math.PI / 2);
-      ctx.stroke();
-
-      // Energy Sparkles at arc tip
-      ctx.fillStyle = this.equippedWeapon.sparkColors[0] || '#fef08a';
-      ctx.beginPath();
-      ctx.arc(28, bodyY - 10, 3, 0, Math.PI * 2);
-      ctx.arc(36, bodyY + 20, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-    }
-
     ctx.restore();
     ctx.globalAlpha = 1.0;
   }

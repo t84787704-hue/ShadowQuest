@@ -54,7 +54,7 @@ export const HUD: React.FC<HUDProps> = ({
 
           {weaponName && (
             <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur border border-sky-500/40 rounded-full px-2.5 py-1 w-fit shadow-lg">
-              <span className="text-xs">{weaponIcon || '⚔️'}</span>
+              <span className="text-xs">{weaponIcon || '👊'}</span>
               <span className="text-sky-300 font-bold text-xs tracking-wide">
                 {weaponName}
               </span>

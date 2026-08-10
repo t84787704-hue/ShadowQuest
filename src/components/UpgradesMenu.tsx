@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Heart, Sword, Magnet, Zap, PlusCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Heart, Magnet, Zap, PlusCircle, CheckCircle, Shield } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { audioEngine } from '../game/audio/AudioEngine';
@@ -58,9 +58,9 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({
     },
     {
       key: 'attackPower' as const,
-      name: 'SWORD DAMAGE',
-      desc: '+5 Sword Damage per level',
-      icon: Sword,
+      name: 'MARTIAL STRIKE POWER',
+      desc: '+5 Punch & Kick Damage per level',
+      icon: Zap,
       color: 'text-amber-400',
       bgColor: 'bg-amber-500/10',
       borderColor: 'border-amber-500/30',
@@ -101,7 +101,7 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({
         </button>
 
         <h2 className="text-xl font-black text-amber-400 tracking-wider">
-          HERO UPGRADES & ARMORY
+          HERO UPGRADES & MARTIAL MASTERY
         </h2>
 
         <div className="text-xs text-amber-300 font-mono font-bold bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1">
@@ -110,11 +110,11 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({
       </div>
 
       <div className="max-w-4xl mx-auto w-full space-y-8">
-        {/* Weapon Armory Section */}
+        {/* Martial Stances Section */}
         <div>
           <h3 className="text-sm font-black text-sky-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Sword className="w-4 h-4 text-sky-400" />
-            WEAPON PROGRESSION & ARMORY
+            <Shield className="w-4 h-4 text-sky-400" />
+            MARTIAL ARTS STANCES & STYLES
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -155,14 +155,14 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({
                       </span>
                     ) : isEquipped ? (
                       <span className="flex items-center gap-1 text-sky-400 font-bold uppercase">
-                        <CheckCircle className="w-3.5 h-3.5" /> EQUIPPED
+                        <CheckCircle className="w-3.5 h-3.5" /> EQUIPPED STANCE
                       </span>
                     ) : (
                       <button
                         onClick={() => handleEquipWeapon(wId)}
                         className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold transition text-[10px]"
                       >
-                        EQUIP
+                        EQUIP STANCE
                       </button>
                     )}
                   </div>

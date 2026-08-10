@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Sword, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { InputManager } from '../game/core/InputManager';
 
 interface MobileControlsProps {
@@ -147,7 +147,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           onMouseLeave={handleActionTouch('attack', false)}
           className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-600/80 active:bg-amber-500 text-amber-100 border-2 border-amber-400/60 active:border-amber-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none"
         >
-          <Sword className="w-8 h-8 stroke-[2.5]" />
+          <span className="text-2xl sm:text-3xl leading-none">👊</span>
           <span className="text-[10px] font-black uppercase tracking-wider mt-0.5">
             ATTACK
           </span>
