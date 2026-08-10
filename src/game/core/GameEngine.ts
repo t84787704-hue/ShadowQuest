@@ -10,6 +10,7 @@ import { InputManager } from './InputManager';
 import { ParticleSystem } from './ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
+import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -51,7 +52,8 @@ export class GameEngine {
     this.tileMap = new TileMap(
       Math.floor(this.levelDef.config.width / 32),
       Math.floor(this.levelDef.config.height / 32),
-      this.levelDef.grid
+      this.levelDef.grid,
+      this.levelDef.config.id
     );
     this.camera = new Camera(canvas.width, canvas.height);
     this.input = new InputManager();
@@ -375,81 +377,7 @@ export class GameEngine {
   }
 
   private renderBackground(offsetX: number, offsetY: number, width: number, height: number) {
-    const ctx = this.ctx;
-
-    // 1. Layer 1: Sky Gradient (Bright Fantasy Forest Day)
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-    skyGrad.addColorStop(0, '#0284c7'); // Sky Blue
-    skyGrad.addColorStop(0.5, '#38bdf8');
-    skyGrad.addColorStop(1, '#e0f2fe');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Sun & Warm Light Glow
-    const sunX = width * 0.75 - offsetX * 0.02;
-    const sunY = 70;
-    ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#fef08a';
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Layer 2: Parallax Far Distant Misty Mountains (Speed: 0.12)
-    ctx.fillStyle = '#38bdf8'; // Soft Distant Blue Peaks
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    for (let x = -50; x <= width + 50; x += 50) {
-      const hillY = height - 150 - Math.sin((x + offsetX * 0.12) * 0.008) * 50;
-      ctx.lineTo(x, hillY);
-    }
-    ctx.lineTo(width, height);
-    ctx.closePath();
-    ctx.fill();
-
-    // 3. Layer 3: Parallax Mid Forest Canopy & Rolling Hills (Speed: 0.3)
-    ctx.fillStyle = '#0d9488'; // Deep Teal/Green Canopy
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    for (let x = -50; x <= width + 50; x += 40) {
-      const hillY = height - 100 - Math.sin((x + offsetX * 0.3) * 0.012) * 35;
-      ctx.lineTo(x, hillY);
-    }
-    ctx.lineTo(width, height);
-    ctx.closePath();
-    ctx.fill();
-
-    // 4. Layer 4: Parallax Near Forest Ancient Trees (Speed: 0.55)
-    const treeSpacing = 160;
-    const startTreeIdx = Math.floor((offsetX * 0.55 - 100) / treeSpacing);
-    for (let i = startTreeIdx; i < startTreeIdx + 12; i++) {
-      const treeX = i * treeSpacing - offsetX * 0.55;
-      const treeY = height - 130;
-
-      // Tree Trunk
-      ctx.fillStyle = '#451a03';
-      ctx.fillRect(treeX, treeY, 14, 60);
-
-      // Tree Bark Detail
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(treeX + 3, treeY + 5, 4, 50);
-
-      // Lush Foliage Canopy Clusters
-      ctx.fillStyle = '#15803d';
-      ctx.beginPath();
-      ctx.arc(treeX + 7, treeY - 10, 28, 0, Math.PI * 2);
-      ctx.arc(treeX - 10, treeY + 4, 20, 0, Math.PI * 2);
-      ctx.arc(treeX + 24, treeY + 4, 20, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#22c55e'; // Highlight Leaves
-      ctx.beginPath();
-      ctx.arc(treeX + 3, treeY - 16, 18, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    EnvironmentRenderer.render(this.ctx, this.levelDef.config.id, offsetX, offsetY, width, height);
   }
 
   private renderGoalPost(offsetX: number, offsetY: number) {

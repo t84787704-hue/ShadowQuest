@@ -237,21 +237,21 @@ export const LEVEL_1_1: LevelDefinition = {
 };
 
 export const WORLD_NAMES: Record<number, string> = {
-  1: 'WORLD 1 — GREEN FOREST',
-  2: 'WORLD 2 — DESERT RUINS',
-  3: 'WORLD 3 — FROZEN MOUNTAINS',
-  4: 'WORLD 4 — DARK CAVE',
-  5: 'WORLD 5 — SKY KINGDOM',
-  6: 'WORLD 6 — LAVA FORTRESS',
+  1: 'WORLD 1 — NATURE ADVENTURE',
+  2: 'WORLD 2 — DESERT',
+  3: 'WORLD 3 — ICE',
+  4: 'WORLD 4 — VOLCANO',
+  5: 'WORLD 5 — DARK LANDS',
+  6: 'WORLD 6 — FINAL REALM',
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Entrance', 'Ancient Ruins', 'Emerald Cavern', 'Misty Peaks', 'Goblin Chief Arena'],
-  2: ['Desert Gates', 'Sunken Temple', 'Quicksand Pass', 'Oasis Shrine', 'Desert Sphinx Boss'],
-  3: ['Frozen Foothills', 'Crystal Glacier', 'Ice Spire', 'Blizzard Peak', 'Frost Titan Boss'],
-  4: ['Dark Cavern', 'Stalactite Chasm', 'Shadow Tunnel', 'Glowshroom Lair', 'Shadow Fiend Boss'],
-  5: ['Cloud Bridge', 'Sky Sanctuary', 'Gale Island', 'Zephyr Summit', 'Sky Wyvern Boss'],
-  6: ['Volcanic Slope', 'Magma Bridge', 'Inferno Cavern', 'Brimstone Keep', 'GOBLIN KING BOSS'],
+  1: ['Green Forest', 'Forest Ruins', 'River Valley', 'Misty Peaks', 'Mountain Fortress'],
+  2: ['Desert', 'Ancient Desert Ruins', 'Canyon', 'Sandstorm', 'Desert Temple'],
+  3: ['Snow Forest', 'Frozen Lake', 'Ice Caves', 'Blizzard Peaks', 'Ice Fortress'],
+  4: ['Volcanic Valley', 'Lava Caves', 'Burning Mountain', 'Magma Fortress', 'Volcano Boss Arena'],
+  5: ['Haunted Forest', 'Ruined Village', 'Shadow Caves', 'Dark Castle', 'Final Castle/Boss Arena'],
+  6: ['Final Realm 1', 'Final Realm 2', 'Final Realm 3', 'Final Realm 4', 'Goblin King Boss'],
 };
 
 export function getLevelsForWorld(worldId: number): LevelConfig[] {

@@ -1,5 +1,6 @@
 import { Rect } from '../../types/game';
 import { Entity } from '../entities/Entity';
+import { getTilePalette } from '../render/EnvironmentRenderer';
 
 export enum TileType {
   EMPTY = 0,
@@ -17,13 +18,15 @@ export class TileMap {
   public grid: number[][];
   public widthInPixels: number;
   public heightInPixels: number;
+  public levelId: string;
 
-  constructor(cols: number, rows: number, gridData: number[][]) {
+  constructor(cols: number, rows: number, gridData: number[][], levelId: string = '1-1') {
     this.cols = cols;
     this.rows = rows;
     this.grid = gridData;
     this.widthInPixels = cols * this.tileSize;
     this.heightInPixels = rows * this.tileSize;
+    this.levelId = levelId;
   }
 
   public getTileAtPixel(x: number, y: number): number {
@@ -133,6 +136,8 @@ export class TileMap {
     const startRow = Math.max(0, Math.floor(offsetY / this.tileSize));
     const endRow = Math.min(this.rows - 1, Math.ceil((offsetY + viewportHeight) / this.tileSize));
 
+    const palette = getTilePalette(this.levelId);
+
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const tile = this.grid[r][c];
@@ -144,52 +149,52 @@ export class TileMap {
         switch (tile) {
           case TileType.GRASS_TOP:
             // Earth Dirt Base
-            ctx.fillStyle = '#78350f';
+            ctx.fillStyle = palette.topBase;
             ctx.fillRect(px, py + 8, this.tileSize, this.tileSize - 8);
 
             // Soil texture detail
-            ctx.fillStyle = '#581c87';
+            ctx.fillStyle = palette.middlePebble1;
             ctx.fillRect(px + 4, py + 18, 3, 3);
             ctx.fillRect(px + 22, py + 14, 4, 4);
 
-            // Lush Organic Grass Top
-            ctx.fillStyle = '#15803d'; // Rich Forest Green
+            // Top Cover Layer
+            ctx.fillStyle = palette.topCover;
             ctx.fillRect(px, py, this.tileSize, 8);
 
-            // Bright Grass Blades
-            ctx.fillStyle = '#22c55e';
+            // Bright Blades
+            ctx.fillStyle = palette.topBlades;
             ctx.fillRect(px + 2, py - 3, 3, 5);
             ctx.fillRect(px + 10, py - 4, 4, 6);
             ctx.fillRect(px + 18, py - 3, 3, 5);
             ctx.fillRect(px + 26, py - 4, 4, 6);
 
-            // Small yellow wildflower detail occasionally
-            if ((c * 7 + r) % 5 === 0) {
-              ctx.fillStyle = '#fef08a';
+            // Detail accent occasionally
+            if ((c * 7 + r) % 5 === 0 && palette.flowerColor) {
+              ctx.fillStyle = palette.flowerColor;
               ctx.fillRect(px + 12, py - 6, 3, 3);
             }
             break;
 
           case TileType.DIRT_MIDDLE:
             // Soil Dirt Tile
-            ctx.fillStyle = '#78350f';
+            ctx.fillStyle = palette.middleDirt;
             ctx.fillRect(px, py, this.tileSize, this.tileSize);
 
             // Pebble and rock inclusions
-            ctx.fillStyle = '#451a03';
+            ctx.fillStyle = palette.middlePebble1;
             ctx.fillRect(px + 6, py + 6, 6, 6);
             ctx.fillRect(px + 20, py + 18, 5, 5);
-            ctx.fillStyle = '#a16207';
+            ctx.fillStyle = palette.middlePebble2;
             ctx.fillRect(px + 14, py + 8, 4, 4);
             break;
 
           case TileType.STONE_PLATFORM:
-            // Ancient Stone Platform Tile
-            ctx.fillStyle = '#475569'; // Slate Stone
+            // Stone Platform Tile
+            ctx.fillStyle = palette.stoneMain;
             ctx.fillRect(px, py, this.tileSize, this.tileSize);
 
-            // Brick Mortar Outlines
-            ctx.strokeStyle = '#1e293b';
+            // Mortar Outlines
+            ctx.strokeStyle = palette.stoneStroke;
             ctx.lineWidth = 1.5;
             ctx.strokeRect(px, py, this.tileSize, this.tileSize);
             ctx.beginPath();
@@ -201,23 +206,23 @@ export class TileMap {
             ctx.lineTo(px + 8, py + 32);
             ctx.stroke();
 
-            // Mossy Top Layer
-            ctx.fillStyle = '#16a34a';
+            // Accent Top Layer
+            ctx.fillStyle = palette.stoneAccent;
             ctx.fillRect(px, py, this.tileSize, 3);
             break;
 
           case TileType.WOOD_BRIDGE:
             // Wooden Plank Bridge Tile
-            ctx.fillStyle = '#92400e'; // Warm Wood
+            ctx.fillStyle = palette.woodMain;
             ctx.fillRect(px, py + 4, this.tileSize, 16);
 
             // Plank Gaps
-            ctx.fillStyle = '#451a03';
+            ctx.fillStyle = palette.woodGap;
             ctx.fillRect(px + 10, py + 4, 2, 16);
             ctx.fillRect(px + 22, py + 4, 2, 16);
 
-            // Iron Nails
-            ctx.fillStyle = '#cbd5e1';
+            // Iron/Metal Nails
+            ctx.fillStyle = palette.woodNails;
             ctx.fillRect(px + 4, py + 6, 2, 2);
             ctx.fillRect(px + 16, py + 6, 2, 2);
             ctx.fillRect(px + 28, py + 6, 2, 2);
