@@ -1,4 +1,4 @@
-export type GameScreen = 'MAIN_MENU' | 'STORY' | 'WORLD_MAP' | 'LEVELS' | 'UPGRADES' | 'SETTINGS' | 'PLAYING';
+export type GameScreen = 'MAIN_MENU' | 'STORY' | 'WORLD_MAP' | 'LEVELS' | 'UPGRADES' | 'SETTINGS' | 'ACHIEVEMENTS' | 'PLAYING';
 
 export type GameStateStatus = 'RUNNING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 
@@ -30,6 +30,17 @@ export interface UpgradeLevel {
   icon: string;
 }
 
+export interface AchievementDef {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'COMBAT' | 'PROGRESS' | 'COLLECTION' | 'MASTERY';
+  targetValue: number;
+  rewardCoins: number;
+  getCurrentValue: (saveData: SaveData) => number;
+}
+
 export interface LevelConfig {
   id: string;
   worldId: number;
@@ -59,6 +70,13 @@ export interface QuickSaveData {
   timestamp: number;
 }
 
+export interface SaveDataStats {
+  enemiesDefeated: number;
+  bossesDefeated: number;
+  coinsCollectedLifetime: number;
+  upgradesPurchased: number;
+}
+
 export interface SaveData {
   coins: number;
   currentWorld: number;
@@ -69,6 +87,8 @@ export interface SaveData {
   levelStars: Record<string, number>;
   equippedWeaponId?: string;
   quickSave?: QuickSaveData | null;
+  stats: SaveDataStats;
+  claimedAchievements: string[]; // list of achievement IDs whose coin rewards have been claimed
   upgrades: {
     maxHealth: number; // level 0-5
     attackPower: number;

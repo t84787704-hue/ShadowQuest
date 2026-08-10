@@ -11,6 +11,7 @@ import { GameCanvas } from './components/GameCanvas';
 import { WorldMap } from './components/WorldMap';
 import { StoryModal } from './components/StoryModal';
 import { WorldIntroModal } from './components/WorldIntroModal';
+import { AchievementsMenu } from './components/AchievementsMenu';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('MAIN_MENU');
@@ -185,6 +186,23 @@ export default function App() {
                 onNavigate={setCurrentScreen}
                 onSaveUpdate={handleSaveUpdate}
                 onSoundToggle={handleSoundToggle}
+              />
+            </motion.div>
+          )}
+
+          {currentScreen === 'ACHIEVEMENTS' && (
+            <motion.div
+              key="ACHIEVEMENTS"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="w-full h-full relative"
+            >
+              <AchievementsMenu
+                saveData={saveData}
+                onNavigate={setCurrentScreen}
+                onSaveUpdate={handleSaveUpdate}
               />
             </motion.div>
           )}

@@ -8,6 +8,7 @@ import { LevelDefinition, getLevelDefinition } from '../world/LevelData';
 import { Camera } from './Camera';
 import { InputManager } from './InputManager';
 import { ParticleSystem } from './ParticleSystem';
+import { WeatherSystem } from './WeatherSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
@@ -26,6 +27,7 @@ export class GameEngine {
   public camera: Camera;
   public input: InputManager;
   public particles: ParticleSystem;
+  public weather: WeatherSystem;
 
   public levelDef: LevelDefinition;
   public startingCoins: number = 0;
@@ -63,6 +65,8 @@ export class GameEngine {
     this.camera = new Camera(canvas.width, canvas.height);
     this.input = new InputManager();
     this.particles = new ParticleSystem();
+    this.weather = new WeatherSystem();
+    this.weather.init(levelId);
 
     this.activeSpawn = { ...this.levelDef.playerSpawn };
 
@@ -331,6 +335,7 @@ export class GameEngine {
 
           // Drop coin on goblin death
           if (!goblin.isAlive) {
+            SaveSystem.recordEnemyDefeated(goblin.isBoss);
             this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
 
             if (goblin.isBoss) {
@@ -368,6 +373,7 @@ export class GameEngine {
       const collected = coin.update(dt, this.player, this.particles);
       if (collected) {
         this.collectedCoinsCount += coin.value;
+        SaveSystem.recordCoinsCollected(coin.value);
         this.coins.splice(i, 1);
         if (this.onStateChangeCallback) {
           this.onStateChangeCallback(this.status, this.collectedCoinsCount, this.totalCoins);
@@ -414,6 +420,9 @@ export class GameEngine {
     // 8. Update Particles
     this.particles.update(dt);
 
+    // 9. Update Weather System
+    this.weather.update(dt, this.canvas.width, this.canvas.height, this.camera.getOffsetX(), this.camera.getOffsetY());
+
     this.input.updatePreviousState();
   }
 
@@ -459,6 +468,9 @@ export class GameEngine {
 
     // 9. Particle FX
     this.particles.render(this.ctx, offsetX, offsetY);
+
+    // 10. Weather System Atmospheric Effects
+    this.weather.render(this.ctx, offsetX, offsetY);
   }
 
   private renderTutorialSigns(offsetX: number, offsetY: number) {

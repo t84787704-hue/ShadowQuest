@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut, BookmarkCheck, Trash2 } from 'lucide-react';
+import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut, BookmarkCheck, Trash2, Trophy } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
+import { getUnclaimedCount } from '../data/achievements';
 
 interface MainMenuProps {
   saveData: SaveData;
@@ -41,6 +42,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
 
   const hasQuickSave = Boolean(saveData.quickSave);
+  const unclaimedCount = getUnclaimedCount(saveData);
 
   return (
     <div className="relative w-full h-full min-h-[450px] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 flex flex-col items-center justify-between p-4 sm:p-6 overflow-hidden select-none">
@@ -147,11 +149,25 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </button>
           </div>
 
-          <div className="flex gap-2.5 w-full">
+          <div className="flex gap-2 w-full">
+            {/* ACHIEVEMENTS */}
+            <button
+              onClick={() => handleBtnClick('ACHIEVEMENTS')}
+              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition relative"
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>AWARDS</span>
+              {unclaimedCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center animate-bounce border border-amber-300">
+                  {unclaimedCount}
+                </span>
+              )}
+            </button>
+
             {/* STORY INTRO */}
             <button
               onClick={() => handleBtnClick('STORY')}
-              className="flex-1 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
+              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
             >
               <BookOpen className="w-4 h-4 text-amber-400" />
               STORY
@@ -160,7 +176,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             {/* UPGRADES */}
             <button
               onClick={() => handleBtnClick('UPGRADES')}
-              className="flex-1 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
+              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
             >
               <ShieldAlert className="w-4 h-4 text-emerald-400" />
               UPGRADES
@@ -169,7 +185,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             {/* SETTINGS */}
             <button
               onClick={() => handleBtnClick('SETTINGS')}
-              className="flex-1 py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
+              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
             >
               <Settings className="w-4 h-4 text-sky-400" />
               SETTINGS
@@ -181,7 +197,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 audioEngine.playButtonClick();
                 setShowExitConfirm(true);
               }}
-              className="py-2.5 px-3 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-400 hover:text-rose-400 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center transition"
+              className="py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-400 hover:text-rose-400 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center transition"
               title="Exit Game"
             >
               <LogOut className="w-4 h-4" />

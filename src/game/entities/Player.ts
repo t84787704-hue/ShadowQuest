@@ -125,7 +125,7 @@ export class Player extends Entity {
       this.attackCooldownTimer = 180;
       this.currentComboMultiplier = 1.7; // Strong balanced damage
 
-      audioEngine.playKick();
+      audioEngine.playSpinKick();
       const kickX = this.x + this.width / 2;
       particles.createCombatImpact(kickX, this.y + this.height - 10, this.facingRight, ['#38bdf8', '#facc15', '#f97316']);
       particles.createFloatingText(kickX, this.y - 12, 'SWEEP KICK! 🌀', '#06b6d4', 16);
@@ -143,7 +143,7 @@ export class Player extends Entity {
         this.attackTimer = 0.22;
         this.attackCooldownTimer = 160;
         this.currentComboMultiplier = 1.3;
-        audioEngine.playKick();
+        audioEngine.playJumpKick();
 
         const kickX = this.facingRight ? this.x + this.width + 12 : this.x - 12;
         particles.createCombatImpact(kickX, this.y + 24, this.facingRight, this.equippedWeapon.sparkColors);
@@ -165,7 +165,7 @@ export class Player extends Entity {
           this.attackTimer = 0.14;
           this.attackCooldownTimer = 90;
           this.currentComboMultiplier = 1.0;
-          audioEngine.playPunch();
+          audioEngine.playLightPunch();
 
           const punchX = this.facingRight ? this.x + this.width + 10 : this.x - 10;
           particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);
@@ -177,7 +177,7 @@ export class Player extends Entity {
           this.attackTimer = 0.16;
           this.attackCooldownTimer = 100;
           this.currentComboMultiplier = 1.25;
-          audioEngine.playPunch();
+          audioEngine.playHeavyPunch();
 
           const punchX = this.facingRight ? this.x + this.width + 14 : this.x - 14;
           particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull, Trophy } from 'lucide-react';
 import { WORLD_NAMES, getLevelsForWorld } from '../game/world/LevelData';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
@@ -119,7 +119,17 @@ export const WorldMap: React.FC<WorldMapProps> = ({
           WORLD MAP
         </h2>
 
-        <div className="flex items-center gap-3 text-xs font-mono font-bold">
+        <div className="flex items-center gap-2 text-xs font-mono font-bold">
+          <button
+            onClick={() => {
+              audioEngine.playButtonClick();
+              onNavigate('ACHIEVEMENTS');
+            }}
+            className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 rounded-lg text-amber-400 flex items-center gap-1 transition"
+            title="Achievements"
+          >
+            <Trophy className="w-4 h-4" />
+          </button>
           <span className="text-amber-300">🪙 {saveData.coins}</span>
           <span className="text-amber-400 flex items-center gap-1">
             <Star className="w-3.5 h-3.5 fill-amber-400" /> {totalStars}

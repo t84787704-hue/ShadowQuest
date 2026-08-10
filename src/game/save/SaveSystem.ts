@@ -1,5 +1,6 @@
 import { SaveData } from '../../types/game';
 import { getHighestUnlockedWeapon, WEAPONS, WeaponDef } from '../weapons/WeaponData';
+import { ACHIEVEMENTS, isAchievementUnlocked } from '../../data/achievements';
 
 const SAVE_KEY = 'BLAZE_ADVENTURE_SAVE_V1';
 
@@ -12,6 +13,13 @@ const DEFAULT_SAVE_DATA: SaveData = {
   hasSeenStory: false,
   levelStars: {},
   equippedWeaponId: 'basic_sword',
+  stats: {
+    enemiesDefeated: 0,
+    bossesDefeated: 0,
+    coinsCollectedLifetime: 0,
+    upgradesPurchased: 0,
+  },
+  claimedAchievements: [],
   upgrades: {
     maxHealth: 0,
     attackPower: 0,
@@ -33,13 +41,27 @@ export class SaveSystem {
         return { ...DEFAULT_SAVE_DATA };
       }
       const parsed = JSON.parse(dataStr);
+
+      const loadedUpgrades = { ...DEFAULT_SAVE_DATA.upgrades, ...(parsed.upgrades || {}) };
+      const totalUpgradesCount = Object.values(loadedUpgrades).reduce(
+        (sum: number, lvl: number) => sum + (typeof lvl === 'number' ? lvl : 0),
+        0
+      );
+
       const loadedData: SaveData = {
         ...DEFAULT_SAVE_DATA,
         ...parsed,
         unlockedWorlds: parsed.unlockedWorlds || [1],
         completedLevels: parsed.completedLevels || [],
         equippedWeaponId: parsed.equippedWeaponId || 'basic_sword',
-        upgrades: { ...DEFAULT_SAVE_DATA.upgrades, ...(parsed.upgrades || {}) },
+        claimedAchievements: parsed.claimedAchievements || [],
+        stats: {
+          enemiesDefeated: parsed.stats?.enemiesDefeated || 0,
+          bossesDefeated: parsed.stats?.bossesDefeated || 0,
+          coinsCollectedLifetime: parsed.stats?.coinsCollectedLifetime || parsed.coins || 0,
+          upgradesPurchased: parsed.stats?.upgradesPurchased ?? totalUpgradesCount,
+        },
+        upgrades: loadedUpgrades,
         settings: { ...DEFAULT_SAVE_DATA.settings, ...(parsed.settings || {}) },
       };
 
@@ -83,13 +105,66 @@ export class SaveSystem {
   public static addCoins(amount: number): SaveData {
     const data = this.load();
     data.coins += amount;
+    data.stats.coinsCollectedLifetime += amount;
     this.save(data);
     return data;
+  }
+
+  public static recordEnemyDefeated(isBoss: boolean = false): SaveData {
+    const data = this.load();
+    data.stats.enemiesDefeated += 1;
+    if (isBoss) {
+      data.stats.bossesDefeated += 1;
+    }
+    this.save(data);
+    return data;
+  }
+
+  public static recordCoinsCollected(amount: number): SaveData {
+    const data = this.load();
+    data.stats.coinsCollectedLifetime += amount;
+    this.save(data);
+    return data;
+  }
+
+  public static claimAchievement(achievementId: string): { success: boolean; rewardCoins: number; data: SaveData } {
+    const data = this.load();
+    const ach = ACHIEVEMENTS.find((a) => a.id === achievementId);
+    if (!ach) return { success: false, rewardCoins: 0, data };
+
+    if (isAchievementUnlocked(ach, data) && !data.claimedAchievements.includes(achievementId)) {
+      data.claimedAchievements.push(achievementId);
+      data.coins += ach.rewardCoins;
+      this.save(data);
+      return { success: true, rewardCoins: ach.rewardCoins, data };
+    }
+    return { success: false, rewardCoins: 0, data };
+  }
+
+  public static claimAllAvailableAchievements(): { claimedCount: number; totalRewards: number; data: SaveData } {
+    let data = this.load();
+    let claimedCount = 0;
+    let totalRewards = 0;
+
+    for (const ach of ACHIEVEMENTS) {
+      if (isAchievementUnlocked(ach, data) && !data.claimedAchievements.includes(ach.id)) {
+        data.claimedAchievements.push(ach.id);
+        data.coins += ach.rewardCoins;
+        totalRewards += ach.rewardCoins;
+        claimedCount++;
+      }
+    }
+
+    if (claimedCount > 0) {
+      this.save(data);
+    }
+    return { claimedCount, totalRewards, data };
   }
 
   public static completeLevel(levelId: string, stars: number, coinsEarned: number): SaveData {
     const data = this.load();
     data.coins += coinsEarned;
+    data.stats.coinsCollectedLifetime += coinsEarned;
     data.quickSave = null; // Clear active quick save on victory
     if (!data.completedLevels.includes(levelId)) {
       data.completedLevels.push(levelId);
@@ -167,6 +242,7 @@ export class SaveSystem {
     if (data.coins >= cost && (data.upgrades[upgradeKey] || 0) < 5) {
       data.coins -= cost;
       data.upgrades[upgradeKey] = (data.upgrades[upgradeKey] || 0) + 1;
+      data.stats.upgradesPurchased += 1;
       this.save(data);
       return { success: true, data };
     }
