@@ -107,7 +107,7 @@ export class HealthPickup extends Entity {
       if (player.stats.currentHp < player.stats.maxHp) {
         this.isCollected = true;
         player.stats.currentHp = Math.min(player.stats.maxHp, player.stats.currentHp + this.healAmount);
-        audioEngine.playCoinPickup();
+        audioEngine.playHeal();
         particles.createCoinSparkle(this.x + 11, this.y + 11);
         particles.createFloatingText(this.x + 11, this.y, `+${this.healAmount} HP`, '#4ade80', 16);
         return true;
