@@ -3,6 +3,7 @@ import { Player } from './Player';
 import { TileMap } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
+import { BossProjectile } from './BossProjectile';
 
 export class ForestGoblin extends Entity {
   public hp: number = 50;
@@ -22,6 +23,35 @@ export class ForestGoblin extends Entity {
   public slowTimer: number = 0;
   public burnTimer: number = 0;
   public burnTickTimer: number = 0;
+
+  // Unique World Special Powers
+  public abilityCooldown: number = 2.0;
+  public warningTimer: number = 0;
+  public warningType: string | null = null;
+
+  // World 1 (Forest)
+  public hasBlockShield: boolean = false;
+  public isDashing: boolean = false;
+  public dashTimer: number = 0;
+
+  // World 2 (Ruins)
+  public stoneShieldTimer: number = 0;
+
+  // World 3 (Desert)
+  public isSandDashing: boolean = false;
+  public isBurrowed: boolean = false;
+  public burrowTimer: number = 0;
+
+  // World 4 (Peaks)
+  public iceShieldHits: number = 0;
+  public iceShieldTimer: number = 0;
+
+  // World 5 (Shadow)
+  public isShadowClone: boolean = false;
+  public cloneLifetime: number = 3.5;
+
+  // World 6 (Citadel)
+  public isRageMode: boolean = false;
 
   private patrolMinX: number;
   private patrolMaxX: number;
@@ -65,22 +95,45 @@ export class ForestGoblin extends Entity {
 
     this.patrolMinX = x - patrolRange / 2;
     this.patrolMaxX = x + patrolRange / 2;
+
+    // World 1 Guard Shield Assignment for 50% of regular enemies
+    if (w === 1 && !isBoss && Math.floor(x + y) % 2 === 0) {
+      this.hasBlockShield = true;
+    }
   }
 
-  public update(dt: number, player: Player, tileMap: TileMap, particles: ParticleSystem) {
+  public update(
+    dt: number,
+    player: Player,
+    tileMap: TileMap,
+    particles: ParticleSystem,
+    projectiles?: BossProjectile[],
+    goblins?: ForestGoblin[]
+  ) {
     if (!this.isAlive) return;
 
-    if (this.hitFlashTimer > 0) {
-      this.hitFlashTimer -= dt;
-    }
-    if (this.attackCooldown > 0) {
-      this.attackCooldown -= dt;
+    // Handle Shadow Clone Lifespan
+    if (this.isShadowClone) {
+      this.cloneLifetime -= dt;
+      if (this.cloneLifetime <= 0) {
+        this.isAlive = false;
+        particles.createSlashSparks(this.x + this.width / 2, this.y + 10, true, ['#c084fc', '#3b0764']);
+        return;
+      }
     }
 
-    // Status Timers
-    if (this.slowTimer > 0) {
-      this.slowTimer -= dt;
+    if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+    if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.slowTimer > 0) this.slowTimer -= dt;
+    if (this.stoneShieldTimer > 0) this.stoneShieldTimer -= dt;
+    if (this.iceShieldTimer > 0) this.iceShieldTimer -= dt;
+    if (this.abilityCooldown > 0) this.abilityCooldown -= dt;
+
+    if (this.dashTimer > 0) {
+      this.dashTimer -= dt;
+      if (this.dashTimer <= 0) this.isDashing = false;
     }
+
     if (this.burnTimer > 0) {
       this.burnTimer -= dt;
       this.burnTickTimer -= dt;
@@ -91,7 +144,17 @@ export class ForestGoblin extends Entity {
       }
     }
 
-    const currentSpeed = this.slowTimer > 0 ? this.moveSpeed * 0.5 : this.moveSpeed;
+    // World 6 Rage Mode Trigger (<40% HP)
+    const [wStr] = this.levelId.split('-');
+    const w = parseInt(wStr, 10) || 1;
+    if (w === 6 && !this.isRageMode && this.hp < this.maxHp * 0.4) {
+      this.isRageMode = true;
+      particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'RAGE MODE! 🤬', '#ef4444', 16);
+      particles.createSlashSparks(this.x + this.width / 2, this.y, true, ['#ef4444', '#f97316']);
+    }
+
+    const baseSpeed = this.isRageMode ? this.moveSpeed * 1.35 : this.moveSpeed;
+    const currentSpeed = this.slowTimer > 0 ? baseSpeed * 0.5 : baseSpeed;
 
     // Animation frames
     this.animTime += dt;
@@ -104,23 +167,244 @@ export class ForestGoblin extends Entity {
     const dy = player.y - this.y;
     const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
+    // ------------------------------------
+    // TELEGRAPHED ATTACK EXECUTION CHECK
+    // ------------------------------------
+    if (this.warningTimer > 0) {
+      this.warningTimer -= dt;
+      this.vx = 0; // Pause during warning telegraph
+
+      if (this.warningTimer <= 0) {
+        // Warning finished -> Execute Special Move!
+        if (this.warningType === 'SMASH' && projectiles) {
+          // Ground Shockwave
+          projectiles.push(
+            new BossProjectile({
+              x: this.x + (this.facingRight ? this.width : -24),
+              y: this.y + this.height - 24,
+              vx: this.facingRight ? 6.5 : -6.5,
+              vy: 0,
+              width: 24,
+              height: 24,
+              damage: 7,
+              color: '#b45309',
+              glowColor: '#f59e0b',
+              isShockwave: true,
+              type: 'vine',
+            })
+          );
+          audioEngine.playCustomSFX('finisher');
+          particles.createLandingImpact(this.x + this.width / 2, this.y + this.height, 8);
+        } else if (this.warningType === 'SAND_THROW' && projectiles) {
+          // Sand Projectile
+          projectiles.push(
+            new BossProjectile({
+              x: this.x + (this.facingRight ? this.width : -20),
+              y: this.y + 10,
+              vx: this.facingRight ? 7.0 : -7.0,
+              vy: 0,
+              width: 20,
+              height: 20,
+              damage: 5,
+              color: '#f59e0b',
+              glowColor: '#d97706',
+              type: 'sand',
+            })
+          );
+          particles.createFloatingText(this.x + this.width / 2, this.y - 10, 'SAND THROW! ⌛', '#f59e0b', 13);
+        } else if (this.warningType === 'ICE_BLAST' && projectiles) {
+          // Ice Blast Projectile
+          projectiles.push(
+            new BossProjectile({
+              x: this.x + (this.facingRight ? this.width : -20),
+              y: this.y + 10,
+              vx: this.facingRight ? 7.5 : -7.5,
+              vy: 0,
+              width: 22,
+              height: 22,
+              damage: 6,
+              color: '#38bdf8',
+              glowColor: '#0284c7',
+              type: 'ice',
+            })
+          );
+          particles.createFloatingText(this.x + this.width / 2, this.y - 10, 'ICE BLAST! ❄️', '#38bdf8', 13);
+        } else if (this.warningType === 'SHADOW_STRIKE') {
+          // Heavy Lunge Strike
+          this.vx = this.facingRight ? 8.5 : -8.5;
+          this.vy = -3;
+          if (distToPlayer < 48 && player.isAlive) {
+            player.takeDamage(11, particles);
+          }
+          particles.createFloatingText(this.x + this.width / 2, this.y - 10, 'SHADOW STRIKE! 🔮', '#c084fc', 14);
+        }
+
+        this.warningType = null;
+        this.abilityCooldown = 4.0 + Math.random() * 2.0;
+      }
+
+      this.applyPhysics(tileMap);
+      return;
+    }
+
     // Direct body contact check
-    if (this.intersects(player) && player.isAlive) {
+    if (this.intersects(player) && player.isAlive && !this.isBurrowed) {
       player.takeDamage(this.attackDamage, particles);
     }
 
-    // AI Logic
+    // ------------------------------------
+    // WORLD SPECIAL POWER AI TRIGGERS
+    // ------------------------------------
     if (distToPlayer <= this.detectionRadius && player.isAlive) {
-      // Pursuit player
       this.facingRight = dx > 0;
-      if (distToPlayer > this.attackRange) {
-        this.vx = this.facingRight ? currentSpeed : -currentSpeed;
+
+      if (this.abilityCooldown <= 0) {
+        if (w === 1) {
+          // World 1: Fast Dash or Quick Leap
+          if (distToPlayer > 80 && distToPlayer < 180 && Math.random() < 0.5) {
+            this.isDashing = true;
+            this.dashTimer = 0.38;
+            this.abilityCooldown = 3.8;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'DASH! 💨', '#4ade80', 13);
+          } else if (distToPlayer > 70 && distToPlayer < 150 && this.isGrounded) {
+            this.vy = -7.5;
+            this.vx = this.facingRight ? currentSpeed * 2.6 : -currentSpeed * 2.6;
+            this.abilityCooldown = 4.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'LEAP! 🦅', '#22c55e', 13);
+          }
+        } else if (w === 2) {
+          // World 2: Stone Shield or Ground Smash
+          if (distToPlayer < 120 && this.stoneShieldTimer <= 0 && Math.random() < 0.45) {
+            this.stoneShieldTimer = 3.2;
+            this.abilityCooldown = 5.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'STONE SHIELD! 🪨', '#94a3b8', 13);
+          } else if (distToPlayer < 140 && this.isGrounded) {
+            this.warningTimer = 0.5;
+            this.warningType = 'SMASH';
+            particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SMASH! ⚠️', '#f97316', 14);
+          }
+        } else if (w === 3) {
+          // World 3: Sand Dash, Sand Throw, or Burrow
+          const roll = Math.random();
+          if (roll < 0.35 && distToPlayer < 100) {
+            // Sand Dash behind player
+            this.isSandDashing = true;
+            this.x = player.x + (this.facingRight ? -50 : 50);
+            this.abilityCooldown = 4.5;
+            particles.createSlashSparks(this.x, this.y, true, ['#f59e0b', '#d97706']);
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'SAND DASH! ⏳', '#f59e0b', 13);
+          } else if (roll < 0.7 && distToPlayer < 110) {
+            // Sand Throw Telegraph
+            this.warningTimer = 0.4;
+            this.warningType = 'SAND_THROW';
+            particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SAND PREP! ⏳', '#f59e0b', 13);
+          } else if (this.isGrounded) {
+            // Burrow Underground
+            this.isBurrowed = true;
+            this.burrowTimer = 1.2;
+            this.abilityCooldown = 6.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'BURROW! 🌪️', '#d97706', 13);
+          }
+        } else if (w === 4) {
+          // World 4: Ice Blast, Flying Leap, or Ice Shield
+          const roll = Math.random();
+          if (roll < 0.4) {
+            // Ice Blast Telegraph
+            this.warningTimer = 0.5;
+            this.warningType = 'ICE_BLAST';
+            particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'ICE CHARGE! ❄️', '#38bdf8', 14);
+          } else if (roll < 0.75 && this.isGrounded) {
+            // Flying Flip Leap over player
+            this.vy = -10.5;
+            this.vx = this.facingRight ? 6.5 : -6.5;
+            this.abilityCooldown = 4.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'FLIP LEAP! 🦅', '#38bdf8', 13);
+          } else {
+            // Ice Shield
+            this.iceShieldHits = 2;
+            this.iceShieldTimer = 3.0;
+            this.abilityCooldown = 6.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'ICE SHIELD! 🧊', '#0ea5e9', 13);
+          }
+        } else if (w === 5) {
+          // World 5: Shadow Clone, Teleport Dash, or Shadow Strike
+          const roll = Math.random();
+          if (roll < 0.35 && goblins && goblins.length < 12) {
+            // Shadow Clone
+            const clone = new ForestGoblin(this.x + (this.facingRight ? 36 : -36), this.y, 100, false, this.levelId);
+            clone.isShadowClone = true;
+            clone.maxHp = 15;
+            clone.hp = 15;
+            goblins.push(clone);
+            this.abilityCooldown = 7.0;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'SHADOW CLONE! 👥', '#c084fc', 13);
+          } else if (roll < 0.7) {
+            // Teleport Void Dash
+            this.x = player.x + (this.facingRight ? -60 : 60);
+            this.abilityCooldown = 4.0;
+            particles.createSlashSparks(this.x, this.y, true, ['#c084fc', '#3b0764']);
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'VOID DASH! 🔮', '#c084fc', 13);
+          } else {
+            // Shadow Strike Telegraph
+            this.warningTimer = 0.7;
+            this.warningType = 'SHADOW_STRIKE';
+            particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SHADOW CHARGE! 🔮', '#c084fc', 14);
+          }
+        } else if (w === 6) {
+          // World 6: Combined Elite Moves
+          const roll = Math.random();
+          if (roll < 0.4 && this.isGrounded) {
+            this.warningTimer = 0.45;
+            this.warningType = 'SMASH';
+            particles.createFloatingText(this.x + this.width / 2, this.y - 16, 'SMASH! ⚠️', '#ef4444', 14);
+          } else if (roll < 0.7) {
+            this.x = player.x + (this.facingRight ? -50 : 50);
+            this.abilityCooldown = 3.5;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'VOID DASH! 🔮', '#ef4444', 13);
+          } else {
+            this.stoneShieldTimer = 3.0;
+            this.abilityCooldown = 5.0;
+            particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'STONE SHIELD! 🪨', '#facc15', 13);
+          }
+        }
+      }
+
+      // Handle Burrow Movement
+      if (this.isBurrowed) {
+        this.burrowTimer -= dt;
+        this.vx = this.facingRight ? currentSpeed * 1.5 : -currentSpeed * 1.5;
+        if (Math.random() < 0.4) {
+          particles.createSlashSparks(this.x + this.width / 2, this.y + this.height, true, ['#d97706', '#f59e0b']);
+        }
+        if (this.burrowTimer <= 0 || distToPlayer < 24) {
+          this.isBurrowed = false;
+          this.vy = -6.5; // Pop up!
+          if (distToPlayer < 36 && player.isAlive) {
+            player.takeDamage(6, particles);
+          }
+          particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'BURROW POP! 🌪️', '#d97706', 14);
+        }
+      } else if (distToPlayer > this.attackRange) {
+        // Normal Pursuit
+        const speedMultiplier = this.isDashing ? 3.2 : 1.0;
+        this.vx = (this.facingRight ? currentSpeed : -currentSpeed) * speedMultiplier;
       } else {
         // Attack Range reached
         this.vx = 0;
         if (this.attackCooldown <= 0) {
-          this.attackCooldown = 1.2; // Attack every 1.2s
+          const attackSpeed = this.isRageMode ? 0.8 : 1.2;
+          this.attackCooldown = attackSpeed;
           player.takeDamage(this.attackDamage, particles);
+
+          // World 6 Combo Strike
+          if (w === 6 && Math.random() < 0.5) {
+            setTimeout(() => {
+              if (this.isAlive && player.isAlive && this.intersects(player)) {
+                player.takeDamage(Math.round(this.attackDamage * 0.8), particles);
+                particles.createFloatingText(player.x, player.y - 10, 'COMBO STRIKE!', '#ef4444', 14);
+              }
+            }, 220);
+          }
         }
       }
     } else {
@@ -135,12 +419,7 @@ export class ForestGoblin extends Entity {
       }
     }
 
-    // Apply gravity
-    this.vy += 0.5;
-    if (this.vy > 10) this.vy = 10;
-
-    // TileMap Physics
-    tileMap.resolveEntityCollision(this);
+    this.applyPhysics(tileMap);
 
     // Hazard Pit check
     if (this.y > tileMap.heightInPixels + 100) {
@@ -148,8 +427,38 @@ export class ForestGoblin extends Entity {
     }
   }
 
+  private applyPhysics(tileMap: TileMap) {
+    this.vy += 0.5;
+    if (this.vy > 10) this.vy = 10;
+    tileMap.resolveEntityCollision(this);
+  }
+
   public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
     if (!this.isAlive) return false;
+
+    // 1. Guard Block Check
+    if (this.hasBlockShield) {
+      this.hasBlockShield = false;
+      audioEngine.playEnemyHit(attackType);
+      particles.createSlashSparks(this.x + this.width / 2, this.y + 10, this.facingRight, ['#e2e8f0', '#94a3b8']);
+      particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'BLOCK! 🛡️', '#e2e8f0', 15);
+      return true; // Attack absorbed
+    }
+
+    // 2. Ice Shield Check
+    if (this.iceShieldHits > 0 && this.iceShieldTimer > 0) {
+      this.iceShieldHits--;
+      audioEngine.playEnemyHit(attackType);
+      particles.createSlashSparks(this.x + this.width / 2, this.y + 10, this.facingRight, ['#38bdf8', '#0ea5e9']);
+      particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'ICE SHIELD! 🧊', '#38bdf8', 14);
+      return true; // Attack absorbed
+    }
+
+    // 3. Stone Shield Damage Reduction (60% reduction)
+    if (this.stoneShieldTimer > 0) {
+      damage = Math.max(1, Math.round(damage * 0.4));
+      particles.createFloatingText(this.x + this.width / 2, this.y - 14, 'STONE SHIELD! 🪨', '#94a3b8', 13);
+    }
 
     this.hp -= damage;
     this.hitFlashTimer = 0.2;
@@ -180,6 +489,24 @@ export class ForestGoblin extends Entity {
     const px = Math.round(this.x - offsetX);
     const py = Math.round(this.y - offsetY);
 
+    // If Shadow Clone, translucent render
+    if (this.isShadowClone) {
+      ctx.globalAlpha = 0.55;
+    }
+
+    // If Burrowed, render sand mound moving along floor
+    if (this.isBurrowed) {
+      ctx.save();
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(px + this.width / 2, py + this.height - 4, 14, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(px + this.width / 2 - 8, py + this.height - 2, 16, 2);
+      ctx.restore();
+      return;
+    }
+
     ctx.save();
     // Anchor at feet center for ground alignment
     ctx.translate(px + this.width / 2, py + this.height);
@@ -188,45 +515,49 @@ export class ForestGoblin extends Entity {
     const scaleX = this.facingRight ? baseScale : -baseScale;
     ctx.scale(scaleX, baseScale);
 
-    const isAttacking = this.attackCooldown > 0.9; // Attack windup/slash pose
+    const isAttacking = this.attackCooldown > 0.9;
     const isHit = this.hitFlashTimer > 0;
     const isMoving = Math.abs(this.vx) > 0.1;
     const walkCycle = isMoving ? Math.sin(this.animFrame * 1.2) : 0;
     const bob = isMoving ? Math.abs(Math.sin(this.animFrame * 1.5)) * -2 : Math.sin(this.animTime * 6) * 1.2;
 
-    // Stagger rotation when hit
     if (isHit) {
       ctx.rotate(-0.15);
     } else if (isMoving) {
-      ctx.rotate(0.05); // Slight aggressive forward lean while moving
+      ctx.rotate(0.05);
     }
 
-    // World ID parsing
     const [wStr] = this.levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
 
-    // 1. Ground Shadow
+    // Ground Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(0, -2, 14, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Golden Boss Crown
-    if (this.isBoss) {
-      ctx.fillStyle = isHit ? '#ffffff' : '#facc15';
+    // Render Auras for Active Shields
+    if (this.stoneShieldTimer > 0) {
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.85)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(-10, -42 + bob);
-      ctx.lineTo(-7, -52 + bob);
-      ctx.lineTo(-3, -45 + bob);
-      ctx.lineTo(0, -56 + bob);
-      ctx.lineTo(3, -45 + bob);
-      ctx.lineTo(7, -52 + bob);
-      ctx.lineTo(10, -42 + bob);
-      ctx.closePath();
-      ctx.fill();
+      ctx.arc(0, -20, 20, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (this.iceShieldHits > 0 && this.iceShieldTimer > 0) {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, -20, 22, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (this.isRageMode) {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, -20, 22, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
-    // Render World-Specific Intimidating Enemy Visuals
+    // Render World-Specific Visuals
     switch (w) {
       case 2:
         this.renderDesertRaider(ctx, bob, walkCycle, isAttacking, isHit);
@@ -249,10 +580,23 @@ export class ForestGoblin extends Entity {
         break;
     }
 
+    // Render Guard Shield Icon
+    if (this.hasBlockShield) {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(-18, -32 + bob, 6, 12);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-18, -32 + bob, 6, 12);
+    }
+
     ctx.restore();
 
-    // HP Bar floating above enemy
-    if (this.hp < this.maxHp) {
+    // HP Bar & Warning Badge floating above enemy
+    if (this.warningTimer > 0) {
+      ctx.fillStyle = '#f97316';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('⚠️ CHARGING', px - 10, py - 24);
+    } else if (this.hp < this.maxHp) {
       const hpWidth = 34;
       const hpHeight = 4;
       const hpPercent = Math.max(0, this.hp / this.maxHp);
@@ -267,6 +611,8 @@ export class ForestGoblin extends Entity {
       ctx.lineWidth = 1;
       ctx.strokeRect(px, py - 16, hpWidth, hpHeight);
     }
+
+    ctx.globalAlpha = 1.0;
   }
 
   // ==========================================

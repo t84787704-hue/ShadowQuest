@@ -25,6 +25,12 @@ export class Player extends Entity {
   public spinKickCooldownTimer: number = 0;
   public onDamage?: () => void;
 
+  // Status effects from world enemies
+  public slowTimer: number = 0;
+  public stunTimer: number = 0;
+  public sandBlindTimer: number = 0;
+  public isGodMode: boolean = false;
+
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
   private jumpBufferTimer: number = 0;
@@ -60,6 +66,24 @@ export class Player extends Entity {
     if (!this.isAlive) {
       this.state = 'DEAD';
       return;
+    }
+
+    // Status Timers
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      this.vx = 0;
+      this.state = 'HURT';
+      // Apply gravity and physics while stunned
+      this.vy += this.GRAVITY;
+      if (this.vy > this.TERMINAL_VELOCITY) this.vy = this.TERMINAL_VELOCITY;
+      tileMap.resolveEntityCollision(this);
+      return;
+    }
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+    }
+    if (this.sandBlindTimer > 0) {
+      this.sandBlindTimer -= dt;
     }
 
     // Cooldown & combo window timers
@@ -212,7 +236,8 @@ export class Player extends Entity {
     }
 
     // Handle Horizontal Movement (ALLOW MOVEMENT WHILE FIGHTING FOR FLUIDITY)
-    const moveSpeedMult = this.state === 'ATTACK' ? 0.85 : (input.down ? 0.5 : 1.0);
+    const slowSpeedMult = this.slowTimer > 0 ? 0.52 : 1.0;
+    const moveSpeedMult = (this.state === 'ATTACK' ? 0.85 : (input.down ? 0.5 : 1.0)) * slowSpeedMult;
 
     if (input.left) {
       this.vx = -this.stats.moveSpeed * moveSpeedMult;
@@ -344,7 +369,7 @@ export class Player extends Entity {
   }
 
   public takeDamage(damage: number, particles: ParticleSystem): boolean {
-    if (this.invulnerableTimer > 0 || !this.isAlive) return false;
+    if (this.isGodMode || this.invulnerableTimer > 0 || !this.isAlive) return false;
 
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
     this.invulnerableTimer = 1.0; // 1.0 second damage invulnerability period
@@ -781,6 +806,44 @@ export class Player extends Entity {
       ctx.fillStyle = '#fed7aa'; // Bare Knuckles
       ctx.beginPath();
       ctx.arc(12, -0.5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Render God Mode Badge / Stun Stars / Freeze Aura / Sand Dust
+    if (this.isGodMode && this.isAlive) {
+      ctx.save();
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('🛡️ GOD', -16, -58);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, -22, 22, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.stunTimer > 0 && this.isAlive) {
+      ctx.save();
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 12px sans-serif';
+      const starAngle = Date.now() * 0.008;
+      for (let i = 0; i < 3; i++) {
+        const a = starAngle + (i * Math.PI * 2) / 3;
+        const sx = Math.cos(a) * 12;
+        const sy = Math.sin(a) * 5 - 50;
+        ctx.fillText('✦', sx - 4, sy);
+      }
+      ctx.restore();
+    } else if (this.slowTimer > 0 && this.isAlive) {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.beginPath();
+      ctx.arc(0, -20, 18, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.sandBlindTimer > 0 && this.isAlive) {
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
+      ctx.beginPath();
+      ctx.arc(0, -20, 16, 0, Math.PI * 2);
       ctx.fill();
     }
 

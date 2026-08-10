@@ -403,11 +403,11 @@ export class BossMonster extends Entity {
       case 1:
         return 'vine';
       case 2:
-        return 'sand';
+        return 'vine';
       case 3:
-        return 'ice';
+        return 'sand';
       case 4:
-        return 'fire';
+        return 'ice';
       case 5:
         return 'shadow';
       default:

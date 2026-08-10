@@ -82,7 +82,26 @@ export class BossProjectile {
       this.y + this.height > playerBox.y
     ) {
       if (player.isAlive) {
-        player.takeDamage(this.damage, particles);
+        // Shockwaves can be jumped over!
+        if (this.isShockwave && !player.isGrounded) {
+          // Player is in mid-air jumping over shockwave -> dodge!
+          return;
+        }
+
+        const tookDamage = player.takeDamage(this.damage, particles);
+        if (tookDamage) {
+          if (this.isShockwave) {
+            player.stunTimer = 0.5;
+            particles.createFloatingText(player.x + player.width / 2, player.y - 10, 'STUNNED! ⚡', '#facc15', 15);
+          } else if (this.type === 'sand') {
+            player.slowTimer = 1.5;
+            player.sandBlindTimer = 1.5;
+            particles.createFloatingText(player.x + player.width / 2, player.y - 10, 'BLINDED! ⌛', '#f59e0b', 14);
+          } else if (this.type === 'ice') {
+            player.slowTimer = 2.0;
+            particles.createFloatingText(player.x + player.width / 2, player.y - 10, 'FROZEN! ❄️', '#38bdf8', 14);
+          }
+        }
         particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
         this.isAlive = false;
         return;

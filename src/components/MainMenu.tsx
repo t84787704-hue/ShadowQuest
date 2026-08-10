@@ -4,6 +4,7 @@ import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { getUnclaimedCount } from '../data/achievements';
+import { DebugManager } from '../game/debug/DebugManager';
 
 interface MainMenuProps {
   saveData: SaveData;
@@ -11,6 +12,7 @@ interface MainMenuProps {
   onSelectLevel: (levelId: string, isResume?: boolean) => void;
   onClearQuickSave?: () => void;
   onSoundToggle: () => void;
+  onOpenDebugMenu: () => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -19,10 +21,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onSelectLevel,
   onClearQuickSave,
   onSoundToggle,
+  onOpenDebugMenu,
 }) => {
   const isSoundOn = audioEngine.isSoundEnabled();
   const latestUnlockedLevel = SaveSystem.getLatestUnlockedLevel();
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [tapCount, setTapCount] = useState<number>(DebugManager.getTapCount());
+
+  const handleVersionTap = () => {
+    const result = DebugManager.registerVersionTap();
+    setTapCount(result.currentTaps);
+    if (result.unlocked) {
+      audioEngine.playVictory();
+      onOpenDebugMenu();
+    } else {
+      audioEngine.playButtonClick();
+    }
+  };
 
   const handleBtnClick = (screen: GameScreen) => {
     audioEngine.playButtonClick();
@@ -238,6 +253,19 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Footer Info */}
       <div className="w-full max-w-2xl flex justify-between items-center text-[10px] text-slate-500 font-mono z-10">
         <span>6 WORLDS • 30 LEVELS</span>
+        <button
+          onClick={handleVersionTap}
+          className="hover:text-amber-400 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 bg-slate-900/80 hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/60 shadow-sm"
+          title="Tap 7 times quickly for Debug Menu"
+        >
+          <span>v1.0.4 (Build 104)</span>
+          {tapCount > 0 && tapCount < 7 && (
+            <span className="text-amber-400 font-bold font-sans text-[11px]">[{7 - tapCount}]</span>
+          )}
+          {DebugManager.isDebugMenuOpen() && (
+            <span className="text-emerald-400 font-bold">🛠️</span>
+          )}
+        </button>
         <span>SAVED OFFLINE</span>
       </div>
     </div>

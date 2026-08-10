@@ -18,6 +18,8 @@ interface GameCanvasProps {
   onSaveUpdate: (updatedSave: SaveData) => void;
   onSelectNextLevel?: (nextLevelId: string) => void;
   onReturnToMainMenu: () => void;
+  onOpenDebugMenu?: () => void;
+  onEngineReady?: (engine: GameEngine | null) => void;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
@@ -27,6 +29,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onSaveUpdate,
   onSelectNextLevel,
   onReturnToMainMenu,
+  onOpenDebugMenu,
+  onEngineReady,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
@@ -69,6 +73,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const currentSave = SaveSystem.load();
     const engine = new GameEngine(canvas, currentSave, levelId, isResume);
     engineRef.current = engine;
+    if (onEngineReady) onEngineReady(engine);
 
     engine.onImpactCallback = (type) => {
       if (type === 'HEAVY' || type === 'BOSS') {
@@ -141,6 +146,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         engineRef.current.stop();
         engineRef.current = null;
       }
+      if (onEngineReady) onEngineReady(null);
     };
   }, []);
 
@@ -319,6 +325,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               onQuickSave={handleQuickSave}
               onRestart={handleRestart}
               onMainMenu={onReturnToMainMenu}
+              onOpenDebugMenu={onOpenDebugMenu}
             />
           )}
 

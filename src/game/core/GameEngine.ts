@@ -14,6 +14,7 @@ import { WeatherSystem } from './WeatherSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
+import { DebugManager } from '../debug/DebugManager';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -123,6 +124,52 @@ export class GameEngine {
 
   public setOnStateChange(cb: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void) {
     this.onStateChangeCallback = cb;
+  }
+
+  // Debug Helper Methods
+  public setGodMode(enabled: boolean) {
+    this.player.isGodMode = enabled;
+  }
+
+  public setPlayerHp(hp: number) {
+    this.player.stats.currentHp = hp;
+    if (hp > this.player.stats.maxHp) {
+      this.player.stats.maxHp = hp;
+    }
+    this.player.isAlive = hp > 0;
+    if (this.player.isAlive && this.player.state === 'DEAD') {
+      this.player.state = 'IDLE';
+    }
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback(this.status, this.collectedCoinsCount, this.totalCoins);
+    }
+  }
+
+  public addCoins(amount: number) {
+    this.collectedCoinsCount += amount;
+    SaveSystem.addCoins(amount);
+    const fresh = SaveSystem.load();
+    this.startingCoins = fresh.coins - this.collectedCoinsCount;
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback(this.status, this.collectedCoinsCount, fresh.coins);
+    }
+  }
+
+  public triggerVictory() {
+    if (this.status === 'VICTORY') return;
+    this.status = 'VICTORY';
+    audioEngine.playVictory();
+    this.particles.createVictoryConfetti(this.player.x, this.player.y);
+
+    const totalPossible = Math.max(1, this.totalCoinsInLevel);
+    const coinRatio = this.collectedCoinsCount / totalPossible;
+    const stars = coinRatio >= 0.8 ? 3 : coinRatio >= 0.4 ? 2 : 1;
+
+    SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
+
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
+    }
   }
 
   public registerComboHit(x: number, y: number) {
@@ -342,6 +389,9 @@ export class GameEngine {
   private update(dt: number) {
     const inputState = this.input.getState();
 
+    // Sync Debug God Mode
+    this.player.isGodMode = DebugManager.isGodMode();
+
     // Update Combat Combo Inactivity Timer
     if (this.comboTimer > 0) {
       this.comboTimer -= dt;
@@ -509,9 +559,10 @@ export class GameEngine {
     }
 
     // 5. Update Goblins
-    for (const goblin of this.goblins) {
+    for (let i = this.goblins.length - 1; i >= 0; i--) {
+      const goblin = this.goblins[i];
       if (goblin.isAlive) {
-        goblin.update(dt, this.player, this.tileMap, this.particles);
+        goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
       }
     }
 
@@ -635,6 +686,12 @@ export class GameEngine {
 
     // 10. Weather System Atmospheric Effects
     this.weather.render(this.ctx, offsetX, offsetY);
+
+    // Sand Blind Screen Vignette Overlay
+    if (this.player.sandBlindTimer > 0) {
+      this.ctx.fillStyle = 'rgba(217, 119, 6, 0.22)';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
 
   private renderTutorialSigns(offsetX: number, offsetY: number) {
