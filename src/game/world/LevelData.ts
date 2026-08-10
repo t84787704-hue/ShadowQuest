@@ -14,245 +14,52 @@ export interface LevelDefinition {
   playerSpawn: { x: number; y: number };
   goalPost: { x: number; y: number; width: number; height: number };
   checkpoint?: { x: number; y: number };
+  checkpoints?: { x: number; y: number }[];
   signs?: TutorialSign[];
   coins: { x: number; y: number; value?: number }[];
   healthPickups?: { x: number; y: number; healAmount?: number }[];
   goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[];
 }
 
-// Helper to construct Level 1-1 Green Forest Tile Grid (140 cols x 15 rows = 4480px)
-function buildLevel1_1Grid(): number[][] {
-  const cols = 140;
-  const rows = 15;
-  const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(TileType.EMPTY));
-
-  // Base ground line setup (row 12, 13, 14) with strategic gap pits
-  for (let c = 0; c < cols; c++) {
-    // Gap 1: Section 2 Forest Path (cols 32..35)
-    if (c >= 32 && c <= 35) continue;
-
-    // Gap 2: Section 3 Forest Ruins Spike Pit (cols 66..70)
-    if (c >= 66 && c <= 70) {
-      grid[14][c] = TileType.DIRT_MIDDLE;
-      grid[13][c] = TileType.HAZARD_SPIKES; // Spikes in pit
-      continue;
-    }
-
-    // Gap 3: Section 4 Deep Forest Chasm (cols 102..107)
-    if (c >= 102 && c <= 107) continue;
-
-    grid[12][c] = TileType.GRASS_TOP;
-    grid[13][c] = TileType.DIRT_MIDDLE;
-    grid[14][c] = TileType.DIRT_MIDDLE;
-  }
-
-  // ==================== SECTION 1 — Forest Entrance (cols 0..28) ====================
-  // Gentle introduction hill
-  grid[11][12] = TileType.GRASS_TOP;
-  grid[11][13] = TileType.GRASS_TOP;
-  grid[11][14] = TileType.GRASS_TOP;
-  grid[11][15] = TileType.GRASS_TOP;
-
-  // Intro low platform
-  for (let c = 20; c <= 24; c++) {
-    grid[10][c] = TileType.WOOD_BRIDGE;
-  }
-
-  // ==================== SECTION 2 — Forest Path (cols 29..58) ====================
-  // Pre-gap launch step
-  grid[10][30] = TileType.STONE_PLATFORM;
-  grid[10][31] = TileType.STONE_PLATFORM;
-
-  // Low Wooden Bridge across Gap 1 (cols 32..35) - row 10 (easy jump from row 10/12)
-  for (let c = 32; c <= 35; c++) {
-    grid[10][c] = TileType.WOOD_BRIDGE;
-  }
-
-  // Stepping stones to mid platform
-  grid[10][39] = TileType.STONE_PLATFORM;
-  grid[10][40] = TileType.STONE_PLATFORM;
-
-  // Mid Wooden Bridge (cols 41..45) at row 8 (reachable from row 10 platform!)
-  for (let c = 41; c <= 45; c++) {
-    grid[8][c] = TileType.WOOD_BRIDGE;
-  }
-  grid[10][46] = TileType.STONE_PLATFORM; // Step down
-
-  // Forest Path Hill (cols 50..55)
-  for (let c = 50; c <= 55; c++) {
-    grid[11][c] = TileType.GRASS_TOP;
-  }
-
-  // ==================== SECTION 3 — Forest Ruins (cols 59..88) ====================
-  // Ancient Stone Ruins & Pillars
-  grid[10][60] = TileType.STONE_PLATFORM;
-  grid[10][61] = TileType.STONE_PLATFORM;
-
-  for (let r = 9; r <= 11; r++) {
-    grid[r][62] = TileType.STONE_PLATFORM;
-    grid[r][65] = TileType.STONE_PLATFORM;
-  }
-  for (let c = 62; c <= 65; c++) {
-    grid[8][c] = TileType.STONE_PLATFORM; // Reachable from row 10 stone step
-  }
-
-  // Ruin Platform above Spike Pit (cols 67..70) at row 9
-  for (let c = 67; c <= 70; c++) {
-    grid[9][c] = TileType.STONE_PLATFORM;
-  }
-
-  // Secret Coin Tower Staircase (cols 73..79)
-  grid[10][73] = TileType.STONE_PLATFORM; // Step 1 (row 10)
-  for (let c = 74; c <= 75; c++) {
-    grid[8][c] = TileType.STONE_PLATFORM; // Step 2 (row 8)
-  }
-  for (let c = 76; c <= 79; c++) {
-    grid[6][c] = TileType.STONE_PLATFORM; // Secret Top (row 6) - reachable from row 8 step!
-  }
-
-  // ==================== SECTION 4 — Deep Forest (cols 89..118) ====================
-  // Checkpoint Pedestal at Col 91 (row 11)
-  grid[11][91] = TileType.STONE_PLATFORM;
-
-  // Stepping Stone Platforms across Chasm (cols 102..107)
-  grid[10][101] = TileType.STONE_PLATFORM;
-  grid[10][103] = TileType.STONE_PLATFORM;
-  grid[9][105] = TileType.STONE_PLATFORM;
-  grid[10][107] = TileType.STONE_PLATFORM;
-
-  // Deep Forest High Branch Platform (cols 111..116)
-  grid[10][109] = TileType.WOOD_BRIDGE;
-  grid[10][110] = TileType.WOOD_BRIDGE;
-  for (let c = 111; c <= 116; c++) {
-    grid[8][c] = TileType.WOOD_BRIDGE; // Reachable from row 10 bridge step!
-  }
-  grid[10][117] = TileType.WOOD_BRIDGE;
-
-  // ==================== SECTION 5 — Level Exit (cols 119..140) ====================
-  // Victory Staircase
-  for (let c = 124; c <= 126; c++) {
-    grid[11][c] = TileType.STONE_PLATFORM;
-  }
-  for (let c = 127; c <= 129; c++) {
-    grid[10][c] = TileType.STONE_PLATFORM;
-  }
-  for (let c = 130; c <= 132; c++) {
-    grid[9][c] = TileType.STONE_PLATFORM;
-  }
-
-  // Goal Post Pedestal (col 135)
-  grid[11][135] = TileType.STONE_PLATFORM;
-
-  return grid;
-}
-
-export const LEVEL_1_1: LevelDefinition = {
-  config: {
-    id: '1-1',
-    worldId: 1,
-    levelNum: 1,
-    title: '1-1 GREEN FOREST',
-    worldName: 'WORLD 1 — GREEN VALLEY',
-    width: 140 * 32, // 4480px
-    height: 15 * 32, // 480px
-    unlocked: true,
-    completed: false,
-    stars: 0,
-    highScoreCoins: 0,
-  },
-  grid: buildLevel1_1Grid(),
-  playerSpawn: { x: 80, y: 320 },
-  checkpoint: { x: 91 * 32, y: 11 * 32 - 48 }, // Deep Forest Checkpoint (x: 2912, y: 304)
-  goalPost: { x: 135 * 32 + 4, y: 11 * 32 - 48, width: 24, height: 48 },
-  signs: [],
-  healthPickups: [
-    { x: 1480, y: 310, healAmount: 30 }, // Mid forest path healing heart
-    { x: 3120, y: 310, healAmount: 30 }, // Deep forest healing heart
-  ],
-  coins: [
-    // Section 1 — Forest Entrance
-    { x: 180, y: 330 },
-    { x: 220, y: 330 },
-    { x: 400, y: 300 },
-    { x: 440, y: 300 },
-    { x: 680, y: 270 }, // On intro wood bridge
-    { x: 720, y: 270 },
-    { x: 760, y: 330 },
-
-    // Section 2 — Forest Path
-    { x: 1040, y: 270 }, // On bridge
-    { x: 1080, y: 270 },
-    { x: 1320, y: 200 }, // On high wood bridge
-    { x: 1360, y: 200 },
-    { x: 1400, y: 200 },
-    { x: 1620, y: 300 },
-    { x: 1660, y: 300 },
-
-    // Section 3 — Forest Ruins
-    { x: 2000, y: 200 }, // On ruin platform
-    { x: 2040, y: 200 },
-    { x: 2180, y: 230 }, // On spike pit bridge
-    { x: 2220, y: 230 },
-    // Secret Stash Top
-    { x: 2440, y: 140, value: 5 },
-    { x: 2480, y: 140, value: 5 },
-    { x: 2520, y: 140, value: 5 },
-
-    // Section 4 — Deep Forest
-    { x: 3000, y: 330 },
-    { x: 3040, y: 330 },
-    { x: 3300, y: 270 }, // Across chasm stepping stones
-    { x: 3360, y: 240 },
-    { x: 3580, y: 200 }, // On high branch
-    { x: 3640, y: 200 },
-
-    // Section 5 — Level Exit
-    { x: 4000, y: 330 },
-    { x: 4050, y: 330 },
-    { x: 4100, y: 290 }, // On victory stairs
-    { x: 4140, y: 260 },
-    { x: 4180, y: 230 },
-    { x: 4250, y: 330 },
-  ],
-  goblins: [
-    // Section 1
-    { x: 820, y: 320, patrolRange: 80 },
-
-    // Section 2
-    { x: 1340, y: 200, patrolRange: 80 },
-    { x: 1640, y: 320, patrolRange: 100 },
-
-    // Section 3
-    { x: 2020, y: 200, patrolRange: 70 },
-    { x: 2500, y: 320, patrolRange: 120 },
-
-    // Section 4
-    { x: 3080, y: 320, patrolRange: 110 },
-    { x: 3600, y: 200, patrolRange: 80 },
-
-    // Section 5
-    { x: 4020, y: 320, patrolRange: 120 },
-    { x: 4180, y: 320, patrolRange: 100 },
-  ],
-};
-
 export const WORLD_NAMES: Record<number, string> = {
-  1: 'WORLD 1 — NATURE ADVENTURE',
-  2: 'WORLD 2 — DESERT',
-  3: 'WORLD 3 — ICE',
-  4: 'WORLD 4 — VOLCANO',
-  5: 'WORLD 5 — DARK LANDS',
-  6: 'WORLD 6 — FINAL REALM',
+  1: 'WORLD 1 — GREEN VALLEY',
+  2: 'WORLD 2 — ANCIENT DESERT',
+  3: 'WORLD 3 — FROZEN MOUNTAIN',
+  4: 'WORLD 4 — VOLCANIC CORE',
+  5: 'WORLD 5 — SHADOW REALM',
+  6: "WORLD 6 — GOBLIN KING'S CITADEL",
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
   1: ['Green Forest', 'Forest Ruins', 'River Valley', 'Misty Peaks', 'Mountain Fortress'],
-  2: ['Desert', 'Ancient Desert Ruins', 'Canyon', 'Sandstorm', 'Desert Temple'],
-  3: ['Snow Forest', 'Frozen Lake', 'Ice Caves', 'Blizzard Peaks', 'Ice Fortress'],
-  4: ['Volcanic Valley', 'Lava Caves', 'Burning Mountain', 'Magma Fortress', 'Volcano Boss Arena'],
-  5: ['Haunted Forest', 'Ruined Village', 'Shadow Caves', 'Dark Castle', 'Final Castle/Boss Arena'],
-  6: ['Final Realm 1', 'Final Realm 2', 'Final Realm 3', 'Final Realm 4', 'Goblin King Boss'],
+  2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Desert Citadel'],
+  3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frost Citadel'],
+  4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Fortress', 'Volcanic Citadel'],
+  5: ['Haunted Woods', 'Shadow Ruins', 'Dark Pass', 'Obsidian Tower', 'Shadow Citadel'],
+  6: ['Citadel Gates', 'Outer Ramparts', 'Inner Keep', 'Royal Chambers', 'Goblin King Throne'],
 };
+
+// Seedable pseudo-random generator
+function makeRandom(seed: number) {
+  let s = seed;
+  return function () {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+export function getLevelCols(worldId: number, levelNum: number): number {
+  if (worldId === 1 && levelNum === 1) return 220; // Level 1-1 (7,040px)
+  const isBoss = levelNum === 5;
+  if (worldId === 6 && isBoss) return 560; // Level 30 Final Boss Finale (17,920px)
+
+  const baseCols = 200 + (worldId - 1) * 50 + (levelNum - 1) * 12;
+  return isBoss ? baseCols + 35 : baseCols;
+}
+
+export function getLevelWidth(worldId: number, levelNum: number): number {
+  return getLevelCols(worldId, levelNum) * 32;
+}
 
 export function getLevelsForWorld(worldId: number): LevelConfig[] {
   const titles = WORLD_TITLES[worldId] || WORLD_TITLES[1];
@@ -261,13 +68,14 @@ export function getLevelsForWorld(worldId: number): LevelConfig[] {
   return [1, 2, 3, 4, 5].map((lvlNum) => {
     const isBoss = lvlNum === 5;
     const title = `${worldId}-${lvlNum} ${titles[lvlNum - 1].toUpperCase()}`;
+    const width = getLevelWidth(worldId, lvlNum);
     return {
       id: `${worldId}-${lvlNum}`,
       worldId,
       levelNum: lvlNum,
       title,
       worldName: isBoss ? `${wName} (BOSS)` : wName,
-      width: isBoss ? 2800 : 3800,
+      width,
       height: 480,
       unlocked: worldId === 1 && lvlNum === 1,
       completed: false,
@@ -282,92 +90,253 @@ export const ALL_LEVELS_METADATA: LevelConfig[] = [1, 2, 3, 4, 5, 6].flatMap((w)
   getLevelsForWorld(w)
 );
 
-function buildProceduralGrid(isBoss: boolean): number[][] {
-  const cols = isBoss ? 90 : 120;
-  const rows = 15;
-  const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(TileType.EMPTY));
-
-  // Ground setup with gaps every ~25 columns
-  for (let c = 0; c < cols; c++) {
-    if (!isBoss) {
-      if ((c >= 30 && c <= 33) || (c >= 65 && c <= 68) || (c >= 95 && c <= 98)) {
-        continue; // Gap
-      }
-    } else {
-      if (c >= 45 && c <= 47) continue; // Single gap in boss level
-    }
-
-    grid[12][c] = TileType.GRASS_TOP;
-    grid[13][c] = TileType.DIRT_MIDDLE;
-    grid[14][c] = TileType.DIRT_MIDDLE;
-  }
-
-  // Add wooden/stone platforms
-  const platformLocations = isBoss
-    ? [
-        { start: 15, end: 25, r: 9, type: TileType.STONE_PLATFORM },
-        { start: 35, end: 42, r: 8, type: TileType.WOOD_BRIDGE },
-        { start: 52, end: 62, r: 8, type: TileType.WOOD_BRIDGE },
-        { start: 70, end: 80, r: 9, type: TileType.STONE_PLATFORM },
-      ]
-    : [
-        { start: 15, end: 20, r: 10, type: TileType.WOOD_BRIDGE },
-        { start: 28, end: 35, r: 9, type: TileType.STONE_PLATFORM }, // Bridge over Gap 1
-        { start: 42, end: 48, r: 8, type: TileType.WOOD_BRIDGE },
-        { start: 55, end: 60, r: 10, type: TileType.STONE_PLATFORM },
-        { start: 64, end: 70, r: 9, type: TileType.STONE_PLATFORM }, // Bridge over Gap 2
-        { start: 78, end: 84, r: 7, type: TileType.WOOD_BRIDGE },
-        { start: 93, end: 100, r: 9, type: TileType.STONE_PLATFORM }, // Bridge over Gap 3
-      ];
-
-  for (const plat of platformLocations) {
-    for (let c = plat.start; c <= plat.end; c++) {
-      grid[plat.r][c] = plat.type;
-    }
-  }
-
-  return grid;
-}
-
 export function getLevelDefinition(levelId: string): LevelDefinition {
-  if (levelId === '1-1') {
-    return LEVEL_1_1;
-  }
-
   const [wStr, lStr] = levelId.split('-');
   const w = parseInt(wStr, 10) || 1;
   const l = parseInt(lStr, 10) || 1;
 
   const isBoss = l === 5;
+  const isFinalLevel = w === 6 && isBoss; // Level 30
+  const cols = getLevelCols(w, l);
+  const rows = 15;
+
   const wName = WORLD_NAMES[w] || `WORLD ${w}`;
   const titles = WORLD_TITLES[w] || WORLD_TITLES[1];
   const title = `${w}-${l} ${titles[l - 1].toUpperCase()}`;
 
-  const grid = buildProceduralGrid(isBoss);
-  const cols = grid[0].length;
+  const rng = makeRandom(w * 1000 + l * 47 + 1337);
+
+  const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(TileType.EMPTY));
+
+  // Base ground baseline setup (row 12, 13, 14)
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.GRASS_TOP;
+    grid[13][c] = TileType.DIRT_MIDDLE;
+    grid[14][c] = TileType.DIRT_MIDDLE;
+  }
 
   const coins: { x: number; y: number; value?: number }[] = [];
   const goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] = [];
+  const healthPickups: { x: number; y: number; healAmount?: number }[] = [];
+  const checkpoints: { x: number; y: number }[] = [];
+  const signs: TutorialSign[] = [];
 
-  // Generate coin lines along platforms
-  for (let c = 12; c < cols - 15; c += 4) {
+  // Tutorial Signs for Level 1-1
+  if (w === 1 && l === 1) {
+    signs.push(
+      { x: 120, y: 310, title: 'CONTROLS', subtitle: 'Use A/D or Arrow keys to move, Space/W to Jump!' },
+      { x: 500, y: 310, title: 'COMBAT', subtitle: 'Press J or Attack button to slash goblins with your sword!' },
+      { x: 1000, y: 310, title: 'JUMPING', subtitle: 'Hold Jump for higher leaps over gaps and spike pits!' },
+      { x: 1800, y: 310, title: 'CHECKPOINTS', subtitle: 'Touch green crystal shrines to save your respawn point!' }
+    );
+  }
+
+  // 1. Reserve Safe Spawn Zone (cols 0..16)
+  for (let c = 0; c <= 16; c++) {
+    grid[12][c] = TileType.GRASS_TOP;
+    grid[13][c] = TileType.DIRT_MIDDLE;
+    grid[14][c] = TileType.DIRT_MIDDLE;
+  }
+
+  // Initial coins in spawn zone
+  for (let c = 5; c <= 14; c += 3) {
     coins.push({ x: c * 32, y: 320 });
-    if (c % 8 === 0) {
-      coins.push({ x: c * 32, y: 220, value: 3 });
+  }
+
+  // Define section limits
+  const bodyEnd = isBoss ? cols - 50 : cols - 24;
+
+  // Track gap/feature placement
+  let c = 18;
+  let nextCheckpointCol = 120;
+
+  while (c < bodyEnd) {
+    // Checkpoint Placement every ~120-140 columns
+    if (c >= nextCheckpointCol && c < bodyEnd - 20) {
+      grid[12][c] = TileType.STONE_PLATFORM;
+      grid[12][c + 1] = TileType.STONE_PLATFORM;
+      grid[12][c + 2] = TileType.STONE_PLATFORM;
+
+      checkpoints.push({ x: (c + 1) * 32, y: 11 * 32 - 16 });
+      healthPickups.push({ x: (c + 3) * 32, y: 310, healAmount: 30 });
+      coins.push({ x: (c + 1) * 32, y: 260, value: 3 });
+
+      nextCheckpointCol += 130 + Math.floor(rng() * 30);
+      c += 8;
+      continue;
+    }
+
+    const patternType = Math.floor(rng() * 6);
+
+    switch (patternType) {
+      case 0: {
+        // Wood Bridge over Ground Gap
+        const gapWidth = 3 + Math.floor(rng() * 3); // 3..5 tiles
+        for (let gc = c; gc < c + gapWidth; gc++) {
+          if (w >= 3 && rng() > 0.5) {
+            grid[14][gc] = TileType.DIRT_MIDDLE;
+            grid[13][gc] = TileType.HAZARD_SPIKES;
+          } else {
+            grid[12][gc] = TileType.EMPTY;
+            grid[13][gc] = TileType.EMPTY;
+            grid[14][gc] = TileType.EMPTY;
+          }
+        }
+        // Elevated Bridge overhead
+        const bridgeRow = 8 + Math.floor(rng() * 2); // row 8 or 9
+        for (let bc = c - 1; bc <= c + gapWidth; bc++) {
+          grid[bridgeRow][bc] = TileType.WOOD_BRIDGE;
+          coins.push({ x: bc * 32, y: (bridgeRow - 1) * 32 });
+        }
+        if (rng() > 0.4) {
+          goblins.push({ x: (c + Math.floor(gapWidth / 2)) * 32, y: (bridgeRow - 1) * 32, patrolRange: 60 });
+        }
+        c += gapWidth + 4;
+        break;
+      }
+
+      case 1: {
+        // Ancient Stone Ruins & Pillars
+        const ruinLen = 6 + Math.floor(rng() * 4);
+        for (let r = 9; r <= 11; r++) {
+          grid[r][c] = TileType.STONE_PLATFORM;
+          grid[r][c + ruinLen - 1] = TileType.STONE_PLATFORM;
+        }
+        for (let rc = c; rc < c + ruinLen; rc++) {
+          grid[8][rc] = TileType.STONE_PLATFORM;
+          coins.push({ x: rc * 32, y: 7 * 32 });
+        }
+        goblins.push({ x: (c + 2) * 32, y: 7 * 32, patrolRange: 80 });
+        c += ruinLen + 4;
+        break;
+      }
+
+      case 2: {
+        // Spike Pit with Stepping Stones
+        const pitLen = 5 + Math.floor(rng() * 3);
+        for (let pc = c; pc < c + pitLen; pc++) {
+          grid[14][pc] = TileType.DIRT_MIDDLE;
+          grid[13][pc] = TileType.HAZARD_SPIKES;
+          grid[12][pc] = TileType.EMPTY;
+        }
+        // Stepping stone platforms
+        grid[10][c + 1] = TileType.STONE_PLATFORM;
+        grid[9][c + 3] = TileType.STONE_PLATFORM;
+        grid[10][c + pitLen - 2] = TileType.STONE_PLATFORM;
+
+        coins.push({ x: (c + 1) * 32, y: 9 * 32 });
+        coins.push({ x: (c + 3) * 32, y: 8 * 32, value: 3 });
+        coins.push({ x: (c + pitLen - 2) * 32, y: 9 * 32 });
+
+        c += pitLen + 4;
+        break;
+      }
+
+      case 3: {
+        // Secret High Treasure Tower
+        grid[10][c] = TileType.STONE_PLATFORM;
+        grid[8][c + 2] = TileType.STONE_PLATFORM;
+        grid[6][c + 4] = TileType.STONE_PLATFORM;
+        grid[6][c + 5] = TileType.STONE_PLATFORM;
+        grid[6][c + 6] = TileType.STONE_PLATFORM;
+
+        coins.push({ x: (c + 4) * 32, y: 5 * 32, value: 5 });
+        coins.push({ x: (c + 5) * 32, y: 5 * 32, value: 5 });
+        coins.push({ x: (c + 6) * 32, y: 5 * 32, value: 5 });
+
+        c += 9;
+        break;
+      }
+
+      case 4: {
+        // Flat Ground Patrol & Coins
+        const flatLen = 8 + Math.floor(rng() * 6);
+        for (let fc = c; fc < c + flatLen; fc += 3) {
+          coins.push({ x: fc * 32, y: 320 });
+        }
+        goblins.push({ x: (c + Math.floor(flatLen / 2)) * 32, y: 320, patrolRange: 100 });
+        if (rng() > 0.6) {
+          healthPickups.push({ x: (c + flatLen - 1) * 32, y: 310, healAmount: 30 });
+        }
+        c += flatLen + 2;
+        break;
+      }
+
+      case 5:
+      default: {
+        // Rolling Hills with Elevated Wood Platforms
+        for (let hc = c; hc < c + 6; hc++) {
+          grid[11][hc] = TileType.GRASS_TOP;
+        }
+        for (let bc = c + 1; bc < c + 5; bc++) {
+          grid[9][bc] = TileType.WOOD_BRIDGE;
+          coins.push({ x: bc * 32, y: 8 * 32 });
+        }
+        goblins.push({ x: (c + 2) * 32, y: 288, patrolRange: 60 });
+        c += 8;
+        break;
+      }
     }
   }
 
-  // Generate enemy goblins
+  // 2. Build Exit Section or Boss Arena Section
   if (!isBoss) {
-    for (let c = 25; c < cols - 20; c += 22) {
-      goblins.push({ x: c * 32, y: 320, patrolRange: 100 });
+    // Normal Level Exit Section
+    const exitStart = cols - 20;
+    for (let ec = exitStart; ec < cols; ec++) {
+      grid[12][ec] = TileType.GRASS_TOP;
+      grid[13][ec] = TileType.DIRT_MIDDLE;
+      grid[14][ec] = TileType.DIRT_MIDDLE;
     }
+    // Staircase leading to goal
+    grid[11][cols - 14] = TileType.STONE_PLATFORM;
+    grid[10][cols - 12] = TileType.STONE_PLATFORM;
+    grid[9][cols - 10] = TileType.STONE_PLATFORM;
+
+    coins.push({ x: (cols - 14) * 32, y: 10 * 32 });
+    coins.push({ x: (cols - 12) * 32, y: 9 * 32 });
+    coins.push({ x: (cols - 10) * 32, y: 8 * 32, value: 5 });
+
+    goblins.push({ x: (cols - 16) * 32, y: 320, patrolRange: 90 });
   } else {
-    // Boss Level: Regular goblins on side platforms + Boss Goblin in center arena!
-    goblins.push({ x: 18 * 32, y: 240, patrolRange: 80 });
-    goblins.push({ x: 72 * 32, y: 240, patrolRange: 80 });
-    // GIANT BOSS GOBLIN!
-    goblins.push({ x: 55 * 32, y: 300, patrolRange: 160, isBoss: true });
+    // BOSS LEVEL ARENA SECTION!
+    const arenaStart = cols - 55;
+    // Checkpoint before Boss Arena
+    checkpoints.push({ x: arenaStart * 32, y: 11 * 32 - 16 });
+    healthPickups.push({ x: (arenaStart + 2) * 32, y: 310, healAmount: 30 });
+
+    // Arena Floor
+    for (let ac = arenaStart; ac < cols; ac++) {
+      grid[12][ac] = TileType.STONE_PLATFORM;
+      grid[13][ac] = TileType.DIRT_MIDDLE;
+      grid[14][ac] = TileType.DIRT_MIDDLE;
+    }
+
+    // Elevated Tactical Battlements inside Boss Arena
+    for (let bc = arenaStart + 10; bc <= arenaStart + 18; bc++) {
+      grid[8][bc] = TileType.STONE_PLATFORM;
+      coins.push({ x: bc * 32, y: 7 * 32 });
+    }
+    for (let bc = arenaStart + 28; bc <= arenaStart + 36; bc++) {
+      grid[8][bc] = TileType.STONE_PLATFORM;
+      coins.push({ x: bc * 32, y: 7 * 32 });
+    }
+
+    // Guards on Battlements
+    goblins.push({ x: (arenaStart + 14) * 32, y: 7 * 32 - 32, patrolRange: 60 });
+    goblins.push({ x: (arenaStart + 32) * 32, y: 7 * 32 - 32, patrolRange: 60 });
+
+    // GIANT BOSS GOBLIN in Center Arena!
+    const bossX = (arenaStart + 23) * 32;
+    goblins.push({ x: bossX, y: 300, patrolRange: 180, isBoss: true });
+
+    // Additional Health Pickup in Arena
+    healthPickups.push({ x: (arenaStart + 23) * 32, y: 220, healAmount: 30 });
+  }
+
+  // Ensure initial fallback checkpoint if none was placed
+  if (checkpoints.length === 0) {
+    checkpoints.push({ x: Math.floor(cols / 2) * 32, y: 11 * 32 - 16 });
   }
 
   return {
@@ -375,11 +344,11 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
       id: levelId,
       worldId: w,
       levelNum: l,
-      title,
+      title: isFinalLevel ? "30 GOBLIN KING'S THRONE (FINAL FINALE)" : title,
       worldName: isBoss ? `${wName} (BOSS)` : wName,
       width: cols * 32,
       height: 15 * 32,
-      unlocked: true,
+      unlocked: w === 1 && l === 1,
       completed: false,
       stars: 0,
       highScoreCoins: 0,
@@ -387,14 +356,12 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     },
     grid,
     playerSpawn: { x: 80, y: 320 },
-    checkpoint: { x: Math.floor(cols / 2) * 32, y: 304 },
-    goalPost: { x: (cols - 8) * 32, y: 304, width: 24, height: 48 },
-    healthPickups: [
-      { x: Math.floor(cols * 0.35) * 32, y: 280, healAmount: 30 },
-      { x: Math.floor(cols * 0.7) * 32, y: 280, healAmount: 30 },
-    ],
+    checkpoints,
+    checkpoint: checkpoints[0],
+    goalPost: { x: (cols - 6) * 32, y: 11 * 32 - 16, width: 24, height: 48 },
+    signs,
+    healthPickups,
     coins,
     goblins,
   };
 }
-

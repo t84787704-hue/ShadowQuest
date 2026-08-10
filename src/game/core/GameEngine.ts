@@ -4,7 +4,7 @@ import { ForestGoblin } from '../entities/Enemy';
 import { Coin, HealthPickup } from '../entities/Collectible';
 import { Checkpoint } from '../entities/Checkpoint';
 import { TileMap } from '../world/TileMap';
-import { LEVEL_1_1, LevelDefinition, getLevelDefinition } from '../world/LevelData';
+import { LevelDefinition, getLevelDefinition } from '../world/LevelData';
 import { Camera } from './Camera';
 import { InputManager } from './InputManager';
 import { ParticleSystem } from './ParticleSystem';
@@ -21,7 +21,7 @@ export class GameEngine {
   public goblins: ForestGoblin[] = [];
   public coins: Coin[] = [];
   public healthPickups: HealthPickup[] = [];
-  public checkpoint?: Checkpoint;
+  public checkpoints: Checkpoint[] = [];
   public tileMap: TileMap;
   public camera: Camera;
   public input: InputManager;
@@ -86,6 +86,10 @@ export class GameEngine {
     return this.startingCoins + this.collectedCoinsCount;
   }
 
+  public get checkpoint(): Checkpoint | undefined {
+    return this.checkpoints.find((c) => c.isActive) || this.checkpoints[0];
+  }
+
   public setOnStateChange(cb: (status: GameStateStatus, levelCoins: number, totalCoins: number) => void) {
     this.onStateChangeCallback = cb;
   }
@@ -105,12 +109,12 @@ export class GameEngine {
       (h) => new HealthPickup(h.x, h.y, h.healAmount || 25)
     );
 
-    // Populate Checkpoint
-    if (this.levelDef.checkpoint) {
-      this.checkpoint = new Checkpoint(
-        this.levelDef.checkpoint.x,
-        this.levelDef.checkpoint.y
-      );
+    // Populate Checkpoints
+    this.checkpoints = [];
+    if (this.levelDef.checkpoints && this.levelDef.checkpoints.length > 0) {
+      this.checkpoints = this.levelDef.checkpoints.map((c) => new Checkpoint(c.x, c.y));
+    } else if (this.levelDef.checkpoint) {
+      this.checkpoints = [new Checkpoint(this.levelDef.checkpoint.x, this.levelDef.checkpoint.y)];
     }
   }
 
@@ -230,10 +234,10 @@ export class GameEngine {
     }
 
     // 3. Checkpoint collision check
-    if (this.checkpoint) {
-      const activated = this.checkpoint.update(dt, this.player, this.particles);
+    for (const cp of this.checkpoints) {
+      const activated = cp.update(dt, this.player, this.particles);
       if (activated) {
-        this.activeSpawn = { x: this.checkpoint.x, y: this.checkpoint.y };
+        this.activeSpawn = { x: cp.x, y: cp.y };
       }
     }
 
@@ -314,8 +318,8 @@ export class GameEngine {
     this.tileMap.render(this.ctx, offsetX, offsetY, width, height);
 
     // 4. Checkpoint Flag / Shrine
-    if (this.checkpoint) {
-      this.checkpoint.render(this.ctx, offsetX, offsetY);
+    for (const cp of this.checkpoints) {
+      cp.render(this.ctx, offsetX, offsetY);
     }
 
     // 5. Goal Post (Victory Flag)
