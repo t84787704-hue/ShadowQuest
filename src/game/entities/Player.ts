@@ -1,7 +1,7 @@
 import { Entity } from './Entity';
 import { PlayerActionState, PlayerStats, Rect } from '../../types/game';
 import { InputState } from '../../types/game';
-import { TileMap } from '../world/TileMap';
+import { TileMap, TileType } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
 
@@ -146,6 +146,12 @@ export class Player extends Entity {
       this.vx = 0;
     }
 
+    // Hazard Spikes check
+    const footTile = tileMap.getTileAtPixel(this.x + this.width / 2, this.y + this.height - 4);
+    if (footTile === TileType.HAZARD_SPIKES) {
+      this.takeDamage(10, particles);
+    }
+
     // Hazard Pit check
     if (this.y > tileMap.heightInPixels + 100) {
       this.takeDamage(999, particles); // Fall out of bounds
@@ -174,7 +180,7 @@ export class Player extends Entity {
     if (this.invulnerableTimer > 0 || !this.isAlive) return false;
 
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
-    this.invulnerableTimer = 0.8; // 800ms invulnerability frames
+    this.invulnerableTimer = 1.2; // 1200ms invulnerability frames
     this.state = 'HURT';
 
     // Knockback

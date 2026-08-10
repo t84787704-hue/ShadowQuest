@@ -28,7 +28,7 @@ export class ForestGoblin extends Entity {
     this.isBoss = isBoss;
     this.maxHp = isBoss ? 250 : 50;
     this.hp = this.maxHp;
-    this.attackDamage = isBoss ? 25 : 15;
+    this.attackDamage = isBoss ? 12 : 7;
     this.moveSpeed = isBoss ? 1.8 : 2.0;
     this.detectionRadius = isBoss ? 300 : 220;
     this.attackRange = isBoss ? 48 : 36;
@@ -69,7 +69,7 @@ export class ForestGoblin extends Entity {
         // Attack Range reached
         this.vx = 0;
         if (this.attackCooldown <= 0) {
-          this.attackCooldown = 1.2; // Attack every 1.2s
+          this.attackCooldown = 1.5; // Attack every 1.5s
           player.takeDamage(this.attackDamage, particles);
         }
       }
