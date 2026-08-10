@@ -121,19 +121,20 @@ export class ParticleSystem {
     }
   }
 
-  public createSlashSparks(x: number, y: number, facingRight: boolean) {
+  public createSlashSparks(x: number, y: number, facingRight: boolean, sparkColors: string[] = ['#38bdf8', '#fef08a']) {
     const dir = facingRight ? 1 : -1;
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 16; i++) {
+      const color = sparkColors[i % sparkColors.length];
       this.particles.push({
         x: x,
-        y: y + (Math.random() - 0.5) * 20,
-        vx: dir * (Math.random() * 4 + 2),
-        vy: (Math.random() - 0.5) * 4,
-        size: Math.random() * 3 + 2,
-        color: i % 2 === 0 ? '#38bdf8' : '#fef08a',
+        y: y + (Math.random() - 0.5) * 22,
+        vx: dir * (Math.random() * 4.5 + 2),
+        vy: (Math.random() - 0.5) * 4.5,
+        size: Math.random() * 3.5 + 2,
+        color: color,
         alpha: 1,
         life: 0,
-        maxLife: 0.25 + Math.random() * 0.15,
+        maxLife: 0.28 + Math.random() * 0.15,
         shape: 'spark',
       });
     }

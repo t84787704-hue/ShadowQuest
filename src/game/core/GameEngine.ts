@@ -66,7 +66,7 @@ export class GameEngine {
 
     this.activeSpawn = { ...this.levelDef.playerSpawn };
 
-    // Create Player BLAZE with upgrade stats bonus
+    // Create Player BLAZE with upgrade stats bonus and equipped weapon
     const hpBonus = (saveData.upgrades?.maxHealth || 0) * 15;
     const dmgBonus = (saveData.upgrades?.attackPower || 0) * 5;
     const speedBonus = (saveData.upgrades?.moveSpeed || 0) * 0.3;
@@ -77,7 +77,8 @@ export class GameEngine {
       moveSpeed: speedBonus,
     };
 
-    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus);
+    const equippedWeapon = SaveSystem.getEquippedWeapon(saveData, levelId);
+    this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, equippedWeapon);
 
     this.initLevelEntities();
   }
@@ -97,7 +98,7 @@ export class GameEngine {
   private initLevelEntities() {
     // Populate Goblins
     this.goblins = this.levelDef.goblins.map(
-      (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false)
+      (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false, this.levelDef.config.id)
     );
 
     // Populate Coins
@@ -224,6 +225,25 @@ export class GameEngine {
           this.hitEnemiesThisAttack.add(goblin);
           goblin.takeDamage(this.player.stats.attackDamage, this.particles);
           this.camera.addShake(0.12, 4);
+
+          // Apply weapon special effects
+          const effect = this.player.equippedWeapon.specialEffect;
+          if (effect === 'ICE_SLOW') {
+            goblin.slowTimer = 2.0;
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'FROST!', '#38bdf8', 12);
+          } else if (effect === 'FLAME_BURN') {
+            goblin.burnTimer = 1.6;
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'BURN!', '#f97316', 12);
+          } else if (effect === 'SHADOW_CRIT') {
+            if (Math.random() < 0.35) {
+              goblin.takeDamage(22, this.particles);
+              this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'CRIT!', '#c084fc', 13);
+            }
+          } else if (effect === 'GOLDEN_RADIANCE') {
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'RADIANT!', '#facc15', 12);
+          } else if (effect === 'CELESTIAL_BURST') {
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'CELESTIAL!', '#f43f5e', 14);
+          }
 
           // Drop coin on goblin death
           if (!goblin.isAlive) {

@@ -1,4 +1,5 @@
 import { SaveData } from '../../types/game';
+import { getHighestUnlockedWeapon, WEAPONS, WeaponDef } from '../weapons/WeaponData';
 
 const SAVE_KEY = 'BLAZE_ADVENTURE_SAVE_V1';
 
@@ -10,6 +11,7 @@ const DEFAULT_SAVE_DATA: SaveData = {
   unlockedWorlds: [1],
   hasSeenStory: false,
   levelStars: {},
+  equippedWeaponId: 'basic_sword',
   upgrades: {
     maxHealth: 0,
     attackPower: 0,
@@ -31,18 +33,41 @@ export class SaveSystem {
         return { ...DEFAULT_SAVE_DATA };
       }
       const parsed = JSON.parse(dataStr);
-      return {
+      const loadedData: SaveData = {
         ...DEFAULT_SAVE_DATA,
         ...parsed,
         unlockedWorlds: parsed.unlockedWorlds || [1],
         completedLevels: parsed.completedLevels || [],
+        equippedWeaponId: parsed.equippedWeaponId || 'basic_sword',
         upgrades: { ...DEFAULT_SAVE_DATA.upgrades, ...(parsed.upgrades || {}) },
         settings: { ...DEFAULT_SAVE_DATA.settings, ...(parsed.settings || {}) },
       };
+
+      // Ensure equipped weapon is at least the highest unlocked weapon
+      const highest = getHighestUnlockedWeapon(loadedData);
+      const currentEquipped = WEAPONS[loadedData.equippedWeaponId || 'basic_sword'] || WEAPONS.basic_sword;
+      if (highest.baseDamage > currentEquipped.baseDamage) {
+        loadedData.equippedWeaponId = highest.id;
+        this.save(loadedData);
+      }
+
+      return loadedData;
     } catch (e) {
       console.warn('Failed to load save data, using default:', e);
       return { ...DEFAULT_SAVE_DATA };
     }
+  }
+
+  public static getEquippedWeapon(data: SaveData, currentLevelId?: string): WeaponDef {
+    const highest = getHighestUnlockedWeapon(data, currentLevelId);
+    const equipped = WEAPONS[data.equippedWeaponId || 'basic_sword'] || WEAPONS.basic_sword;
+
+    if (highest.baseDamage > equipped.baseDamage) {
+      data.equippedWeaponId = highest.id;
+      this.save(data);
+      return highest;
+    }
+    return equipped;
   }
 
   public static save(data: SaveData): boolean {
@@ -92,6 +117,12 @@ export class SaveSystem {
         data.currentWorld = nextWorld;
         data.currentLevel = 1;
       }
+    }
+
+    // Auto-equip newly unlocked weapon if applicable
+    const highest = getHighestUnlockedWeapon(data, `${data.currentWorld}-${data.currentLevel}`);
+    if (highest.baseDamage > (WEAPONS[data.equippedWeaponId || 'basic_sword']?.baseDamage || 0)) {
+      data.equippedWeaponId = highest.id;
     }
 
     this.save(data);

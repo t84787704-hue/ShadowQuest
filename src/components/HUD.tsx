@@ -6,6 +6,8 @@ interface HUDProps {
   maxHp: number;
   coins: number;
   levelTitle: string;
+  weaponName?: string;
+  weaponIcon?: string;
   onPauseClick: () => void;
 }
 
@@ -14,14 +16,16 @@ export const HUD: React.FC<HUDProps> = ({
   maxHp,
   coins,
   levelTitle,
+  weaponName,
+  weaponIcon,
   onPauseClick,
 }) => {
   const hpPercent = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
 
   return (
     <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between pointer-events-none z-10 select-none">
-      {/* Top Left: HP Bar & Coins */}
-      <div className="flex flex-col gap-2">
+      {/* Top Left: HP Bar, Coins & Weapon */}
+      <div className="flex flex-col gap-1.5">
         {/* Health Bar */}
         <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-full px-3 py-1.5 shadow-lg">
           <Heart className="w-5 h-5 text-red-500 fill-red-500 animate-pulse" />
@@ -39,12 +43,23 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         </div>
 
-        {/* Coins Counter */}
-        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-amber-500/30 rounded-full px-3 py-1 w-fit shadow-lg">
-          <Coins className="w-4 h-4 text-amber-400 fill-amber-400" />
-          <span className="text-amber-300 font-black text-sm tracking-wide">
-            🪙 Coins: {coins}
-          </span>
+        {/* Coins Counter & Weapon Indicator Row */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-amber-500/30 rounded-full px-3 py-1 w-fit shadow-lg">
+            <Coins className="w-4 h-4 text-amber-400 fill-amber-400" />
+            <span className="text-amber-300 font-black text-xs sm:text-sm tracking-wide">
+              🪙 {coins}
+            </span>
+          </div>
+
+          {weaponName && (
+            <div className="flex items-center gap-1.5 bg-slate-900/80 backdrop-blur border border-sky-500/40 rounded-full px-2.5 py-1 w-fit shadow-lg">
+              <span className="text-xs">{weaponIcon || '⚔️'}</span>
+              <span className="text-sky-300 font-bold text-xs tracking-wide">
+                {weaponName}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

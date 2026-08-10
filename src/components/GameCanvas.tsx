@@ -149,6 +149,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           maxHp={playerHp.max}
           coins={totalCoins}
           levelTitle={currentLevelTitle}
+          weaponName={engineRef.current?.player?.equippedWeapon?.name}
+          weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
           onPauseClick={handlePause}
         />
 

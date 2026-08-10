@@ -53,6 +53,7 @@ export interface SaveData {
   unlockedWorlds: number[]; // e.g. [1, 2]
   hasSeenStory: boolean;
   levelStars: Record<string, number>;
+  equippedWeaponId?: string;
   upgrades: {
     maxHealth: number; // level 0-5
     attackPower: number;

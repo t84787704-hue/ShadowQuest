@@ -18,6 +18,11 @@ export class ForestGoblin extends Entity {
   public isBoss: boolean = false;
   public levelId: string = '1-1';
 
+  // Weapon status effects
+  public slowTimer: number = 0;
+  public burnTimer: number = 0;
+  public burnTickTimer: number = 0;
+
   private patrolMinX: number;
   private patrolMaxX: number;
   private patrolDirection: number = 1;
@@ -73,6 +78,22 @@ export class ForestGoblin extends Entity {
       this.attackCooldown -= dt;
     }
 
+    // Status Timers
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+    }
+    if (this.burnTimer > 0) {
+      this.burnTimer -= dt;
+      this.burnTickTimer -= dt;
+      if (this.burnTickTimer <= 0) {
+        this.burnTickTimer = 0.4;
+        this.takeDamage(5, particles);
+        particles.createSlashSparks(this.x + this.width / 2, this.y + 10, this.facingRight, ['#f97316', '#ef4444']);
+      }
+    }
+
+    const currentSpeed = this.slowTimer > 0 ? this.moveSpeed * 0.5 : this.moveSpeed;
+
     // Animation frames
     this.animTime += dt;
     if (this.animTime >= 0.1) {
@@ -94,7 +115,7 @@ export class ForestGoblin extends Entity {
       // Pursuit player
       this.facingRight = dx > 0;
       if (distToPlayer > this.attackRange) {
-        this.vx = this.facingRight ? this.moveSpeed : -this.moveSpeed;
+        this.vx = this.facingRight ? currentSpeed : -currentSpeed;
       } else {
         // Attack Range reached
         this.vx = 0;
@@ -105,7 +126,7 @@ export class ForestGoblin extends Entity {
       }
     } else {
       // Normal Patrol Logic
-      this.vx = this.patrolDirection * (this.moveSpeed * 0.6);
+      this.vx = this.patrolDirection * (currentSpeed * 0.6);
       if (this.x <= this.patrolMinX) {
         this.patrolDirection = 1;
         this.facingRight = true;

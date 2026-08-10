@@ -4,6 +4,7 @@ import { InputState } from '../../types/game';
 import { TileMap, TileType } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
+import { WeaponDef, WEAPONS } from '../weapons/WeaponData';
 
 export class Player extends Entity {
   public stats: PlayerStats;
@@ -13,6 +14,7 @@ export class Player extends Entity {
   public attackCooldownTimer: number = 0;
   public animFrame: number = 0;
   public animTime: number = 0;
+  public equippedWeapon: WeaponDef = WEAPONS.basic_sword;
 
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
@@ -24,16 +26,24 @@ export class Player extends Entity {
 
   public currentAttackId: number = 0;
 
-  constructor(x: number, y: number, statsBonus?: Partial<PlayerStats>) {
+  constructor(x: number, y: number, statsBonus?: Partial<PlayerStats>, weapon?: WeaponDef) {
     super(x, y, 32, 48); // Hero width x height
+    if (weapon) {
+      this.equippedWeapon = weapon;
+    }
     this.stats = {
       maxHp: 100 + (statsBonus?.maxHp || 0),
       currentHp: 100 + (statsBonus?.maxHp || 0),
-      attackDamage: 35 + (statsBonus?.attackDamage || 0),
+      attackDamage: this.equippedWeapon.baseDamage + (statsBonus?.attackDamage || 0),
       moveSpeed: 4.4 + (statsBonus?.moveSpeed || 0),
       jumpForce: 12.0 + (statsBonus?.jumpForce || 0),
       attackCooldownMs: 320,
     };
+  }
+
+  public setWeapon(weapon: WeaponDef, attackBonus: number = 0) {
+    this.equippedWeapon = weapon;
+    this.stats.attackDamage = weapon.baseDamage + attackBonus;
   }
 
   public update(dt: number, input: InputState, tileMap: TileMap, particles: ParticleSystem) {
@@ -85,7 +95,7 @@ export class Player extends Entity {
       this.attackCooldownTimer = this.stats.attackCooldownMs;
       audioEngine.playSwordAttack();
       const slashX = this.facingRight ? this.x + this.width + 10 : this.x - 10;
-      particles.createSlashSparks(slashX, this.y + 20, this.facingRight);
+      particles.createSlashSparks(slashX, this.y + 20, this.facingRight, this.equippedWeapon.sparkColors);
     }
 
     // Handle Horizontal Movement
@@ -381,13 +391,13 @@ export class Player extends Entity {
     ctx.fillRect(8, -8, 4, 16);
     ctx.fillStyle = '#78350f'; // Hilt Grip
     ctx.fillRect(5, -1, 4, 3);
-    ctx.fillStyle = '#38bdf8'; // Pommel Gem
+    ctx.fillStyle = this.equippedWeapon.glowColor; // Pommel Gem
     ctx.beginPath();
     ctx.arc(4, 0, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Radiant Blaze Sword Blade
-    ctx.fillStyle = '#38bdf8'; // Glowing Light Blue Edge
+    // Weapon Blade
+    ctx.fillStyle = this.equippedWeapon.glowColor; // Glowing Blade Edge
     ctx.beginPath();
     ctx.moveTo(12, -3);
     ctx.lineTo(36, -1);
@@ -397,8 +407,8 @@ export class Player extends Entity {
     ctx.closePath();
     ctx.fill();
 
-    // Silver Blade Core
-    ctx.fillStyle = '#f8fafc';
+    // Blade Core
+    ctx.fillStyle = this.equippedWeapon.bladeColor;
     ctx.fillRect(12, -1, 24, 2);
 
     ctx.restore();
@@ -411,22 +421,22 @@ export class Player extends Entity {
       ctx.save();
       ctx.globalAlpha = slashAlpha;
 
-      // Outer Cyan Energy Arc
-      ctx.strokeStyle = '#38bdf8';
+      // Outer Energy Arc
+      ctx.strokeStyle = this.equippedWeapon.glowColor;
       ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.arc(8, bodyY + 10, 38, -Math.PI / 2.2, Math.PI / 2);
       ctx.stroke();
 
-      // Inner White Core Arc
-      ctx.strokeStyle = '#ffffff';
+      // Inner Core Arc
+      ctx.strokeStyle = this.equippedWeapon.bladeColor;
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(8, bodyY + 10, 37, -Math.PI / 2.2, Math.PI / 2);
       ctx.stroke();
 
       // Energy Sparkles at arc tip
-      ctx.fillStyle = '#fef08a';
+      ctx.fillStyle = this.equippedWeapon.sparkColors[0] || '#fef08a';
       ctx.beginPath();
       ctx.arc(28, bodyY - 10, 3, 0, Math.PI * 2);
       ctx.arc(36, bodyY + 20, 2.5, 0, Math.PI * 2);
