@@ -177,6 +177,18 @@ export class GameEngine {
       const bossY = bossSpawn ? bossSpawn.y : 300;
 
       this.bossMonster = new BossMonster(bossX, bossY, this.levelDef.config.id);
+      if (qs?.bossHp !== undefined && qs.bossHp > 0) {
+        this.bossMonster.hp = qs.bossHp;
+        if (qs.bossPhase) {
+          this.bossMonster.currentPhase = qs.bossPhase;
+        }
+        this.bossMonster.isTriggered = true;
+        this.bossMonster.state = 'COMBAT';
+      } else if (qs?.bossHp === 0) {
+        this.bossMonster.hp = 0;
+        this.bossMonster.isAlive = false;
+        this.bossMonster.state = 'DEAD';
+      }
       // Remove generic boss goblin
       this.goblins = this.goblins.filter((g) => !g.isBoss);
     } else {
@@ -230,6 +242,8 @@ export class GameEngine {
       collectedHealthIndices: this.healthPickups.map((h, i) => (h.isCollected ? i : -1)).filter((i) => i >= 0),
       defeatedEnemyIndices: this.goblins.map((g, i) => (!g.isAlive ? i : -1)).filter((i) => i >= 0),
       activeCheckpointIndex: this.checkpoints.findIndex((c) => c.isActive),
+      bossHp: this.bossMonster ? this.bossMonster.hp : undefined,
+      bossPhase: this.bossMonster ? this.bossMonster.currentPhase : undefined,
       timestamp: Date.now(),
     };
   }
@@ -364,7 +378,7 @@ export class GameEngine {
         const comboMult = this.player.currentComboMultiplier || 1.0;
         const damage = Math.round(this.player.stats.attackDamage * comboMult);
 
-        this.bossMonster.takeDamage(damage, this.particles);
+        this.bossMonster.takeDamage(damage, this.particles, this.player.attackType);
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
 
         this.camera.addShake(0.15, 6);
@@ -407,7 +421,7 @@ export class GameEngine {
           const comboMult = this.player.currentComboMultiplier || 1.0;
           const damage = Math.round(this.player.stats.attackDamage * comboMult);
 
-          goblin.takeDamage(damage, this.particles);
+          goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
 
           // Physical Knockback and Hit Reactions
@@ -439,7 +453,7 @@ export class GameEngine {
             this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'BURN!', '#f97316', 12);
           } else if (effect === 'SHADOW_CRIT') {
             if (Math.random() < 0.35) {
-              goblin.takeDamage(22, this.particles);
+              goblin.takeDamage(22, this.particles, this.player.attackType);
               this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'CRIT!', '#c084fc', 13);
             }
           } else if (effect === 'GOLDEN_RADIANCE') {

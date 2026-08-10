@@ -149,7 +149,7 @@ export class ForestGoblin extends Entity {
     }
   }
 
-  public takeDamage(damage: number, particles: ParticleSystem): boolean {
+  public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
     if (!this.isAlive) return false;
 
     this.hp -= damage;
@@ -157,7 +157,7 @@ export class ForestGoblin extends Entity {
     this.vy = -3;
     this.vx = this.facingRight ? -4 : 4; // Knockback
 
-    audioEngine.playEnemyHit();
+    audioEngine.playEnemyHit(attackType);
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
     particles.createFloatingText(
       this.x + this.width / 2,

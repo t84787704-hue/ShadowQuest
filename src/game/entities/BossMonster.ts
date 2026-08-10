@@ -317,7 +317,7 @@ export class BossMonster extends Entity {
 
     switch (this.activeAttackType) {
       case 'MELEE':
-        audioEngine.playCustomSFX('heavy_punch');
+        audioEngine.playBossAttackSwing('heavy_punch');
         particles.createSlashSparks(originX, originY, this.facingRight, [
           BOSS_SPECS[this.worldId].primaryColor,
           BOSS_SPECS[this.worldId].glowColor,
@@ -328,7 +328,7 @@ export class BossMonster extends Entity {
         break;
 
       case 'SHOCKWAVE':
-        audioEngine.playCustomSFX('finisher');
+        audioEngine.playBossAttackSwing('finisher');
         particles.createCombatImpact(
           this.x + this.width / 2,
           this.y + this.height - 10,
@@ -354,7 +354,7 @@ export class BossMonster extends Entity {
         break;
 
       case 'PROJECTILE':
-        audioEngine.playCustomSFX('kick');
+        audioEngine.playBossAttackSwing('kick');
         particles.createSlashSparks(originX, originY, this.facingRight, [
           BOSS_SPECS[this.worldId].glowColor,
           '#ffffff',
@@ -382,7 +382,7 @@ export class BossMonster extends Entity {
         break;
 
       case 'TELEPORT':
-        audioEngine.playCustomSFX('spin_kick');
+        audioEngine.playBossAttackSwing('spin_kick');
         particles.createCombatImpact(this.x + this.width / 2, this.y + this.height / 2, true, [
           '#c084fc',
           '#7e22ce',
@@ -415,7 +415,7 @@ export class BossMonster extends Entity {
     }
   }
 
-  public takeDamage(damage: number, particles: ParticleSystem): boolean {
+  public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
     if (!this.isAlive || this.isInvulnerable || this.state === 'INTRO') return false;
 
     // Vulnerable window bonus damage!
@@ -424,7 +424,7 @@ export class BossMonster extends Entity {
 
     this.hp -= actualDamage;
     this.hitFlashTimer = 0.22;
-    audioEngine.playEnemyHit();
+    audioEngine.playHitImpact('boss', attackType);
 
     const textX = this.x + this.width / 2;
     const textY = this.y - 10;

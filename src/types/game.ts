@@ -67,6 +67,8 @@ export interface QuickSaveData {
   collectedHealthIndices?: number[];
   defeatedEnemyIndices?: number[];
   activeCheckpointIndex?: number;
+  bossHp?: number;
+  bossPhase?: number;
   timestamp: number;
 }
 
