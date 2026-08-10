@@ -45,7 +45,7 @@ export class Player extends Entity {
       maxHp: 100 + (statsBonus?.maxHp || 0),
       currentHp: 100 + (statsBonus?.maxHp || 0),
       attackDamage: this.equippedWeapon.baseDamage + (statsBonus?.attackDamage || 0),
-      moveSpeed: 4.8 + (statsBonus?.moveSpeed || 0), // Quick and agile
+      moveSpeed: 3.84 + (statsBonus?.moveSpeed || 0), // Controlled agile movement
       jumpForce: 17.0 + (statsBonus?.jumpForce || 0),
       attackCooldownMs: 120, // Fast base combo window
     };
