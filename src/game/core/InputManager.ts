@@ -6,6 +6,8 @@ export class InputManager {
     right: false,
     jump: false,
     attack: false,
+    down: false,
+    spinKick: false,
   };
 
   private prevJump: boolean = false;
@@ -23,6 +25,12 @@ export class InputManager {
       if (['ArrowRight', 'd', 'D'].includes(e.key)) {
         this.state.right = true;
       }
+      if (['ArrowDown', 's', 'S'].includes(e.key)) {
+        this.state.down = true;
+      }
+      if (['c', 'C', 'z', 'Z'].includes(e.key)) {
+        this.state.spinKick = true;
+      }
       if (['Space', ' ', 'ArrowUp', 'w', 'W', 'k', 'K'].includes(e.key)) {
         this.state.jump = true;
         e.preventDefault();
@@ -39,6 +47,12 @@ export class InputManager {
       }
       if (['ArrowRight', 'd', 'D'].includes(e.key)) {
         this.state.right = false;
+      }
+      if (['ArrowDown', 's', 'S'].includes(e.key)) {
+        this.state.down = false;
+      }
+      if (['c', 'C', 'z', 'Z'].includes(e.key)) {
+        this.state.spinKick = false;
       }
       if (['Space', ' ', 'ArrowUp', 'w', 'W', 'k', 'K'].includes(e.key)) {
         this.state.jump = false;
@@ -79,6 +93,8 @@ export class InputManager {
     this.state.right = false;
     this.state.jump = false;
     this.state.attack = false;
+    this.state.down = false;
+    this.state.spinKick = false;
     this.prevJump = false;
     this.prevAttack = false;
   }

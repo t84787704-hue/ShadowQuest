@@ -2,7 +2,7 @@ export type GameScreen = 'MAIN_MENU' | 'STORY' | 'WORLD_MAP' | 'LEVELS' | 'UPGRA
 
 export type GameStateStatus = 'RUNNING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 
-export type PlayerActionState = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'FALL' | 'ATTACK' | 'HURT' | 'DEAD';
+export type PlayerActionState = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'FALL' | 'ATTACK' | 'CROUCH' | 'HURT' | 'DEAD';
 
 export interface Rect {
   x: number;
@@ -87,5 +87,7 @@ export interface InputState {
   right: boolean;
   jump: boolean;
   attack: boolean;
+  down: boolean;
+  spinKick: boolean;
 }
 

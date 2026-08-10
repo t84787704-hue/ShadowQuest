@@ -17,10 +17,11 @@ export class Player extends Entity {
   public equippedWeapon: WeaponDef = WEAPONS.basic_sword;
 
   public comboStep: number = 0; // 1: JAB, 2: CROSS, 3: KICK, 4: FINISHER
-  public attackType: 'JAB' | 'CROSS' | 'KICK' | 'FINISHER' | 'JUMP_KICK' = 'JAB';
+  public attackType: 'JAB' | 'CROSS' | 'KICK' | 'FINISHER' | 'JUMP_KICK' | 'SPIN_KICK' = 'JAB';
   public comboWindowTimer: number = 0;
   public attackDuration: number = 0.16;
   public currentComboMultiplier: number = 1.0;
+  public spinKickCooldownTimer: number = 0;
 
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
@@ -65,6 +66,9 @@ export class Player extends Entity {
     if (this.attackCooldownTimer > 0) {
       this.attackCooldownTimer -= dt * 1000;
     }
+    if (this.spinKickCooldownTimer > 0) {
+      this.spinKickCooldownTimer -= dt;
+    }
     if (this.comboWindowTimer > 0) {
       this.comboWindowTimer -= dt;
       if (this.comboWindowTimer <= 0) {
@@ -100,6 +104,24 @@ export class Player extends Entity {
     if (this.animTime >= 0.08) {
       this.animTime = 0;
       this.animFrame = (this.animFrame + 1) % 8;
+    }
+
+    // Handle Special Spinning Low Kick (Joystick Down or Spin Kick Input)
+    const triggerSpinKick = (input.spinKick || (input.down && input.attack)) && this.spinKickCooldownTimer <= 0;
+    if (triggerSpinKick && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
+      this.state = 'ATTACK';
+      this.currentAttackId++;
+      this.attackType = 'SPIN_KICK';
+      this.attackDuration = 0.28;
+      this.attackTimer = 0.28;
+      this.spinKickCooldownTimer = 0.42; // Short cooldown so it cannot be spammed
+      this.attackCooldownTimer = 180;
+      this.currentComboMultiplier = 1.7; // Strong balanced damage
+
+      audioEngine.playKick();
+      const kickX = this.x + this.width / 2;
+      particles.createCombatImpact(kickX, this.y + this.height - 10, this.facingRight, ['#38bdf8', '#facc15', '#f97316']);
+      particles.createFloatingText(kickX, this.y - 12, 'SWEEP KICK! 🌀', '#06b6d4', 16);
     }
 
     // Handle Martial Arts Attack Input (Combos + Jump Kick)
@@ -182,20 +204,26 @@ export class Player extends Entity {
     }
 
     // Handle Horizontal Movement (ALLOW MOVEMENT WHILE FIGHTING FOR FLUIDITY)
-    const moveSpeedMult = this.state === 'ATTACK' ? 0.85 : 1.0;
+    const moveSpeedMult = this.state === 'ATTACK' ? 0.85 : (input.down ? 0.5 : 1.0);
 
     if (input.left) {
       this.vx = -this.stats.moveSpeed * moveSpeedMult;
       this.facingRight = false;
-      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'RUN';
+      if (this.isGrounded && this.state !== 'ATTACK') {
+        this.state = input.down ? 'CROUCH' : 'RUN';
+      }
     } else if (input.right) {
       this.vx = this.stats.moveSpeed * moveSpeedMult;
       this.facingRight = true;
-      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'RUN';
+      if (this.isGrounded && this.state !== 'ATTACK') {
+        this.state = input.down ? 'CROUCH' : 'RUN';
+      }
     } else {
       this.vx *= 0.65; // Smooth friction
       if (Math.abs(this.vx) < 0.2) this.vx = 0;
-      if (this.isGrounded && this.state !== 'ATTACK') this.state = 'IDLE';
+      if (this.isGrounded && this.state !== 'ATTACK') {
+        this.state = input.down ? 'CROUCH' : 'IDLE';
+      }
     }
 
     // Handle Jump Input with Coyote Time & Jump Buffer
@@ -265,6 +293,15 @@ export class Player extends Entity {
       } else if (this.attackType === 'JUMP_KICK') {
         reach = 48;
         attackHeight = 44;
+      } else if (this.attackType === 'SPIN_KICK') {
+        // Low 360-degree sweep kick surrounding lower body
+        const reachX = 32;
+        return {
+          x: this.x - reachX,
+          y: this.y + this.height - 26,
+          width: this.width + (reachX * 2),
+          height: 26,
+        };
       }
 
       const attackX = this.facingRight ? this.x + this.width : this.x - reach;
@@ -342,7 +379,9 @@ export class Player extends Entity {
     let bodyY = -24;
     let legOffset = 0;
 
-    if (this.state === 'RUN') {
+    if (this.state === 'CROUCH') {
+      bodyY = -17; // Crouched stance
+    } else if (this.state === 'RUN') {
       legOffset = runCycle * 8.5;
       bodyY = -24 + Math.abs(Math.sin(this.animFrame * 0.8)) * -2;
     } else if (this.state === 'IDLE') {
@@ -463,6 +502,41 @@ export class Player extends Entity {
       ctx.fill();
 
       ctx.restore();
+    } else if (isAttacking && this.attackType === 'SPIN_KICK') {
+      // Fast Low Spinning Sweep Kick
+      const spinAngle = attackProgress * Math.PI * 2 * (this.facingRight ? 1 : -1);
+      ctx.save();
+      ctx.translate(0, bodyY + 18);
+      ctx.rotate(spinAngle);
+
+      // Low extended leg bar
+      ctx.fillStyle = pantColor;
+      ctx.fillRect(-22, -4, 44, 8);
+      ctx.fillStyle = bootColor;
+      ctx.fillRect(16, -5, 8, 10);
+      ctx.fillRect(-24, -5, 8, 10);
+      ctx.fillStyle = buckleColor;
+      ctx.fillRect(16, -5, 8, 2);
+      ctx.fillRect(-24, -5, 8, 2);
+
+      // Wide Low Sweep Energy Ring
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 32, 9, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    } else if (this.state === 'CROUCH') {
+      // Bent crouch legs
+      ctx.fillRect(-9, bodyY + 11, 7, 9);
+      ctx.fillRect(2, bodyY + 11, 7, 9);
+      ctx.fillStyle = bootColor;
+      ctx.fillRect(-10, bodyY + 18, 8, 5);
+      ctx.fillRect(2, bodyY + 18, 8, 5);
+      ctx.fillStyle = buckleColor;
+      ctx.fillRect(-10, bodyY + 18, 8, 2);
+      ctx.fillRect(2, bodyY + 18, 8, 2);
     } else if (this.state === 'JUMP') {
       // Tucked Airborne Knees
       ctx.fillRect(-9, bodyY + 16, 7, 11);

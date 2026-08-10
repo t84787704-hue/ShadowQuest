@@ -292,7 +292,11 @@ export class GameEngine {
           goblin.takeDamage(damage, this.particles);
 
           // Physical Knockback and Hit Reactions
-          if (this.player.attackType === 'FINISHER' || this.player.attackType === 'KICK') {
+          if (this.player.attackType === 'SPIN_KICK') {
+            goblin.vx = (goblin.x > this.player.x) ? 7.5 : -7.5;
+            goblin.vy = -4.5;
+            this.camera.addShake(0.14, 6);
+          } else if (this.player.attackType === 'FINISHER' || this.player.attackType === 'KICK') {
             goblin.vx = this.player.facingRight ? 8 : -8;
             goblin.vy = -4.5;
             this.camera.addShake(0.16, 7);

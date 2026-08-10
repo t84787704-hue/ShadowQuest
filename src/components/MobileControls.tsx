@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 import { InputManager } from '../game/core/InputManager';
 
 interface MobileControlsProps {
@@ -15,6 +15,9 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const joystickRef = useRef<HTMLDivElement>(null);
   const activePointerIdRef = useRef<number | null>(null);
+
+  const upTriggeredRef = useRef<boolean>(false);
+  const downTriggeredRef = useRef<boolean>(false);
 
   const updateJoystick = (clientX: number, clientY: number) => {
     if (!joystickRef.current) return;
@@ -36,10 +39,15 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
     setJoystickPos({ x: knobX, y: knobY });
 
-    // Directional activation threshold based on horizontal offset
+    // Directional thresholds
     const normX = dx / (maxRadius || 1);
-    const deadzone = 0.18;
+    const normY = dy / (maxRadius || 1);
 
+    const deadzone = 0.20;
+    const upThreshold = -0.45;
+    const downThreshold = 0.45;
+
+    // 1. HORIZONTAL MOVEMENT (LEFT / RIGHT)
     if (normX < -deadzone) {
       inputManager.setTouchState('left', true);
       inputManager.setTouchState('right', false);
@@ -49,6 +57,38 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     } else {
       inputManager.setTouchState('left', false);
       inputManager.setTouchState('right', false);
+    }
+
+    // 2. VERTICAL UP (JUMP)
+    if (normY < upThreshold) {
+      if (!upTriggeredRef.current) {
+        upTriggeredRef.current = true;
+        inputManager.setTouchState('jump', true);
+        window.setTimeout(() => {
+          inputManager.setTouchState('jump', false);
+        }, 60);
+      }
+    } else if (normY >= upThreshold + 0.18) {
+      // Returned toward center/neutral: re-arm jump trigger
+      upTriggeredRef.current = false;
+      inputManager.setTouchState('jump', false);
+    }
+
+    // 3. VERTICAL DOWN (CROUCH & SPINNING LOW KICK)
+    if (normY > downThreshold) {
+      inputManager.setTouchState('down', true);
+      if (!downTriggeredRef.current) {
+        downTriggeredRef.current = true;
+        inputManager.setTouchState('spinKick', true);
+        window.setTimeout(() => {
+          inputManager.setTouchState('spinKick', false);
+        }, 60);
+      }
+    } else if (normY <= downThreshold - 0.18) {
+      // Returned toward center/neutral: re-arm spin kick trigger
+      downTriggeredRef.current = false;
+      inputManager.setTouchState('down', false);
+      inputManager.setTouchState('spinKick', false);
     }
   };
 
@@ -85,8 +125,14 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     setIsDragging(false);
     setJoystickPos({ x: 0, y: 0 });
 
+    upTriggeredRef.current = false;
+    downTriggeredRef.current = false;
+
     inputManager.setTouchState('left', false);
     inputManager.setTouchState('right', false);
+    inputManager.setTouchState('jump', false);
+    inputManager.setTouchState('down', false);
+    inputManager.setTouchState('spinKick', false);
   };
 
   // Action button touch handler (ATTACK, JUMP)
@@ -102,6 +148,9 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     return () => {
       inputManager.setTouchState('left', false);
       inputManager.setTouchState('right', false);
+      inputManager.setTouchState('jump', false);
+      inputManager.setTouchState('down', false);
+      inputManager.setTouchState('spinKick', false);
     };
   }, [inputManager]);
 
@@ -117,21 +166,33 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUpOrCancel}
         onPointerCancel={handlePointerUpOrCancel}
-        className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-900/80 border-2 border-sky-500/50 shadow-[0_0_20px_rgba(56,189,248,0.25)] flex items-center justify-center relative touch-none pointer-events-auto cursor-pointer"
+        className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-slate-900/85 border-2 border-sky-500/60 shadow-[0_0_25px_rgba(56,189,248,0.3)] flex items-center justify-center relative touch-none pointer-events-auto cursor-pointer"
       >
-        {/* Subtle Directional Arrows */}
-        <ChevronLeft className="absolute left-2.5 w-5 h-5 text-sky-400/50 pointer-events-none" />
-        <ChevronRight className="absolute right-2.5 w-5 h-5 text-sky-400/50 pointer-events-none" />
+        {/* Directional Action Indicators on Joystick Ring */}
+        <div className="absolute top-1.5 flex flex-col items-center pointer-events-none opacity-75">
+          <ArrowUp className="w-4 h-4 text-sky-400" />
+          <span className="text-[8px] font-black text-sky-300 tracking-tighter -mt-0.5">JUMP</span>
+        </div>
+
+        <div className="absolute bottom-1.5 flex flex-col items-center pointer-events-none opacity-75">
+          <span className="text-[8px] font-black text-amber-300 tracking-tighter -mb-0.5">SPIN</span>
+          <RotateCw className="w-4 h-4 text-amber-400" />
+        </div>
+
+        <ChevronLeft className="absolute left-2 w-5 h-5 text-sky-400/60 pointer-events-none" />
+        <ChevronRight className="absolute right-2 w-5 h-5 text-sky-400/60 pointer-events-none" />
 
         {/* Joystick Thumb / Knob */}
         <div
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-sky-400 via-sky-500 to-sky-700 border-2 border-sky-200 shadow-xl flex items-center justify-center absolute pointer-events-none"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-sky-400 via-sky-500 to-sky-700 border-2 border-sky-200 shadow-2xl flex items-center justify-center absolute pointer-events-none"
           style={{
             transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`,
             transition: isDragging ? 'none' : 'transform 0.15s ease-out',
           }}
         >
-          <div className="w-3.5 h-3.5 rounded-full bg-sky-100/80 border border-sky-300 shadow-inner" />
+          <div className="w-4 h-4 rounded-full bg-sky-100/90 border border-sky-300 shadow-inner flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-sky-600" />
+          </div>
         </div>
       </div>
 
