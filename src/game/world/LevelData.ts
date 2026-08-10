@@ -188,16 +188,17 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
           grid[bridgeRow][bc] = TileType.WOOD_BRIDGE;
           coins.push({ x: bc * 32, y: (bridgeRow - 1) * 32 });
         }
-        if (rng() > 0.4) {
-          goblins.push({ x: (c + Math.floor(gapWidth / 2)) * 32, y: (bridgeRow - 1) * 32, patrolRange: 60 });
-        }
-        c += gapWidth + 4;
+        // Group encounter: 3 goblins around bridge
+        goblins.push({ x: (c - 2) * 32, y: 320, patrolRange: 60 });
+        goblins.push({ x: (c + Math.floor(gapWidth / 2)) * 32, y: (bridgeRow - 1) * 32, patrolRange: 60 });
+        goblins.push({ x: (c + gapWidth + 2) * 32, y: 320, patrolRange: 60 });
+        c += gapWidth + 5;
         break;
       }
 
       case 1: {
         // Ancient Stone Ruins & Pillars
-        const ruinLen = 6 + Math.floor(rng() * 4);
+        const ruinLen = 7 + Math.floor(rng() * 4);
         for (let r = 9; r <= 11; r++) {
           grid[r][c] = TileType.STONE_PLATFORM;
           grid[r][c + ruinLen - 1] = TileType.STONE_PLATFORM;
@@ -206,7 +207,11 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
           grid[8][rc] = TileType.STONE_PLATFORM;
           coins.push({ x: rc * 32, y: 7 * 32 });
         }
+        // Group encounter: 3-4 goblins at ruins
+        goblins.push({ x: (c - 1) * 32, y: 320, patrolRange: 60 });
         goblins.push({ x: (c + 2) * 32, y: 7 * 32, patrolRange: 80 });
+        goblins.push({ x: (c + ruinLen - 2) * 32, y: 7 * 32, patrolRange: 80 });
+        goblins.push({ x: (c + ruinLen + 1) * 32, y: 320, patrolRange: 60 });
         c += ruinLen + 4;
         break;
       }
@@ -228,7 +233,12 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
         coins.push({ x: (c + 3) * 32, y: 8 * 32, value: 3 });
         coins.push({ x: (c + pitLen - 2) * 32, y: 9 * 32 });
 
-        c += pitLen + 4;
+        // Group encounter: 3 goblins around pit
+        goblins.push({ x: (c - 2) * 32, y: 320, patrolRange: 60 });
+        goblins.push({ x: (c + pitLen + 1) * 32, y: 320, patrolRange: 60 });
+        goblins.push({ x: (c + pitLen + 4) * 32, y: 320, patrolRange: 60 });
+
+        c += pitLen + 5;
         break;
       }
 
@@ -244,36 +254,50 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
         coins.push({ x: (c + 5) * 32, y: 5 * 32, value: 5 });
         coins.push({ x: (c + 6) * 32, y: 5 * 32, value: 5 });
 
+        // Group encounter: 3 goblins guarding tower ground
+        goblins.push({ x: c * 32, y: 320, patrolRange: 60 });
+        goblins.push({ x: (c + 3) * 32, y: 320, patrolRange: 60 });
+        goblins.push({ x: (c + 6) * 32, y: 320, patrolRange: 60 });
+
         c += 9;
         break;
       }
 
       case 4: {
-        // Flat Ground Patrol & Coins
-        const flatLen = 8 + Math.floor(rng() * 6);
+        // Flat Ground Arena Encounter
+        const flatLen = 12 + Math.floor(rng() * 4);
         for (let fc = c; fc < c + flatLen; fc += 3) {
           coins.push({ x: fc * 32, y: 320 });
         }
-        goblins.push({ x: (c + Math.floor(flatLen / 2)) * 32, y: 320, patrolRange: 100 });
-        if (rng() > 0.6) {
-          healthPickups.push({ x: (c + flatLen - 1) * 32, y: 310, healAmount: 30 });
+        // Group encounter: 4 goblins approaching from left and right
+        goblins.push({ x: (c + 1) * 32, y: 320, patrolRange: 80 });
+        goblins.push({ x: (c + 4) * 32, y: 320, patrolRange: 80 });
+        goblins.push({ x: (c + 8) * 32, y: 320, patrolRange: 80 });
+        goblins.push({ x: (c + 11) * 32, y: 320, patrolRange: 80 });
+
+        if (rng() > 0.5) {
+          healthPickups.push({ x: (c + Math.floor(flatLen / 2)) * 32, y: 310, healAmount: 30 });
         }
-        c += flatLen + 2;
+        c += flatLen + 3;
         break;
       }
 
       case 5:
       default: {
         // Rolling Hills with Elevated Wood Platforms
-        for (let hc = c; hc < c + 6; hc++) {
+        for (let hc = c; hc < c + 8; hc++) {
           grid[11][hc] = TileType.GRASS_TOP;
         }
-        for (let bc = c + 1; bc < c + 5; bc++) {
+        for (let bc = c + 1; bc < c + 7; bc++) {
           grid[9][bc] = TileType.WOOD_BRIDGE;
           coins.push({ x: bc * 32, y: 8 * 32 });
         }
-        goblins.push({ x: (c + 2) * 32, y: 288, patrolRange: 60 });
-        c += 8;
+        // Group encounter: 4 goblins across hills and platforms
+        goblins.push({ x: c * 32, y: 288, patrolRange: 60 });
+        goblins.push({ x: (c + 2) * 32, y: 7 * 32, patrolRange: 60 });
+        goblins.push({ x: (c + 5) * 32, y: 7 * 32, patrolRange: 60 });
+        goblins.push({ x: (c + 7) * 32, y: 288, patrolRange: 60 });
+        c += 9;
         break;
       }
     }
@@ -297,7 +321,9 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     coins.push({ x: (cols - 12) * 32, y: 9 * 32 });
     coins.push({ x: (cols - 10) * 32, y: 8 * 32, value: 5 });
 
-    goblins.push({ x: (cols - 16) * 32, y: 320, patrolRange: 90 });
+    goblins.push({ x: (cols - 18) * 32, y: 320, patrolRange: 80 });
+    goblins.push({ x: (cols - 15) * 32, y: 320, patrolRange: 80 });
+    goblins.push({ x: (cols - 12) * 32, y: 320, patrolRange: 80 });
   } else {
     // BOSS LEVEL ARENA SECTION!
     const arenaStart = cols - 55;

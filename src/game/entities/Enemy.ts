@@ -7,7 +7,7 @@ import { audioEngine } from '../audio/AudioEngine';
 export class ForestGoblin extends Entity {
   public hp: number = 50;
   public maxHp: number = 50;
-  public attackDamage: number = 15;
+  public attackDamage: number = 8;
   public moveSpeed: number = 2.0;
   public detectionRadius: number = 220;
   public attackRange: number = 36;
@@ -47,15 +47,15 @@ export class ForestGoblin extends Entity {
 
     if (isFinalBoss) {
       this.maxHp = 500; // Final Goblin King
-      this.attackDamage = 18;
+      this.attackDamage = 14;
       this.moveSpeed = 1.9;
     } else if (isBoss) {
       this.maxHp = 220 + w * 35;
-      this.attackDamage = 14 + Math.floor(w * 0.8);
+      this.attackDamage = 11 + Math.floor(w * 0.6);
       this.moveSpeed = 1.8;
     } else {
       this.maxHp = 45 + w * 5;
-      this.attackDamage = 10 + Math.floor(w * 0.6);
+      this.attackDamage = 8 + Math.floor(w * 0.4);
       this.moveSpeed = 1.9 + (w % 2 === 0 ? 0.3 : 0);
     }
 
