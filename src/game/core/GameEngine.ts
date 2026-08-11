@@ -13,6 +13,7 @@ import { ParticleSystem } from './ParticleSystem';
 import { WeatherSystem } from './WeatherSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
+import { DebugManager } from '../debug/DebugManager';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
 
 export class GameEngine {

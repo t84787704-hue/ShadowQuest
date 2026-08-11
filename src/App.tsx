@@ -26,13 +26,15 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === '`' || e.key === '~' || e.key === 'F12') && DebugManager.isUnlocked()) {
-        e.preventDefault();
-        setShowDebugMenu((prev) => !prev);
+        if (currentScreen !== 'PLAYING') {
+          e.preventDefault();
+          setShowDebugMenu((prev) => !prev);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [currentScreen]);
 
   useEffect(() => {
     // Synchronize sound settings on initial load

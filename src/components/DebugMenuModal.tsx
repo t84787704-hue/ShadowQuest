@@ -1,9 +1,66 @@
-import React, { useState } from 'react';
+import React, { Component, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Play, RefreshCw, Zap, Shield, Heart, Coins, Skull, Plus, CheckCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { X, Play, RefreshCw, Zap, Shield, Heart, Coins, Skull, Plus, CheckCircle, RotateCcw, AlertTriangle, Crown } from 'lucide-react';
 import { DebugManager } from '../game/debug/DebugManager';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { EnemyClass } from '../game/entities/Enemy';
+
+interface DebugErrorBoundaryProps {
+  children: React.ReactNode;
+  onClose: () => void;
+}
+
+interface DebugErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class DebugErrorBoundary extends Component<DebugErrorBoundaryProps, DebugErrorBoundaryState> {
+  public state: DebugErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+  public props!: DebugErrorBoundaryProps;
+
+  constructor(props: DebugErrorBoundaryProps) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: Error): DebugErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('DebugMenu error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    const { hasError, error } = this.state;
+    const { onClose, children } = this.props;
+    if (hasError) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-slate-900 border-2 border-red-500 rounded-2xl p-6 text-center text-slate-100 shadow-2xl">
+            <div className="w-12 h-12 bg-red-950 border border-red-500 rounded-full flex items-center justify-center mx-auto mb-3 text-red-400 text-xl font-bold">
+              ⚠️
+            </div>
+            <h3 className="text-base font-extrabold text-red-400 mb-2">Debug Menu Error Encountered</h3>
+            <p className="text-xs text-slate-300 mb-4 font-mono bg-slate-950 p-3 rounded-lg border border-slate-800 text-left overflow-auto max-h-32 text-[11px] leading-relaxed">
+              {error?.message || 'An unexpected rendering error occurred inside the Debug Menu.'}
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-black text-xs rounded-xl transition cursor-pointer shadow-lg"
+            >
+              CLOSE DEBUGGER
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return children;
+  }
+}
 
 interface DebugMenuModalProps {
   onClose: () => void;
@@ -30,7 +87,7 @@ interface DebugMenuModalProps {
   isPlaying?: boolean;
 }
 
-export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
+const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
   onClose,
   onStartLevel,
   onRestartLevel,
@@ -64,11 +121,14 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
   };
 
   const handleToggleGod = () => {
+    let nextState = false;
     if (onToggleGodMode) {
-      const state = onToggleGodMode();
-      setIsGodMode(state);
-      showToast(state ? '⚡ GOD MODE ACTIVATED!' : '🛡️ GOD MODE DISABLED');
+      nextState = onToggleGodMode();
+    } else {
+      nextState = DebugManager.toggleGodMode();
     }
+    setIsGodMode(nextState);
+    showToast(nextState ? '⚡ GOD MODE ACTIVATED!' : '🛡️ GOD MODE DISABLED');
   };
 
   const worlds = [1, 2, 3, 4, 5, 6];
@@ -148,8 +208,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
             <button
               onClick={() => {
-                if (onSetHpFull) onSetHpFull();
-                showToast('❤️ Full HP Restored!');
+                if (onSetHpFull) {
+                  onSetHpFull();
+                  showToast('❤️ Full HP Restored!');
+                } else {
+                  showToast('⚠️ Start a level to adjust HP');
+                }
               }}
               className="py-1.5 px-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/60 rounded-lg text-emerald-300 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -157,7 +221,11 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onAddCoins) onAddCoins(1000);
+                if (onAddCoins) {
+                  onAddCoins(1000);
+                } else {
+                  SaveSystem.addCoins(1000);
+                }
                 showToast('💰 +1000 Coins Added!');
               }}
               className="py-1.5 px-2 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/60 rounded-lg text-amber-300 font-extrabold text-[10px] transition cursor-pointer text-center"
@@ -166,7 +234,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                onRestartLevel();
+                if (onRestartLevel) onRestartLevel();
                 showToast('🔄 Level Restarted');
               }}
               className="py-1.5 px-2 bg-blue-950/80 hover:bg-blue-900 border border-blue-600/60 rounded-lg text-blue-300 font-extrabold text-[10px] transition cursor-pointer text-center"
@@ -175,8 +243,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onSkipLevel) onSkipLevel();
-                showToast('🏆 Level Completed!');
+                if (onSkipLevel) {
+                  onSkipLevel();
+                  showToast('🏆 Level Completed!');
+                } else {
+                  showToast('⚠️ Start a level to complete it');
+                }
               }}
               className="py-1.5 px-2 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/60 rounded-lg text-teal-200 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -184,8 +256,15 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(1);
-                showToast('🥊 Spawned 1 Enemy');
+                if (onSpawnMultipleEnemies) {
+                  onSpawnMultipleEnemies(1);
+                  showToast('🥊 Spawned 1 Enemy');
+                } else if (onSpawnEnemy) {
+                  onSpawnEnemy();
+                  showToast('🥊 Spawned 1 Enemy');
+                } else {
+                  showToast('⚠️ Start a level to spawn enemies');
+                }
               }}
               className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -193,8 +272,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(3);
-                showToast('🥊 Spawned 3 Enemies');
+                if (onSpawnMultipleEnemies) {
+                  onSpawnMultipleEnemies(3);
+                  showToast('🥊 Spawned 3 Enemies');
+                } else {
+                  showToast('⚠️ Start a level to spawn enemies');
+                }
               }}
               className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -202,8 +285,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(5);
-                showToast('🥊 Spawned 5 Enemies');
+                if (onSpawnMultipleEnemies) {
+                  onSpawnMultipleEnemies(5);
+                  showToast('🥊 Spawned 5 Enemies');
+                } else {
+                  showToast('⚠️ Start a level to spawn enemies');
+                }
               }}
               className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -211,8 +298,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onSpawnBoss) onSpawnBoss();
-                showToast('👑 World Boss Spawned!');
+                if (onSpawnBoss) {
+                  onSpawnBoss();
+                  showToast('👑 World Boss Spawned!');
+                } else {
+                  showToast('⚠️ Start a level to spawn boss');
+                }
               }}
               className="py-1.5 px-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/60 rounded-lg text-rose-200 font-extrabold text-[10px] transition cursor-pointer text-center"
             >
@@ -251,8 +342,13 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                         <button
                           key={lvlId}
                           onClick={() => {
-                            onStartLevel(lvlId);
-                            showToast(`Launching Level ${lvlId}...`);
+                            try {
+                              onStartLevel(lvlId);
+                              showToast(`Launching Level ${lvlId}...`);
+                            } catch (err) {
+                              console.error('Error starting level:', err);
+                              showToast(`⚠️ Error loading level ${lvlId}`);
+                            }
                           }}
                           className={`py-2.5 px-2 rounded-lg text-xs font-black transition cursor-pointer flex flex-col items-center justify-center border ${
                             isCurrent
@@ -281,8 +377,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => {
-                    if (onSetHpFull) onSetHpFull();
-                    showToast('❤️ Player HP set to FULL (100%)');
+                    if (onSetHpFull) {
+                      onSetHpFull();
+                      showToast('❤️ Player HP set to FULL (100%)');
+                    } else {
+                      showToast('⚠️ Start a level to modify HP');
+                    }
                   }}
                   className="p-3 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-600/50 rounded-xl text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -291,8 +391,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onSetHpLow) onSetHpLow();
-                    showToast('⚠️ Player HP set to LOW (10 HP)');
+                    if (onSetHpLow) {
+                      onSetHpLow();
+                      showToast('⚠️ Player HP set to LOW (10 HP)');
+                    } else {
+                      showToast('⚠️ Start a level to modify HP');
+                    }
                   }}
                   className="p-3 bg-red-950/60 hover:bg-red-900/80 border border-red-600/50 rounded-xl text-red-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -301,7 +405,11 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onAddCoins) onAddCoins(100);
+                    if (onAddCoins) {
+                      onAddCoins(100);
+                    } else {
+                      SaveSystem.addCoins(100);
+                    }
                     showToast('🪙 +100 Coins Added');
                   }}
                   className="p-3 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-600/50 rounded-xl text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
@@ -311,7 +419,11 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onAddCoins) onAddCoins(1000);
+                    if (onAddCoins) {
+                      onAddCoins(1000);
+                    } else {
+                      SaveSystem.addCoins(1000);
+                    }
                     showToast('💰 +1000 Coins Added');
                   }}
                   className="p-3 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-600/50 rounded-xl text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
@@ -345,8 +457,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => {
-                    if (onKillNearestEnemy) onKillNearestEnemy();
-                    showToast('☠️ Nearest Enemy Defeated');
+                    if (onKillNearestEnemy) {
+                      onKillNearestEnemy();
+                      showToast('☠️ Nearest Enemy Defeated');
+                    } else {
+                      showToast('⚠️ Start a level to clear enemies');
+                    }
                   }}
                   className="p-3 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-600/50 rounded-xl text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -355,8 +471,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onKillAllEnemies) onKillAllEnemies();
-                    showToast('⚡ ALL Enemies Cleared');
+                    if (onKillAllEnemies) {
+                      onKillAllEnemies();
+                      showToast('⚡ ALL Enemies Cleared');
+                    } else {
+                      showToast('⚠️ Start a level to clear enemies');
+                    }
                   }}
                   className="p-3 bg-red-950/80 hover:bg-red-900 border border-red-500 rounded-xl text-red-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -365,8 +485,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onSpawnEnemy) onSpawnEnemy('MARTIAL_ARTIST');
-                    showToast('🥊 Normal Martial Artist Spawned');
+                    if (onSpawnEnemy) {
+                      onSpawnEnemy('MARTIAL_ARTIST');
+                      showToast('🥊 Normal Martial Artist Spawned');
+                    } else {
+                      showToast('⚠️ Start a level to spawn fighters');
+                    }
                   }}
                   className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -375,8 +499,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onSpawnEnemy) onSpawnEnemy('ELITE_FIGHTER');
-                    showToast('🔥 Elite Fighter Spawned');
+                    if (onSpawnEnemy) {
+                      onSpawnEnemy('ELITE_FIGHTER');
+                      showToast('🔥 Elite Fighter Spawned');
+                    } else {
+                      showToast('⚠️ Start a level to spawn fighters');
+                    }
                   }}
                   className="p-3 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-600/50 rounded-xl text-purple-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
@@ -385,12 +513,16 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
 
                 <button
                   onClick={() => {
-                    if (onSpawnBoss) onSpawnBoss();
-                    showToast('👑 World Boss Spawned!');
+                    if (onSpawnBoss) {
+                      onSpawnBoss();
+                      showToast('👑 World Boss Spawned!');
+                    } else {
+                      showToast('⚠️ Start a level to spawn boss');
+                    }
                   }}
                   className="col-span-2 p-3 bg-amber-950/80 hover:bg-amber-900 border border-amber-500 rounded-xl text-amber-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                 >
-                  <CrownIcon className="w-4 h-4 text-amber-400" /> SPAWN WORLD BOSS MONSTER
+                  <Crown className="w-4 h-4 text-amber-400" /> SPAWN WORLD BOSS MONSTER
                 </button>
               </div>
 
@@ -400,28 +532,40 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
-                      if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(1);
-                      showToast('Spawned 1 Enemy');
+                      if (onSpawnMultipleEnemies) {
+                        onSpawnMultipleEnemies(1);
+                        showToast('Spawned 1 Enemy');
+                      } else {
+                        showToast('⚠️ Start a level to spawn enemies');
+                      }
                     }}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700"
+                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer"
                   >
                     +1 ENEMY
                   </button>
                   <button
                     onClick={() => {
-                      if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(3);
-                      showToast('Spawned 3 Enemies');
+                      if (onSpawnMultipleEnemies) {
+                        onSpawnMultipleEnemies(3);
+                        showToast('Spawned 3 Enemies');
+                      } else {
+                        showToast('⚠️ Start a level to spawn enemies');
+                      }
                     }}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700"
+                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer"
                   >
                     +3 ENEMIES
                   </button>
                   <button
                     onClick={() => {
-                      if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(5);
-                      showToast('Spawned 5 Enemies');
+                      if (onSpawnMultipleEnemies) {
+                        onSpawnMultipleEnemies(5);
+                        showToast('Spawned 5 Enemies');
+                      } else {
+                        showToast('⚠️ Start a level to spawn enemies');
+                      }
                     }}
-                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700"
+                    className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer"
                   >
                     +5 ENEMIES
                   </button>
@@ -434,8 +578,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
-                      if (onSetEnemyHp) onSetEnemyHp(1);
-                      showToast('Enemy HP set to 1 (1-Hit Kill)');
+                      if (onSetEnemyHp) {
+                        onSetEnemyHp(1);
+                        showToast('Enemy HP set to 1 (1-Hit Kill)');
+                      } else {
+                        showToast('⚠️ Start a level to affect enemies');
+                      }
                     }}
                     className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
@@ -443,8 +591,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (onSetEnemyHp) onSetEnemyHp(100);
-                      showToast('Enemy HP set to 100');
+                      if (onSetEnemyHp) {
+                        onSetEnemyHp(100);
+                        showToast('Enemy HP set to 100');
+                      } else {
+                        showToast('⚠️ Start a level to affect enemies');
+                      }
                     }}
                     className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
@@ -452,8 +604,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (onSetEnemyHp) onSetEnemyHp(300);
-                      showToast('Enemy HP set to 300 (Tank)');
+                      if (onSetEnemyHp) {
+                        onSetEnemyHp(300);
+                        showToast('Enemy HP set to 300 (Tank)');
+                      } else {
+                        showToast('⚠️ Start a level to affect enemies');
+                      }
                     }}
                     className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
@@ -468,8 +624,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
-                      if (onForceEnemyBlock) onForceEnemyBlock();
-                      showToast('🛡️ Enemy Guard Forced!');
+                      if (onForceEnemyBlock) {
+                        onForceEnemyBlock();
+                        showToast('🛡️ Enemy Guard Forced!');
+                      } else {
+                        showToast('⚠️ Start a level to force block');
+                      }
                     }}
                     className="py-2 bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-xs text-amber-300 rounded-lg font-bold transition cursor-pointer"
                   >
@@ -477,8 +637,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (onForceEnemyDodge) onForceEnemyDodge();
-                      showToast('💨 Enemy Dodge Forced!');
+                      if (onForceEnemyDodge) {
+                        onForceEnemyDodge();
+                        showToast('💨 Enemy Dodge Forced!');
+                      } else {
+                        showToast('⚠️ Start a level to force dodge');
+                      }
                     }}
                     className="py-2 bg-sky-950/70 hover:bg-sky-900 border border-sky-600/60 text-xs text-sky-300 rounded-lg font-bold transition cursor-pointer"
                   >
@@ -486,8 +650,12 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      if (onForceEnemyCounterattack) onForceEnemyCounterattack();
-                      showToast('⚡ Enemy Counter Forced!');
+                      if (onForceEnemyCounterattack) {
+                        onForceEnemyCounterattack();
+                        showToast('⚡ Enemy Counter Forced!');
+                      } else {
+                        showToast('⚠️ Start a level to force counter');
+                      }
                     }}
                     className="py-2 bg-rose-950/70 hover:bg-rose-900 border border-rose-600/60 text-xs text-rose-300 rounded-lg font-bold transition cursor-pointer"
                   >
@@ -505,7 +673,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                 <>
                   <button
                     onClick={() => {
-                      onRestartLevel();
+                      if (onRestartLevel) onRestartLevel();
                       onClose();
                     }}
                     className="w-full p-3 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-600/50 rounded-xl text-blue-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
@@ -543,6 +711,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
                 <span className="font-bold text-amber-400 block">Keyboard Shortcuts during gameplay:</span>
                 <p>• Press <code className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">~</code> (Backquote) or <code className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">F12</code> to open this debug menu</p>
+                <p>• Press <code className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">G</code> to toggle God Mode invincibility anytime</p>
                 <p>• Tap version number "v1.0.4" 7 times in Main Menu to toggle menu access</p>
               </div>
             </div>
@@ -564,10 +733,11 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
   );
 };
 
-function CrownIcon({ className }: { className?: string }) {
+export const DebugMenuModal: React.FC<DebugMenuModalProps> = (props) => {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
-    </svg>
+    <DebugErrorBoundary onClose={props.onClose}>
+      <DebugMenuModalContent {...props} />
+    </DebugErrorBoundary>
   );
-}
+};
+

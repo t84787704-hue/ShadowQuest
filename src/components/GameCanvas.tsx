@@ -357,7 +357,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 if (onSelectNextLevel) onSelectNextLevel(newLvlId);
               }}
               onRestartLevel={handleRestart}
-              onSetHpFull={() => engineRef.current?.setPlayerHp(engineRef.current.player.stats.maxHp)}
+              onSetHpFull={() => {
+                if (engineRef.current?.player?.stats) {
+                  engineRef.current.setPlayerHp(engineRef.current.player.stats.maxHp);
+                }
+              }}
               onSetHpLow={() => engineRef.current?.setPlayerLowHp()}
               onAddCoins={(amt) => engineRef.current?.addCoins(amt)}
               onKillNearestEnemy={() => engineRef.current?.killNearestEnemy()}
@@ -371,8 +375,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               onForceEnemyDodge={() => engineRef.current?.forceEnemyDodge()}
               onForceEnemyCounterattack={() => engineRef.current?.forceEnemyCounterattack()}
               onToggleGodMode={() => {
-                const next = !engineRef.current?.player.isGodMode;
-                if (engineRef.current) engineRef.current.player.isGodMode = next;
+                if (!engineRef.current?.player) return false;
+                const next = !engineRef.current.player.isGodMode;
+                engineRef.current.player.isGodMode = next;
+                DebugManager.setGodMode(next);
+                setIsGodMode(next);
                 return next;
               }}
               onSkipLevel={() => engineRef.current?.triggerVictory()}

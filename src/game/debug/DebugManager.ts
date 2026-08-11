@@ -45,6 +45,10 @@ export class DebugManager {
     return this.godMode;
   }
 
+  public static setGodMode(enabled: boolean) {
+    this.godMode = enabled;
+  }
+
   public static isGodMode(): boolean {
     return this.godMode;
   }

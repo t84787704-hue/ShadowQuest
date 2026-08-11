@@ -317,7 +317,7 @@ export class ForestGoblin extends Entity {
     // ------------------------------------
     // REACTIVE DEFENSE AI (BLOCK, DODGE & COUNTER)
     // ------------------------------------
-    const isPlayerAttacking = player.state === 'ATTACKING';
+    const isPlayerAttacking = player.state === 'ATTACK';
     const playerFacingUs = (player.facingRight && dx < 0) || (!player.facingRight && dx > 0);
 
     // 1. Check Dodge Reaction
