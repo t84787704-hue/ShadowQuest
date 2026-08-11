@@ -12,6 +12,8 @@ import { WorldMap } from './components/WorldMap';
 import { StoryModal } from './components/StoryModal';
 import { WorldIntroModal } from './components/WorldIntroModal';
 import { AchievementsMenu } from './components/AchievementsMenu';
+import { DebugMenuModal } from './components/DebugMenuModal';
+import { DebugManager } from './game/debug/DebugManager';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('MAIN_MENU');
@@ -19,6 +21,18 @@ export default function App() {
   const [selectedLevelId, setSelectedLevelId] = useState<string>('1-1');
   const [pendingLevelId, setPendingLevelId] = useState<string | null>(null);
   const [isResumeRun, setIsResumeRun] = useState<boolean>(false);
+  const [showDebugMenu, setShowDebugMenu] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === '`' || e.key === '~' || e.key === 'F12') && DebugManager.isUnlocked()) {
+        e.preventDefault();
+        setShowDebugMenu((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     // Synchronize sound settings on initial load
@@ -90,6 +104,7 @@ export default function App() {
                 }}
                 onClearQuickSave={handleClearQuickSave}
                 onSoundToggle={handleSoundToggle}
+                onOpenDebug={() => setShowDebugMenu(true)}
               />
             </motion.div>
           )}
@@ -247,6 +262,34 @@ export default function App() {
               levelId={pendingLevelId}
               onStart={handleConfirmStartLevel}
               onBack={() => setPendingLevelId(null)}
+            />
+          )}
+
+          {showDebugMenu && (
+            <DebugMenuModal
+              key="app-debug-modal"
+              onClose={() => setShowDebugMenu(false)}
+              onStartLevel={(lvlId) => {
+                setShowDebugMenu(false);
+                setSelectedLevelId(lvlId);
+                setIsResumeRun(false);
+                setCurrentScreen('PLAYING');
+              }}
+              onRestartLevel={() => {
+                setShowDebugMenu(false);
+              }}
+              onResetProgress={() => {
+                SaveSystem.resetSaveData();
+                setSaveData(SaveSystem.load());
+                setCurrentScreen('MAIN_MENU');
+                setShowDebugMenu(false);
+              }}
+              onBackToMainMenu={() => {
+                setCurrentScreen('MAIN_MENU');
+                setShowDebugMenu(false);
+              }}
+              currentLevelId={selectedLevelId}
+              isPlaying={currentScreen === 'PLAYING'}
             />
           )}
         </AnimatePresence>

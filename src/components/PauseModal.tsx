@@ -8,6 +8,7 @@ interface PauseModalProps {
   onQuickSave: () => void;
   onRestart: () => void;
   onMainMenu: () => void;
+  onOpenDebug?: () => void;
 }
 
 export const PauseModal: React.FC<PauseModalProps> = ({
@@ -15,6 +16,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onQuickSave,
   onRestart,
   onMainMenu,
+  onOpenDebug,
 }) => {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(audioEngine.isSoundEnabled());
@@ -118,6 +120,18 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             <Play className="w-4 h-4 fill-slate-950" />
             RESUME
           </button>
+
+          {onOpenDebug && (
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
+                onOpenDebug();
+              }}
+              className="w-full py-2.5 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 font-extrabold text-xs uppercase rounded-xl border border-amber-500/50 flex items-center justify-center gap-2 transition cursor-pointer"
+            >
+              <span>🛠️</span> DEVELOPER DEBUG MENU
+            </button>
+          )}
 
           <button
             onClick={handleTriggerQuickSave}

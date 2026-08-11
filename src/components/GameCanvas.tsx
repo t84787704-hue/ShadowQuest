@@ -9,7 +9,9 @@ import { MobileControls } from './MobileControls';
 import { PauseModal } from './PauseModal';
 import { GameOverModal } from './GameOverModal';
 import { VictoryModal } from './VictoryModal';
+import { DebugMenuModal } from './DebugMenuModal';
 import { SaveSystem } from '../game/save/SaveSystem';
+import { DebugManager } from '../game/debug/DebugManager';
 
 interface GameCanvasProps {
   saveData: SaveData;
@@ -55,7 +57,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   } | null>(null);
 
   const [impactEffect, setImpactEffect] = useState<{ id: number; type: 'HEAVY' | 'BOSS' | 'LIGHT' } | null>(null);
+  const [showDebugMenu, setShowDebugMenu] = useState<boolean>(false);
   const impactTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === '`' || e.key === '~' || e.key === 'F12') && DebugManager.isUnlocked()) {
+        e.preventDefault();
+        setShowDebugMenu((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -280,6 +294,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           weaponName={engineRef.current?.player?.equippedWeapon?.name}
           weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
           onPauseClick={handlePause}
+          onDebugClick={DebugManager.isUnlocked() ? () => setShowDebugMenu(true) : undefined}
         />
 
         {/* Boss Health Bar HUD */}
@@ -313,12 +328,48 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         {/* Modals based on Game Engine Status */}
         <AnimatePresence>
+          {showDebugMenu && (
+            <DebugMenuModal
+              key="debug-modal"
+              onClose={() => setShowDebugMenu(false)}
+              onStartLevel={(newLvlId) => {
+                setShowDebugMenu(false);
+                if (onSelectNextLevel) onSelectNextLevel(newLvlId);
+              }}
+              onRestartLevel={handleRestart}
+              onSetHpFull={() => engineRef.current?.setPlayerHp(engineRef.current.player.stats.maxHp)}
+              onSetHpLow={() => engineRef.current?.setPlayerLowHp()}
+              onAddCoins={(amt) => engineRef.current?.addCoins(amt)}
+              onKillNearestEnemy={() => engineRef.current?.killNearestEnemy()}
+              onKillAllEnemies={() => engineRef.current?.killAllEnemies()}
+              onSpawnEnemy={(cls) => engineRef.current?.spawnEnemy(cls)}
+              onSpawnMultipleEnemies={(cnt) => engineRef.current?.spawnMultipleEnemies(cnt)}
+              onSpawnBoss={() => engineRef.current?.spawnBoss()}
+              onSetEnemyHp={(hp) => engineRef.current?.setEnemyHp(hp)}
+              onSetEnemyDamage={(dmg) => engineRef.current?.setEnemyDamage(dmg)}
+              onToggleGodMode={() => {
+                const next = !engineRef.current?.player.isGodMode;
+                if (engineRef.current) engineRef.current.player.isGodMode = next;
+                return next;
+              }}
+              onSkipLevel={() => engineRef.current?.triggerVictory()}
+              onResetProgress={() => {
+                SaveSystem.resetSaveData();
+                onReturnToMainMenu();
+              }}
+              onBackToMainMenu={onReturnToMainMenu}
+              currentLevelId={levelId}
+              isPlaying={true}
+            />
+          )}
+
           {gameStatus === 'PAUSED' && (
             <PauseModal
               onResume={handleResume}
               onQuickSave={handleQuickSave}
               onRestart={handleRestart}
               onMainMenu={onReturnToMainMenu}
+              onOpenDebug={DebugManager.isUnlocked() ? () => setShowDebugMenu(true) : undefined}
             />
           )}
 

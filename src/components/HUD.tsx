@@ -9,6 +9,7 @@ interface HUDProps {
   weaponName?: string;
   weaponIcon?: string;
   onPauseClick: () => void;
+  onDebugClick?: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -19,6 +20,7 @@ export const HUD: React.FC<HUDProps> = ({
   weaponName,
   weaponIcon,
   onPauseClick,
+  onDebugClick,
 }) => {
   const hpPercent = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
 
@@ -70,14 +72,26 @@ export const HUD: React.FC<HUDProps> = ({
         </span>
       </div>
 
-      {/* Top Right: Pause Button */}
-      <button
-        onClick={onPauseClick}
-        className="pointer-events-auto w-10 h-10 bg-slate-900/80 hover:bg-slate-800 active:scale-95 text-slate-200 border border-slate-700 rounded-xl flex items-center justify-center shadow-lg transition"
-        title="Pause Game"
-      >
-        <Pause className="w-5 h-5 text-amber-400 fill-amber-400" />
-      </button>
+      {/* Top Right: Debug & Pause Buttons */}
+      <div className="flex items-center gap-2 pointer-events-auto">
+        {onDebugClick && (
+          <button
+            onClick={onDebugClick}
+            className="w-10 h-10 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-500/50 rounded-xl flex items-center justify-center shadow-lg transition cursor-pointer"
+            title="Open Developer Debug Menu"
+          >
+            <span className="text-base">🛠️</span>
+          </button>
+        )}
+
+        <button
+          onClick={onPauseClick}
+          className="w-10 h-10 bg-slate-900/80 hover:bg-slate-800 active:scale-95 text-slate-200 border border-slate-700 rounded-xl flex items-center justify-center shadow-lg transition cursor-pointer"
+          title="Pause Game"
+        >
+          <Pause className="w-5 h-5 text-amber-400 fill-amber-400" />
+        </button>
+      </div>
     </div>
   );
 };

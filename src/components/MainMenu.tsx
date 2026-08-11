@@ -5,12 +5,15 @@ import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { getUnclaimedCount } from '../data/achievements';
 
+import { DebugManager } from '../game/debug/DebugManager';
+
 interface MainMenuProps {
   saveData: SaveData;
   onNavigate: (screen: GameScreen) => void;
   onSelectLevel: (levelId: string, isResume?: boolean) => void;
   onClearQuickSave?: () => void;
   onSoundToggle: () => void;
+  onOpenDebug?: () => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -19,10 +22,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onSelectLevel,
   onClearQuickSave,
   onSoundToggle,
+  onOpenDebug,
 }) => {
   const isSoundOn = audioEngine.isSoundEnabled();
   const latestUnlockedLevel = SaveSystem.getLatestUnlockedLevel();
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [isDebugUnlocked, setIsDebugUnlocked] = useState<boolean>(DebugManager.isUnlocked());
+
+  const handleVersionClick = () => {
+    const res = DebugManager.registerVersionTap();
+    if (res.unlocked) {
+      setIsDebugUnlocked(true);
+      if (onOpenDebug) onOpenDebug();
+    }
+  };
 
   const handleBtnClick = (screen: GameScreen) => {
     audioEngine.playButtonClick();
@@ -238,9 +251,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Footer Info */}
       <div className="w-full max-w-2xl flex justify-between items-center text-[10px] text-slate-500 font-mono z-10">
         <span>6 WORLDS • 30 LEVELS</span>
-        <span className="bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60 shadow-sm">
-          v1.0.4 (Build 104)
-        </span>
+        <div className="flex items-center gap-2">
+          {isDebugUnlocked && onOpenDebug && (
+            <button
+              onClick={onOpenDebug}
+              className="bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-bold px-2.5 py-1 rounded-lg border border-amber-500/50 shadow-sm transition cursor-pointer"
+            >
+              🛠️ DEV DEBUG
+            </button>
+          )}
+          <button
+            onClick={handleVersionClick}
+            className="bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60 shadow-sm hover:border-amber-500/50 transition cursor-pointer"
+            title="Tap 7 times to unlock Dev Debug Menu"
+          >
+            v1.0.4 (Build 104)
+          </button>
+        </div>
         <span>SAVED OFFLINE</span>
       </div>
     </div>

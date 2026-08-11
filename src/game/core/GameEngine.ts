@@ -125,52 +125,6 @@ export class GameEngine {
     this.onStateChangeCallback = cb;
   }
 
-  // Debug Helper Methods
-  public setGodMode(enabled: boolean) {
-    this.player.isGodMode = enabled;
-  }
-
-  public setPlayerHp(hp: number) {
-    this.player.stats.currentHp = hp;
-    if (hp > this.player.stats.maxHp) {
-      this.player.stats.maxHp = hp;
-    }
-    this.player.isAlive = hp > 0;
-    if (this.player.isAlive && this.player.state === 'DEAD') {
-      this.player.state = 'IDLE';
-    }
-    if (this.onStateChangeCallback) {
-      this.onStateChangeCallback(this.status, this.collectedCoinsCount, this.totalCoins);
-    }
-  }
-
-  public addCoins(amount: number) {
-    this.collectedCoinsCount += amount;
-    SaveSystem.addCoins(amount);
-    const fresh = SaveSystem.load();
-    this.startingCoins = fresh.coins - this.collectedCoinsCount;
-    if (this.onStateChangeCallback) {
-      this.onStateChangeCallback(this.status, this.collectedCoinsCount, fresh.coins);
-    }
-  }
-
-  public triggerVictory() {
-    if (this.status === 'VICTORY') return;
-    this.status = 'VICTORY';
-    audioEngine.playVictory();
-    this.particles.createVictoryConfetti(this.player.x, this.player.y);
-
-    const totalPossible = Math.max(1, this.totalCoinsInLevel);
-    const coinRatio = this.collectedCoinsCount / totalPossible;
-    const stars = coinRatio >= 0.8 ? 3 : coinRatio >= 0.4 ? 2 : 1;
-
-    SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
-
-    if (this.onStateChangeCallback) {
-      this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
-    }
-  }
-
   public registerComboHit(x: number, y: number) {
     this.comboHits++;
     this.comboTimer = this.maxComboTimer;
@@ -201,6 +155,131 @@ export class GameEngine {
   public resetCombo() {
     this.comboHits = 0;
     this.comboTimer = 0;
+  }
+
+  // ==========================================
+  // DEBUG & TESTING HELPERS
+  // ==========================================
+  public setPlayerHp(hp: number) {
+    this.player.stats.currentHp = Math.min(hp, this.player.stats.maxHp);
+  }
+
+  public setPlayerLowHp() {
+    this.player.stats.currentHp = Math.min(10, this.player.stats.maxHp);
+  }
+
+  public addCoins(amount: number) {
+    this.collectedCoinsCount += amount;
+    SaveSystem.addCoins(amount);
+  }
+
+  public setGodMode(enabled: boolean) {
+    this.player.isGodMode = enabled;
+  }
+
+  public killNearestEnemy() {
+    let nearest: ForestGoblin | BossMonster | null = null;
+    let minDist = Infinity;
+
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        const dist = Math.hypot(g.x - this.player.x, g.y - this.player.y);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = g;
+        }
+      }
+    }
+
+    if (this.bossMonster && this.bossMonster.isAlive) {
+      const dist = Math.hypot(this.bossMonster.x - this.player.x, this.bossMonster.y - this.player.y);
+      if (dist < minDist) {
+        nearest = this.bossMonster;
+      }
+    }
+
+    if (nearest) {
+      nearest.hp = 0;
+      nearest.isAlive = false;
+      this.particles.createSlashSparks(nearest.x + nearest.width / 2, nearest.y + nearest.height / 2, true, ['#ef4444', '#facc15']);
+    }
+  }
+
+  public killAllEnemies() {
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        g.hp = 0;
+        g.isAlive = false;
+      }
+    }
+    if (this.bossMonster && this.bossMonster.isAlive) {
+      this.bossMonster.hp = 0;
+      this.bossMonster.isAlive = false;
+    }
+  }
+
+  public spawnEnemy(enemyClass?: import('../entities/Enemy').EnemyClass) {
+    const spawnX = this.player.x + (this.player.facingRight ? 100 : -100);
+    const spawnY = this.player.y - 10;
+    const enemy = new ForestGoblin(spawnX, spawnY, 120, false, this.levelDef.config.id);
+    if (enemyClass) {
+      enemy.enemyClass = enemyClass;
+      if (enemyClass === 'ELITE_FIGHTER') {
+        enemy.maxHp = 250;
+        enemy.hp = 250;
+        enemy.attackDamage = 15;
+      }
+    }
+    this.goblins.push(enemy);
+    this.particles.createFloatingText(spawnX, spawnY - 20, 'SPAWNED!', '#22c55e', 14);
+  }
+
+  public spawnMultipleEnemies(count: number) {
+    for (let i = 0; i < count; i++) {
+      const offset = (i + 1) * 60 * (i % 2 === 0 ? 1 : -1);
+      const spawnX = this.player.x + offset;
+      const spawnY = this.player.y - 10;
+      const enemy = new ForestGoblin(spawnX, spawnY, 100, false, this.levelDef.config.id);
+      this.goblins.push(enemy);
+    }
+    this.particles.createFloatingText(this.player.x, this.player.y - 30, `+${count} ENEMIES!`, '#22c55e', 16);
+  }
+
+  public spawnBoss() {
+    const spawnX = this.player.x + 140;
+    const spawnY = this.player.y - 20;
+    this.bossMonster = new BossMonster(spawnX, spawnY, this.levelDef.config.id);
+    this.isBossLevel = true;
+    this.particles.createFloatingText(spawnX, spawnY - 30, 'BOSS SPAWNED!', '#ef4444', 18);
+  }
+
+  public setEnemyHp(hp: number) {
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        g.maxHp = hp;
+        g.hp = hp;
+      }
+    }
+    if (this.bossMonster && this.bossMonster.isAlive) {
+      this.bossMonster.maxHp = hp;
+      this.bossMonster.hp = hp;
+    }
+  }
+
+  public setEnemyDamage(damage: number) {
+    for (const g of this.goblins) {
+      g.attackDamage = damage;
+    }
+    if (this.bossMonster) {
+      this.bossMonster.attackDamage = damage;
+    }
+  }
+
+  public triggerVictory() {
+    this.status = 'VICTORY';
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
+    }
   }
 
   private initLevelEntities(qs?: QuickSaveData | null) {
