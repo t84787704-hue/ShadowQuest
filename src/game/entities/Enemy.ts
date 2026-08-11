@@ -196,7 +196,7 @@ export class ForestGoblin extends Entity {
       this.moveSpeed = 2.5;
     } else {
       this.maxHp = Math.round(baseWorldHp * hpMultiplier);
-      this.attackDamage = Math.round((6 + Math.floor(w * 0.5)) * damageMult);
+      this.attackDamage = Math.max(2, Math.round((2.5 + w * 0.4) * damageMult));
       this.moveSpeed = (3.40 + (w % 3) * 0.08) * speedMult;
     }
 
@@ -469,9 +469,15 @@ export class ForestGoblin extends Entity {
       }
     }
 
-    // Body contact damage check
+    // Body contact physical separation & light bump damage
     if (this.intersects(player) && player.isAlive) {
-      player.takeDamage(this.attackDamage, particles);
+      const bumpDx = (this.x + this.width / 2) - (player.x + player.width / 2);
+      const pushDir = bumpDx >= 0 ? 1 : -1;
+      this.x += pushDir * 2.2; // Push enemy outwards to prevent sprite clipping
+      if (!player.isGodMode && player.invulnerableTimer <= 0) {
+        // Body bump deals a tiny 1 HP graze rather than full heavy attack damage
+        player.takeDamage(1, particles);
+      }
     }
 
     // Continuous Player Attack Perception
@@ -786,7 +792,7 @@ export class ForestGoblin extends Entity {
         particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
         return true;
       }
-      return false;
+      return true;
     }
 
     // 3. Direct Hit -> Enter HIT Stagger state

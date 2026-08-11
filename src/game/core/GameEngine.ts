@@ -1142,7 +1142,7 @@ export class GameEngine {
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`ENEMIES DEFEATED: ${this.totalEnemiesDefeated} / ${this.TOTAL_LEVEL_ENEMIES}`, bx + boxW / 2, by + 18);
+      ctx.fillText(`ENEMIES: ${this.totalEnemiesDefeated} / ${this.TOTAL_LEVEL_ENEMIES}`, bx + boxW / 2, by + 18);
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = '10px monospace';
