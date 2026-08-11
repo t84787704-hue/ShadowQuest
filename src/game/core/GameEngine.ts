@@ -54,7 +54,7 @@ export class GameEngine {
   // Combat Combo Counter & Inactivity Timer
   public comboHits: number = 0;
   public comboTimer: number = 0;
-  public readonly maxComboTimer: number = 2.5;
+  public readonly maxComboTimer: number = 1.5; // Resets when player does not hit an enemy for ~1.5s
 
   // Impact Hit-Stop (Freeze Frame on punch/kick connection)
   public hitStopTimer: number = 0;
@@ -130,27 +130,31 @@ export class GameEngine {
     this.onStateChangeCallback = cb;
   }
 
+  public getComboDamageBonus(): number {
+    if (this.comboHits >= 10) return 1.15; // +15% maximum
+    if (this.comboHits >= 6) return 1.10;  // +10%
+    if (this.comboHits >= 4) return 1.05;  // +5%
+    return 1.0;                            // x2-x3: normal damage (1.0x)
+  }
+
   public registerComboHit(x: number, y: number) {
     this.comboHits++;
     this.comboTimer = this.maxComboTimer;
 
     if (this.comboHits >= 2) {
-      let label = `x${this.comboHits}`;
+      let label = `COMBO x${this.comboHits}`;
       let color = '#facc15';
-      let size = 14 + Math.min(8, this.comboHits);
+      let size = 13 + Math.min(6, this.comboHits);
 
-      if (this.comboHits >= 12) {
-        label = `x${this.comboHits} FEVER!`;
-        color = '#e879f9';
-      } else if (this.comboHits >= 8) {
-        label = `x${this.comboHits} MONSTER!`;
-        color = '#fb7185';
-      } else if (this.comboHits >= 5) {
-        label = `x${this.comboHits} HYPER!`;
-        color = '#fb923c';
-      } else if (this.comboHits >= 3) {
-        label = `x${this.comboHits} STRIKE!`;
-        color = '#facc15';
+      if (this.comboHits >= 10) {
+        label = `COMBO x${this.comboHits}! 💥`;
+        color = '#ef4444';
+      } else if (this.comboHits >= 6) {
+        label = `COMBO x${this.comboHits}! 🔥`;
+        color = '#f97316';
+      } else if (this.comboHits >= 4) {
+        label = `COMBO x${this.comboHits}! ⚡`;
+        color = '#38bdf8';
       }
 
       this.particles.createFloatingText(x, y - 18, label, color, size);
@@ -571,7 +575,8 @@ export class GameEngine {
         this.hitEnemiesThisAttack.add(this.bossMonster as unknown as ForestGoblin);
 
         const comboMult = this.player.currentComboMultiplier || 1.0;
-        const damage = Math.round(this.player.stats.attackDamage * comboMult);
+        const comboBonus = this.getComboDamageBonus();
+        const damage = Math.round(this.player.stats.attackDamage * comboMult * comboBonus);
 
         this.bossMonster.takeDamage(damage, this.particles, this.player.attackType);
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
@@ -591,21 +596,32 @@ export class GameEngine {
         // On Boss Death
         if (!this.bossMonster.isAlive) {
           SaveSystem.recordEnemyDefeated(true);
-          // Drop large coin reward
-          for (let c = 0; c < 10; c++) {
-            this.coins.push(
-              new Coin(
-                this.bossMonster.x + Math.random() * 60 - 30,
-                this.bossMonster.y - Math.random() * 30,
-                5
-              )
+          const bossBonusCoins = [0, 50, 75, 100, 150, 200, 300][this.bossMonster.worldId] || 100;
+          const coinCount = Math.min(15, Math.ceil(bossBonusCoins / 10));
+          const perCoinVal = Math.ceil(bossBonusCoins / coinCount);
+
+          for (let c = 0; c < coinCount; c++) {
+            const coinObj = new Coin(
+              this.bossMonster.x + Math.random() * 80 - 40,
+              this.bossMonster.y - Math.random() * 40,
+              perCoinVal
             );
+            coinObj.vy = -4.5 - Math.random() * 3.5;
+            coinObj.vx = Math.random() * 6 - 3;
+            this.coins.push(coinObj);
           }
+
           const bossCenterX = this.bossMonster.x + this.bossMonster.width / 2;
           const bossCenterY = this.bossMonster.y + this.bossMonster.height / 2;
-          this.camera.addShake(0.45, 12);
+          this.camera.addShake(0.5, 14);
           this.particles.createBossDefeatExplosion(bossCenterX, bossCenterY);
-          this.particles.createFloatingText(bossCenterX, bossCenterY - 30, '👑 BOSS DEFEATED! PORTAL UNLOCKED!', '#22c55e', 22);
+          this.particles.createFloatingText(
+            bossCenterX,
+            bossCenterY - 36,
+            `👑 BOSS DEFEATED! +${bossBonusCoins} COINS!`,
+            '#facc15',
+            24
+          );
           audioEngine.playVictory();
         }
       }
@@ -616,7 +632,8 @@ export class GameEngine {
           this.hitEnemiesThisAttack.add(goblin);
 
           const comboMult = this.player.currentComboMultiplier || 1.0;
-          const damage = Math.round(this.player.stats.attackDamage * comboMult);
+          const comboBonus = this.getComboDamageBonus();
+          const damage = Math.round(this.player.stats.attackDamage * comboMult * comboBonus);
 
           const isBlocked = goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
@@ -874,6 +891,9 @@ export class GameEngine {
     // 8. Player (Blaze)
     this.player.render(this.ctx, offsetX, offsetY);
 
+    // Render active COMBO indicator near player during combat
+    this.renderPlayerComboIndicator(offsetX, offsetY);
+
     // 9. Particle FX
     this.particles.render(this.ctx, offsetX, offsetY);
 
@@ -997,5 +1017,78 @@ export class GameEngine {
     // Base Pedestal
     ctx.fillStyle = '#475569';
     ctx.fillRect(px - 4, py + goal.height - 8, 22, 8);
+  }
+
+  private renderPlayerComboIndicator(offsetX: number, offsetY: number) {
+    if (this.comboHits < 2 || this.comboTimer <= 0) return;
+
+    const ctx = this.ctx;
+    const px = Math.round(this.player.x - offsetX);
+    const py = Math.round(this.player.y - offsetY);
+
+    const bx = px + this.player.width / 2;
+    const by = py - 28;
+
+    // Fade out in last 0.3s of timer
+    const fadeAlpha = Math.min(1, this.comboTimer / 0.3);
+
+    ctx.save();
+    ctx.globalAlpha = fadeAlpha;
+
+    const comboText = `COMBO x${this.comboHits}`;
+
+    let bonusLabel = '';
+    let accentColor = '#facc15'; // Gold
+    let borderColor = '#a16207';
+
+    if (this.comboHits >= 10) {
+      bonusLabel = '+15% DMG';
+      accentColor = '#ef4444'; // Red
+      borderColor = '#991b1b';
+    } else if (this.comboHits >= 6) {
+      bonusLabel = '+10% DMG';
+      accentColor = '#f97316'; // Orange
+      borderColor = '#c2410c';
+    } else if (this.comboHits >= 4) {
+      bonusLabel = '+5% DMG';
+      accentColor = '#38bdf8'; // Cyan
+      borderColor = '#0369a1';
+    }
+
+    ctx.font = 'bold 11px sans-serif';
+    const textW = ctx.measureText(comboText).width;
+    const bonusW = bonusLabel ? ctx.measureText(bonusLabel).width + 8 : 0;
+    const boxWidth = textW + bonusW + 16;
+    const boxHeight = 18;
+    const boxX = bx - boxWidth / 2;
+    const boxY = by - boxHeight / 2;
+
+    // Background capsule
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 9);
+    } else {
+      ctx.rect(boxX, boxY, boxWidth, boxHeight);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Combo text
+    ctx.fillStyle = accentColor;
+    ctx.textAlign = 'left';
+    ctx.fillText(comboText, boxX + 8, by + 4);
+
+    // Bonus label
+    if (bonusLabel) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(bonusLabel, boxX + boxWidth - 6, by + 4);
+    }
+
+    ctx.restore();
   }
 }

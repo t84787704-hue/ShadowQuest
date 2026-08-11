@@ -97,20 +97,38 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </div>
         </motion.div>
       ) : (
-        /* NORMAL LEVEL COMPLETE MODAL */
+        /* NORMAL / BOSS LEVEL COMPLETE MODAL */
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-[0_0_40px_rgba(245,158,11,0.3)] flex flex-col items-center"
+          className={`bg-slate-900 border-2 ${
+            levelTitle?.includes('-5') || levelTitle?.toLowerCase().includes('boss')
+              ? 'border-emerald-400 shadow-[0_0_50px_rgba(34,197,94,0.4)]'
+              : 'border-amber-500/50 shadow-[0_0_40px_rgba(245,158,11,0.3)]'
+          } rounded-2xl p-6 max-w-sm w-full text-center flex flex-col items-center`}
         >
-          <div className="w-14 h-14 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center mb-3">
-            <Trophy className="w-8 h-8 fill-amber-400" />
-          </div>
+          {levelTitle?.includes('-5') || levelTitle?.toLowerCase().includes('boss') ? (
+            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-2xl flex items-center justify-center mb-2 shadow-lg shadow-emerald-500/30 animate-bounce">
+              <Crown className="w-9 h-9 stroke-[2.5]" />
+            </div>
+          ) : (
+            <div className="w-14 h-14 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center mb-3">
+              <Trophy className="w-8 h-8 fill-amber-400" />
+            </div>
+          )}
+
+          {(levelTitle?.includes('-5') || levelTitle?.toLowerCase().includes('boss')) && (
+            <div className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-full text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-2">
+              <Award className="w-3.5 h-3.5" /> WORLD CLEAR — NEXT WORLD UNLOCKED!
+            </div>
+          )}
 
           <h2 className="text-2xl font-black text-amber-400 tracking-wider mb-1">
-            LEVEL COMPLETE!
+            {levelTitle?.includes('-5') || levelTitle?.toLowerCase().includes('boss')
+              ? '👑 BOSS DEFEATED!'
+              : 'LEVEL COMPLETE!'}
           </h2>
           <p className="text-xs text-slate-300 font-medium mb-4">
             {levelTitle ? `${levelTitle} Conquered!` : 'Level Conquered!'}
