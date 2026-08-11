@@ -369,7 +369,11 @@ export class Player extends Entity {
   }
 
   public takeDamage(damage: number, particles: ParticleSystem): boolean {
-    if (this.isGodMode || this.invulnerableTimer > 0 || !this.isAlive) return false;
+    if (this.isGodMode) {
+      particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'GOD MODE! ⚡', '#facc15', 14);
+      return false;
+    }
+    if (this.invulnerableTimer > 0 || !this.isAlive) return false;
 
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
     this.invulnerableTimer = 1.0; // 1.0 second damage invulnerability period
@@ -820,6 +824,23 @@ export class Player extends Entity {
       ctx.beginPath();
       ctx.arc(0, -22, 22, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.isGodMode && this.isAlive) {
+      ctx.save();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, -22, 26 + Math.sin(Date.now() * 0.01) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Floating Crown / Badge
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('👑 GOD', -18, -52 + Math.sin(Date.now() * 0.008) * 2);
       ctx.restore();
     }
 

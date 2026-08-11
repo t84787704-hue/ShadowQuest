@@ -94,6 +94,7 @@ export class GameEngine {
 
     const equippedWeapon = SaveSystem.getEquippedWeapon(saveData, levelId);
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, equippedWeapon);
+    this.player.isGodMode = DebugManager.isGodMode();
     this.player.onDamage = () => this.resetCombo();
 
     // Quick save restoration check

@@ -8,6 +8,8 @@ interface HUDProps {
   levelTitle: string;
   weaponName?: string;
   weaponIcon?: string;
+  isGodMode?: boolean;
+  onGodModeToggle?: () => void;
   onPauseClick: () => void;
   onDebugClick?: () => void;
 }
@@ -19,6 +21,8 @@ export const HUD: React.FC<HUDProps> = ({
   levelTitle,
   weaponName,
   weaponIcon,
+  isGodMode,
+  onGodModeToggle,
   onPauseClick,
   onDebugClick,
 }) => {
@@ -61,6 +65,21 @@ export const HUD: React.FC<HUDProps> = ({
                 {weaponName}
               </span>
             </div>
+          )}
+
+          {onGodModeToggle && (
+            <button
+              onClick={onGodModeToggle}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider transition cursor-pointer pointer-events-auto border shadow-lg ${
+                isGodMode
+                  ? 'bg-amber-500 text-slate-950 border-amber-300 animate-pulse shadow-amber-500/50'
+                  : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-amber-300 hover:border-amber-500/50'
+              }`}
+              title="Toggle God Mode (Press 'G' key)"
+            >
+              <span>⚡</span>
+              <span>{isGodMode ? 'GOD MODE ON' : 'GOD MODE'}</span>
+            </button>
           )}
         </div>
       </div>

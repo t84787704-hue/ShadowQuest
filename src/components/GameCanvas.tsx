@@ -58,13 +58,30 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const [impactEffect, setImpactEffect] = useState<{ id: number; type: 'HEAVY' | 'BOSS' | 'LIGHT' } | null>(null);
   const [showDebugMenu, setShowDebugMenu] = useState<boolean>(false);
+  const [isGodMode, setIsGodMode] = useState<boolean>(DebugManager.isGodMode());
   const impactTimeoutRef = useRef<number | null>(null);
+
+  const handleToggleGodMode = () => {
+    if (engineRef.current) {
+      const nextState = !engineRef.current.player.isGodMode;
+      engineRef.current.player.isGodMode = nextState;
+      DebugManager.setGodMode(nextState);
+      setIsGodMode(nextState);
+    } else {
+      const nextState = !DebugManager.isGodMode();
+      DebugManager.setGodMode(nextState);
+      setIsGodMode(nextState);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === '`' || e.key === '~' || e.key === 'F12') && DebugManager.isUnlocked()) {
         e.preventDefault();
         setShowDebugMenu((prev) => !prev);
+      }
+      if ((e.key === 'g' || e.key === 'G') && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        handleToggleGodMode();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -122,6 +139,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         });
         setLevelCoins(engineRef.current.collectedCoinsCount);
         setTotalCoins(engineRef.current.totalCoins);
+        setIsGodMode(engineRef.current.player.isGodMode);
         setComboState({
           hits: engineRef.current.comboHits,
           timer: engineRef.current.comboTimer,
@@ -293,6 +311,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           levelTitle={currentLevelTitle}
           weaponName={engineRef.current?.player?.equippedWeapon?.name}
           weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
+          isGodMode={isGodMode}
+          onGodModeToggle={handleToggleGodMode}
           onPauseClick={handlePause}
           onDebugClick={DebugManager.isUnlocked() ? () => setShowDebugMenu(true) : undefined}
         />
