@@ -20,7 +20,8 @@ export type AICombatState =
   | 'COUNTER'
   | 'RETREAT'
   | 'RECOVER'
-  | 'HIT';
+  | 'HIT'
+  | 'DEAD';
 
 export class ForestGoblin extends Entity {
   public hp: number = 90;
@@ -76,6 +77,10 @@ export class ForestGoblin extends Entity {
   public counterCooldown: number = 0;
   public consecutiveHitsTaken: number = 0;
   public hitStunTimer: number = 0;
+
+  // Death & Lifecycle Tracking
+  public deathTimer: number = 0;
+  public hasRegisteredDeath: boolean = false;
 
   // AI Debug Information Overlay
   public debugInfo = {
@@ -256,7 +261,7 @@ export class ForestGoblin extends Entity {
       this.groupAttackCooldown -= dt;
     }
 
-    const alive = goblins.filter((g) => g.isAlive && !g.isShadowClone);
+    const alive = goblins.filter((g) => g.isAlive && g.combatState !== 'DEAD' && !g.isShadowClone);
     if (alive.length === 0) return;
 
     const sampleLevel = alive[0].levelId || '1-1';
@@ -315,6 +320,20 @@ export class ForestGoblin extends Entity {
     goblins?: ForestGoblin[]
   ) {
     if (!this.isAlive) return;
+
+    // Handle DEAD state (death animation before complete removal)
+    if (this.combatState === 'DEAD') {
+      this.vx = 0;
+      this.deathTimer -= dt;
+      this.vy += 0.65;
+      if (this.vy > 12) this.vy = 12;
+      tileMap.resolveEntityCollision(this);
+
+      if (this.deathTimer <= 0) {
+        this.isAlive = false;
+      }
+      return;
+    }
 
     // Run Group Combat Coordinator
     if (goblins && goblins.length > 0) {
@@ -727,7 +746,7 @@ export class ForestGoblin extends Entity {
   }
 
   public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
-    if (!this.isAlive) return false;
+    if (!this.isAlive || this.combatState === 'DEAD') return false;
 
     const hitX = this.x + this.width / 2;
     const hitY = this.y - 10;
@@ -758,7 +777,13 @@ export class ForestGoblin extends Entity {
 
       if (this.hp <= 0) {
         this.hp = 0;
-        this.isAlive = false;
+        this.combatState = 'DEAD';
+        this.deathTimer = 0.5;
+        this.vx = 0;
+        this.isGuarding = false;
+        this.hasAttackToken = false;
+        audioEngine.playPlayerHurt();
+        particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
         return true;
       }
       return false;
@@ -782,7 +807,11 @@ export class ForestGoblin extends Entity {
 
     if (this.hp <= 0) {
       this.hp = 0;
-      this.isAlive = false;
+      this.combatState = 'DEAD';
+      this.deathTimer = 0.5;
+      this.vx = 0;
+      this.isGuarding = false;
+      this.hasAttackToken = false;
       audioEngine.playPlayerHurt();
       particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
       return true;
@@ -831,8 +860,13 @@ export class ForestGoblin extends Entity {
     const walk = Math.sin(this.animFrame * Math.PI / 2);
     const hit = this.hitFlashTimer > 0 || this.combatState === 'HIT';
 
-    // Apply visible head & body recoil stagger when hit
-    if (hit) {
+    if (this.combatState === 'DEAD') {
+      const alpha = Math.max(0, Math.min(1, this.deathTimer / 0.5));
+      ctx.globalAlpha = alpha;
+      ctx.rotate(-0.45);
+      ctx.translate(-8, 6);
+    } else if (hit) {
+      // Apply visible head & body recoil stagger when hit
       ctx.rotate(-0.22); // Tilt backward from impact direction
       ctx.translate(-4, -2); // Push back slightly
     }
@@ -865,11 +899,13 @@ export class ForestGoblin extends Entity {
 
     ctx.restore();
 
-    // Render Health Bar & Serious Name Above Head
-    this.renderHealthBar(ctx, renderX, renderY);
+    // Render Health Bar & Serious Name Above Head (living enemies only)
+    if (this.combatState !== 'DEAD') {
+      this.renderHealthBar(ctx, renderX, renderY);
 
-    if (DebugManager.isAiDebugInfoEnabled()) {
-      this.renderAiDebugOverlay(ctx, renderX, renderY);
+      if (DebugManager.isAiDebugInfoEnabled()) {
+        this.renderAiDebugOverlay(ctx, renderX, renderY);
+      }
     }
   }
 

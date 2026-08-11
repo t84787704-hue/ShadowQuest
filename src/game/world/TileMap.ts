@@ -38,6 +38,13 @@ export class TileMap {
     return this.grid[row][col];
   }
 
+  public getTile(col: number, row: number): number {
+    if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) {
+      return TileType.EMPTY;
+    }
+    return this.grid[row][col];
+  }
+
   public isSolidTile(tile: number): boolean {
     return (
       tile === TileType.GRASS_TOP ||

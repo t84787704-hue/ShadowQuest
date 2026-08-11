@@ -23,6 +23,24 @@ export class GameEngine {
 
   public player: Player;
   public goblins: ForestGoblin[] = [];
+
+  // Wave and Encounter Management
+  public currentWave: number = 1;
+  public totalWaves: number = 3;
+  public waveEnemiesTotal: number = 3;
+  public waveEnemiesSpawned: number = 0;
+  public waveEnemiesDefeated: number = 0;
+  public totalEnemiesInLevel: number = 8;
+  public totalEnemiesDefeated: number = 0;
+  public isAreaCleared: boolean = false;
+  public waveTransitionTimer: number = 0;
+  public areaClearedBannerTimer: number = 0;
+
+  public readonly MAX_ACTIVE_ENEMIES: number = 4;
+
+  public get activeEnemyCount(): number {
+    return this.goblins.filter((g) => g.isAlive && g.combatState !== 'DEAD' && !g.isShadowClone).length;
+  }
   public bossMonster?: BossMonster;
   public bossProjectiles: BossProjectile[] = [];
   public isBossLevel: boolean = false;
@@ -227,10 +245,122 @@ export class GameEngine {
     }
   }
 
+  private initWaveSystem() {
+    const [wStr] = this.levelDef.config.id.split('-');
+    const worldId = parseInt(wStr, 10) || 1;
+
+    if (this.isBossLevel) {
+      this.totalWaves = 1;
+      this.currentWave = 1;
+      this.waveEnemiesTotal = 4;
+      this.totalEnemiesInLevel = 4;
+    } else {
+      this.totalWaves = 3;
+      this.currentWave = 1;
+
+      const waveCounts: Record<number, number[]> = {
+        1: [3, 3, 2],
+        2: [3, 4, 3],
+        3: [4, 4, 4],
+        4: [4, 5, 5],
+        5: [5, 5, 6],
+        6: [6, 6, 6],
+      };
+
+      const waves = waveCounts[worldId] || [3, 3, 2];
+      this.waveEnemiesTotal = waves[0];
+      this.totalEnemiesInLevel = waves.reduce((a, b) => a + b, 0);
+    }
+
+    this.waveEnemiesSpawned = 0;
+    this.waveEnemiesDefeated = 0;
+    this.totalEnemiesDefeated = 0;
+    this.isAreaCleared = false;
+    this.waveTransitionTimer = 0.5;
+  }
+
+  private getWaveEnemyCount(waveNum: number): number {
+    const [wStr] = this.levelDef.config.id.split('-');
+    const worldId = parseInt(wStr, 10) || 1;
+
+    if (this.isBossLevel) return 4;
+
+    const waveCounts: Record<number, number[]> = {
+      1: [3, 3, 2],
+      2: [3, 4, 3],
+      3: [4, 4, 4],
+      4: [4, 5, 5],
+      5: [5, 5, 6],
+      6: [6, 6, 6],
+    };
+
+    const waves = waveCounts[worldId] || [3, 3, 2];
+    return waves[waveNum - 1] || 3;
+  }
+
+  public findValidGroundSpawnPosition(): { x: number; y: number } | null {
+    const minDistance = 220;
+    const maxDistance = 380;
+    const enemyHeight = 44;
+
+    const directions = this.player.facingRight ? [1, -1] : [-1, 1];
+
+    for (const dir of directions) {
+      for (let attempts = 0; attempts < 10; attempts++) {
+        const dist = minDistance + Math.random() * (maxDistance - minDistance);
+        const targetX = this.player.x + dir * dist;
+
+        if (targetX < 64 || targetX > this.tileMap.widthInPixels - 128) continue;
+
+        const col = Math.floor(targetX / 32);
+
+        for (let row = 2; row < this.tileMap.rows - 1; row++) {
+          const currentTile = this.tileMap.getTile(col, row);
+          const tileAbove = this.tileMap.getTile(col, row - 1);
+          const tileAbove2 = this.tileMap.getTile(col, row - 2);
+
+          if (
+            this.tileMap.isSolidTile(currentTile) &&
+            currentTile !== 10 &&
+            !this.tileMap.isSolidTile(tileAbove) &&
+            !this.tileMap.isSolidTile(tileAbove2)
+          ) {
+            const spawnY = row * 32 - enemyHeight;
+            const spawnX = col * 32;
+
+            if (Math.abs(spawnX - this.player.x) >= 180) {
+              return { x: spawnX, y: spawnY };
+            }
+          }
+        }
+      }
+    }
+
+    const fallbackX = Math.max(64, Math.min(this.tileMap.widthInPixels - 128, this.player.x + (this.player.facingRight ? 260 : -260)));
+    return { x: fallbackX, y: this.player.y };
+  }
+
+  private spawnWaveEnemy() {
+    if (this.activeEnemyCount >= this.MAX_ACTIVE_ENEMIES) return;
+    if (this.waveEnemiesSpawned >= this.waveEnemiesTotal) return;
+
+    const spawnPos = this.findValidGroundSpawnPosition();
+    if (!spawnPos) return;
+
+    const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 100, false, this.levelDef.config.id);
+    this.goblins.push(enemy);
+    this.waveEnemiesSpawned++;
+
+    this.particles.createFloatingText(spawnPos.x, spawnPos.y - 20, 'ENEMY SPAWNED! ⚔️', '#ef4444', 13);
+    this.particles.createSlashSparks(spawnPos.x + 16, spawnPos.y + 20, true, ['#ef4444', '#facc15']);
+  }
+
   public spawnEnemy(enemyClass?: import('../entities/Enemy').EnemyClass) {
-    const spawnX = this.player.x + (this.player.facingRight ? 100 : -100);
-    const spawnY = this.player.y - 10;
-    const enemy = new ForestGoblin(spawnX, spawnY, 120, false, this.levelDef.config.id);
+    const spawnPos = this.findValidGroundSpawnPosition() || {
+      x: this.player.x + (this.player.facingRight ? 200 : -200),
+      y: this.player.y,
+    };
+    const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 120, false, this.levelDef.config.id);
     if (enemyClass) {
       enemy.enemyClass = enemyClass;
       if (enemyClass === 'ELITE_FIGHTER') {
@@ -240,15 +370,16 @@ export class GameEngine {
       }
     }
     this.goblins.push(enemy);
-    this.particles.createFloatingText(spawnX, spawnY - 20, 'SPAWNED!', '#22c55e', 14);
+    this.particles.createFloatingText(spawnPos.x, spawnPos.y - 20, 'SPAWNED!', '#22c55e', 14);
   }
 
   public spawnMultipleEnemies(count: number) {
     for (let i = 0; i < count; i++) {
-      const offset = (i + 1) * 60 * (i % 2 === 0 ? 1 : -1);
-      const spawnX = this.player.x + offset;
-      const spawnY = this.player.y - 10;
-      const enemy = new ForestGoblin(spawnX, spawnY, 100, false, this.levelDef.config.id);
+      const spawnPos = this.findValidGroundSpawnPosition() || {
+        x: this.player.x + (i + 1) * 80 * (i % 2 === 0 ? 1 : -1),
+        y: this.player.y,
+      };
+      const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 100, false, this.levelDef.config.id);
       this.goblins.push(enemy);
     }
     this.particles.createFloatingText(this.player.x, this.player.y - 30, `+${count} ENEMIES!`, '#22c55e', 16);
@@ -318,16 +449,10 @@ export class GameEngine {
   private initLevelEntities(qs?: QuickSaveData | null) {
     this.bossProjectiles = [];
     this.isBossLevel = this.levelDef.config.isBossLevel || false;
+    this.goblins = [];
 
-    // Populate Goblins
-    this.goblins = this.levelDef.goblins.map(
-      (g) => new ForestGoblin(g.x, g.y, g.patrolRange || 100, g.isBoss || false, this.levelDef.config.id)
-    );
-    if (qs?.defeatedEnemyIndices) {
-      qs.defeatedEnemyIndices.forEach((idx) => {
-        if (this.goblins[idx]) this.goblins[idx].isAlive = false;
-      });
-    }
+    // Initialize Wave System logic & counters
+    this.initWaveSystem();
 
     // Initialize World Boss for Boss Levels (Level 5 of each world)
     if (this.isBossLevel) {
@@ -348,8 +473,6 @@ export class GameEngine {
         this.bossMonster.isAlive = false;
         this.bossMonster.state = 'DEAD';
       }
-      // Remove generic boss goblin
-      this.goblins = this.goblins.filter((g) => !g.isBoss);
     } else {
       this.bossMonster = undefined;
     }
@@ -727,22 +850,6 @@ export class GameEngine {
           } else if (effect === 'CELESTIAL_BURST') {
             this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'CELESTIAL!', '#f43f5e', 14);
           }
-
-          // Drop coin on goblin death
-          if (!goblin.isAlive) {
-            SaveSystem.recordEnemyDefeated(goblin.isBoss);
-            this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
-
-            if (goblin.isBoss) {
-              const bossCenterX = goblin.x + goblin.width / 2;
-              const bossCenterY = goblin.y + goblin.height / 2;
-
-              this.camera.addShake(0.38, 11);
-              this.particles.createBossDefeatExplosion(bossCenterX, bossCenterY);
-              this.particles.createFloatingText(bossCenterX, bossCenterY - 24, 'BOSS DEFEATED! 👑', '#facc15', 20);
-              audioEngine.playVictory();
-            }
-          }
         }
       }
     }
@@ -768,11 +875,81 @@ export class GameEngine {
       }
     }
 
-    // 5. Update Goblins
+    // 5. Update Goblins, Death Registration & Cleanup
     for (let i = this.goblins.length - 1; i >= 0; i--) {
       const goblin = this.goblins[i];
-      if (goblin.isAlive) {
+
+      if (goblin.combatState === 'DEAD' || !goblin.isAlive) {
+        if (!goblin.hasRegisteredDeath) {
+          goblin.hasRegisteredDeath = true;
+          SaveSystem.recordEnemyDefeated(goblin.isBoss);
+
+          if (!goblin.isShadowClone) {
+            this.waveEnemiesDefeated++;
+            this.totalEnemiesDefeated++;
+            this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
+          }
+
+          if (goblin.isBoss) {
+            const bossCenterX = goblin.x + goblin.width / 2;
+            const bossCenterY = goblin.y + goblin.height / 2;
+            this.camera.addShake(0.38, 11);
+            this.particles.createBossDefeatExplosion(bossCenterX, bossCenterY);
+            this.particles.createFloatingText(bossCenterX, bossCenterY - 24, 'BOSS DEFEATED! 👑', '#facc15', 20);
+            audioEngine.playVictory();
+          }
+        }
+
         goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
+
+        if (!goblin.isAlive) {
+          this.goblins.splice(i, 1);
+        }
+      } else {
+        goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
+      }
+    }
+
+    // Handle Wave Progression & Controlled Spawning
+    if (!this.isAreaCleared) {
+      if (this.waveTransitionTimer > 0) {
+        this.waveTransitionTimer -= dt;
+      } else {
+        if (this.waveEnemiesDefeated >= this.waveEnemiesTotal && this.activeEnemyCount === 0) {
+          if (this.currentWave < this.totalWaves) {
+            this.currentWave++;
+            this.waveEnemiesSpawned = 0;
+            this.waveEnemiesDefeated = 0;
+            this.waveEnemiesTotal = this.getWaveEnemyCount(this.currentWave);
+            this.waveTransitionTimer = 1.2;
+
+            this.particles.createFloatingText(
+              this.player.x,
+              this.player.y - 45,
+              `WAVE ${this.currentWave} OF ${this.totalWaves} INCOMING! ⚡`,
+              '#facc15',
+              18
+            );
+            audioEngine.playVocal('heavy_punch');
+          } else {
+            this.isAreaCleared = true;
+            this.areaClearedBannerTimer = 4.0;
+
+            this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+            this.particles.createFloatingText(
+              this.player.x,
+              this.player.y - 50,
+              '🏆 AREA CLEARED! ALL ENEMIES DEFEATED! 🏆',
+              '#22c55e',
+              20
+            );
+            audioEngine.playVictory();
+          }
+        } else {
+          if (this.waveEnemiesSpawned < this.waveEnemiesTotal && this.activeEnemyCount < this.MAX_ACTIVE_ENEMIES) {
+            this.spawnWaveEnemy();
+          }
+        }
       }
     }
 
@@ -806,6 +983,10 @@ export class GameEngine {
         // Prevent completing level until Boss is defeated!
         this.player.vx = this.player.facingRight ? -7 : 7;
         this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — DEFEAT THE BOSS FIRST!', '#ef4444', 16);
+      } else if (!this.isBossLevel && !this.isAreaCleared) {
+        // Prevent completing level until all waves are cleared!
+        this.player.vx = this.player.facingRight ? -7 : 7;
+        this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — CLEAR ALL ENEMIES FIRST!', '#ef4444', 16);
       } else {
         this.status = 'VICTORY';
         audioEngine.playVictory();
@@ -905,6 +1086,55 @@ export class GameEngine {
       this.ctx.fillStyle = 'rgba(217, 119, 6, 0.22)';
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
+
+    // 11. Wave & Encounter Status HUD Overlay
+    this.renderWaveAndEncounterHud();
+  }
+
+  private renderWaveAndEncounterHud() {
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+
+    ctx.save();
+
+    const boxW = 180;
+    const boxH = 36;
+    const bx = w - boxW - 16;
+    const by = 12;
+
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+    ctx.strokeStyle = this.isAreaCleared ? '#22c55e' : '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (typeof (ctx as unknown as { roundRect?: Function }).roundRect === 'function') {
+      (ctx as unknown as { roundRect: Function }).roundRect(bx, by, boxW, boxH, 8);
+    } else {
+      ctx.rect(bx, by, boxW, boxH);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    if (this.isAreaCleared) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🏆 AREA CLEARED!', bx + boxW / 2, by + 16);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '9px monospace';
+      ctx.fillText('GOAL PORTAL UNLOCKED', bx + boxW / 2, by + 28);
+    } else {
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`WAVE ${this.currentWave} OF ${this.totalWaves}`, bx + boxW / 2, by + 15);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '10px monospace';
+      ctx.fillText(`ACTIVE: ${this.activeEnemyCount} | DEFEATED: ${this.waveEnemiesDefeated}/${this.waveEnemiesTotal}`, bx + boxW / 2, by + 28);
+    }
+
+    ctx.restore();
   }
 
   private renderTutorialSigns(offsetX: number, offsetY: number) {
