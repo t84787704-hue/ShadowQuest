@@ -24,19 +24,22 @@ export class GameEngine {
   public player: Player;
   public goblins: ForestGoblin[] = [];
 
-  // Wave and Encounter Management
-  public currentWave: number = 1;
-  public totalWaves: number = 3;
-  public waveEnemiesTotal: number = 3;
-  public waveEnemiesSpawned: number = 0;
-  public waveEnemiesDefeated: number = 0;
-  public totalEnemiesInLevel: number = 8;
+  // Enemy System Settings & Roster Tracking
+  public readonly TOTAL_LEVEL_ENEMIES: number = 50;
+  public readonly MAX_ACTIVE_ENEMIES: number = 5;
+
+  public totalEnemiesInLevel: number = 50;
+  public totalEnemiesSpawned: number = 0;
   public totalEnemiesDefeated: number = 0;
   public isAreaCleared: boolean = false;
-  public waveTransitionTimer: number = 0;
   public areaClearedBannerTimer: number = 0;
 
-  public readonly MAX_ACTIVE_ENEMIES: number = 4;
+  public levelSpawnRoster: {
+    x: number;
+    y: number;
+    spawned: boolean;
+    enemyClass: import('../entities/Enemy').EnemyClass;
+  }[] = [];
 
   public get activeEnemyCount(): number {
     return this.goblins.filter((g) => g.isAlive && g.combatState !== 'DEAD' && !g.isShadowClone).length;
@@ -245,74 +248,46 @@ export class GameEngine {
     }
   }
 
-  private initWaveSystem() {
-    const [wStr] = this.levelDef.config.id.split('-');
-    const worldId = parseInt(wStr, 10) || 1;
-
-    if (this.isBossLevel) {
-      this.totalWaves = 1;
-      this.currentWave = 1;
-      this.waveEnemiesTotal = 4;
-      this.totalEnemiesInLevel = 4;
-    } else {
-      this.totalWaves = 3;
-      this.currentWave = 1;
-
-      const waveCounts: Record<number, number[]> = {
-        1: [3, 3, 2],
-        2: [3, 4, 3],
-        3: [4, 4, 4],
-        4: [4, 5, 5],
-        5: [5, 5, 6],
-        6: [6, 6, 6],
-      };
-
-      const waves = waveCounts[worldId] || [3, 3, 2];
-      this.waveEnemiesTotal = waves[0];
-      this.totalEnemiesInLevel = waves.reduce((a, b) => a + b, 0);
-    }
-
-    this.waveEnemiesSpawned = 0;
-    this.waveEnemiesDefeated = 0;
+  private init50EnemiesRoster() {
+    this.totalEnemiesInLevel = 50;
+    this.totalEnemiesSpawned = 0;
     this.totalEnemiesDefeated = 0;
     this.isAreaCleared = false;
-    this.waveTransitionTimer = 0.5;
+    this.levelSpawnRoster = [];
+
+    const startX = 250;
+    const mapWidthInPx = this.tileMap ? this.tileMap.widthInPixels : (this.levelDef.config.width || 4000);
+    const endX = Math.max(1200, mapWidthInPx - 400);
+
+    for (let i = 0; i < 50; i++) {
+      const progressRatio = i / 49;
+      const rawX = startX + progressRatio * (endX - startX) + Math.sin(i * 1.9) * 35;
+      const groundPos = this.findValidGroundAtX(rawX) || { x: Math.max(120, rawX), y: 320 };
+
+      let enemyClass: import('../entities/Enemy').EnemyClass = 'MARTIAL_ARTIST';
+      if (i % 5 === 0) enemyClass = 'ELITE_FIGHTER';
+      else if (i % 3 === 0) enemyClass = 'HEAVY_FIGHTER';
+      else if (i % 2 === 0) enemyClass = 'FAST_FIGHTER';
+
+      this.levelSpawnRoster.push({
+        x: groundPos.x,
+        y: groundPos.y,
+        spawned: false,
+        enemyClass,
+      });
+    }
   }
 
-  private getWaveEnemyCount(waveNum: number): number {
-    const [wStr] = this.levelDef.config.id.split('-');
-    const worldId = parseInt(wStr, 10) || 1;
+  public findValidGroundAtX(targetX: number): { x: number; y: number } | null {
+    if (!this.tileMap) return { x: targetX, y: 320 };
 
-    if (this.isBossLevel) return 4;
-
-    const waveCounts: Record<number, number[]> = {
-      1: [3, 3, 2],
-      2: [3, 4, 3],
-      3: [4, 4, 4],
-      4: [4, 5, 5],
-      5: [5, 5, 6],
-      6: [6, 6, 6],
-    };
-
-    const waves = waveCounts[worldId] || [3, 3, 2];
-    return waves[waveNum - 1] || 3;
-  }
-
-  public findValidGroundSpawnPosition(): { x: number; y: number } | null {
-    const minDistance = 220;
-    const maxDistance = 380;
     const enemyHeight = 44;
+    const baseCol = Math.floor(targetX / 32);
 
-    const directions = this.player.facingRight ? [1, -1] : [-1, 1];
-
-    for (const dir of directions) {
-      for (let attempts = 0; attempts < 10; attempts++) {
-        const dist = minDistance + Math.random() * (maxDistance - minDistance);
-        const targetX = this.player.x + dir * dist;
-
-        if (targetX < 64 || targetX > this.tileMap.widthInPixels - 128) continue;
-
-        const col = Math.floor(targetX / 32);
+    for (let offset = 0; offset <= 8; offset++) {
+      const colsToTry = offset === 0 ? [baseCol] : [baseCol + offset, baseCol - offset];
+      for (const col of colsToTry) {
+        if (col < 2 || col >= this.tileMap.cols - 3) continue;
 
         for (let row = 2; row < this.tileMap.rows - 1; row++) {
           const currentTile = this.tileMap.getTile(col, row);
@@ -325,64 +300,120 @@ export class GameEngine {
             !this.tileMap.isSolidTile(tileAbove) &&
             !this.tileMap.isSolidTile(tileAbove2)
           ) {
-            const spawnY = row * 32 - enemyHeight;
-            const spawnX = col * 32;
-
-            if (Math.abs(spawnX - this.player.x) >= 180) {
-              return { x: spawnX, y: spawnY };
-            }
+            return {
+              x: col * 32,
+              y: row * 32 - enemyHeight,
+            };
           }
         }
       }
     }
 
-    const fallbackX = Math.max(64, Math.min(this.tileMap.widthInPixels - 128, this.player.x + (this.player.facingRight ? 260 : -260)));
-    return { x: fallbackX, y: this.player.y };
+    const clampedX = Math.max(120, Math.min(this.tileMap.widthInPixels - 128, targetX));
+    return { x: clampedX, y: this.player ? this.player.y : 320 };
   }
 
-  private spawnWaveEnemy() {
+  public findValidGroundSpawnPosition(): { x: number; y: number } | null {
+    if (!this.player) return { x: 300, y: 320 };
+
+    const minDistance = 200;
+    const maxDistance = 380;
+    const directions = this.player.facingRight ? [1, -1] : [-1, 1];
+
+    for (const dir of directions) {
+      for (let attempts = 0; attempts < 6; attempts++) {
+        const dist = minDistance + Math.random() * (maxDistance - minDistance);
+        const targetX = this.player.x + dir * dist;
+        if (targetX < 64 || targetX > this.tileMap.widthInPixels - 128) continue;
+
+        const ground = this.findValidGroundAtX(targetX);
+        if (ground && Math.abs(ground.x - this.player.x) >= 180) {
+          return ground;
+        }
+      }
+    }
+
+    const fallbackX = Math.max(64, Math.min(this.tileMap.widthInPixels - 128, this.player.x + (this.player.facingRight ? 260 : -260)));
+    return this.findValidGroundAtX(fallbackX);
+  }
+
+  private spawnNextRosterEnemy() {
+    if (this.totalEnemiesSpawned >= 50) return;
     if (this.activeEnemyCount >= this.MAX_ACTIVE_ENEMIES) return;
-    if (this.waveEnemiesSpawned >= this.waveEnemiesTotal) return;
 
-    const spawnPos = this.findValidGroundSpawnPosition();
-    if (!spawnPos) return;
+    const unspawnedIndices: number[] = [];
+    for (let i = 0; i < this.levelSpawnRoster.length; i++) {
+      if (!this.levelSpawnRoster[i].spawned) {
+        unspawnedIndices.push(i);
+      }
+    }
 
-    const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 100, false, this.levelDef.config.id);
+    if (unspawnedIndices.length === 0) return;
+
+    const playerX = this.player ? this.player.x : 200;
+    let chosenIndex = -1;
+    let bestDist = Infinity;
+
+    for (const idx of unspawnedIndices) {
+      const entry = this.levelSpawnRoster[idx];
+      const dist = Math.abs(entry.x - playerX);
+
+      if (dist >= 180) {
+        if (dist < bestDist) {
+          bestDist = dist;
+          chosenIndex = idx;
+        }
+      }
+    }
+
+    if (chosenIndex === -1) {
+      chosenIndex = unspawnedIndices[0];
+      const entry = this.levelSpawnRoster[chosenIndex];
+      const safeX = Math.max(64, Math.min(this.tileMap.widthInPixels - 128, playerX + (this.player && this.player.facingRight ? 260 : -260)));
+      const validGround = this.findValidGroundAtX(safeX);
+      if (validGround) {
+        entry.x = validGround.x;
+        entry.y = validGround.y;
+      }
+    }
+
+    const entry = this.levelSpawnRoster[chosenIndex];
+    entry.spawned = true;
+    this.totalEnemiesSpawned++;
+
+    const enemy = new ForestGoblin(entry.x, entry.y, 100, false, this.levelDef.config.id);
+    enemy.enemyClass = entry.enemyClass;
+
+    if (entry.enemyClass === 'ELITE_FIGHTER') {
+      enemy.maxHp = 180;
+      enemy.hp = 180;
+      enemy.attackDamage = 12;
+    } else if (entry.enemyClass === 'HEAVY_FIGHTER') {
+      enemy.maxHp = 140;
+      enemy.hp = 140;
+      enemy.attackDamage = 10;
+    } else if (entry.enemyClass === 'FAST_FIGHTER') {
+      enemy.maxHp = 80;
+      enemy.hp = 80;
+      enemy.attackDamage = 6;
+    }
+
     this.goblins.push(enemy);
-    this.waveEnemiesSpawned++;
 
-    this.particles.createFloatingText(spawnPos.x, spawnPos.y - 20, 'ENEMY SPAWNED! ⚔️', '#ef4444', 13);
-    this.particles.createSlashSparks(spawnPos.x + 16, spawnPos.y + 20, true, ['#ef4444', '#facc15']);
+    this.particles.createFloatingText(entry.x, entry.y - 20, `ENEMY #${this.totalEnemiesSpawned}/50 ⚔️`, '#ef4444', 13);
+    this.particles.createSlashSparks(entry.x + 16, entry.y + 20, true, ['#ef4444', '#facc15']);
   }
 
   public spawnEnemy(enemyClass?: import('../entities/Enemy').EnemyClass) {
-    const spawnPos = this.findValidGroundSpawnPosition() || {
-      x: this.player.x + (this.player.facingRight ? 200 : -200),
-      y: this.player.y,
-    };
-    const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 120, false, this.levelDef.config.id);
-    if (enemyClass) {
-      enemy.enemyClass = enemyClass;
-      if (enemyClass === 'ELITE_FIGHTER') {
-        enemy.maxHp = 250;
-        enemy.hp = 250;
-        enemy.attackDamage = 15;
-      }
-    }
-    this.goblins.push(enemy);
-    this.particles.createFloatingText(spawnPos.x, spawnPos.y - 20, 'SPAWNED!', '#22c55e', 14);
+    if (this.totalEnemiesSpawned >= 50) return;
+    this.spawnNextRosterEnemy();
   }
 
   public spawnMultipleEnemies(count: number) {
-    for (let i = 0; i < count; i++) {
-      const spawnPos = this.findValidGroundSpawnPosition() || {
-        x: this.player.x + (i + 1) * 80 * (i % 2 === 0 ? 1 : -1),
-        y: this.player.y,
-      };
-      const enemy = new ForestGoblin(spawnPos.x, spawnPos.y, 100, false, this.levelDef.config.id);
-      this.goblins.push(enemy);
+    const toSpawn = Math.min(count, 50 - this.totalEnemiesSpawned);
+    for (let i = 0; i < toSpawn; i++) {
+      this.spawnNextRosterEnemy();
     }
-    this.particles.createFloatingText(this.player.x, this.player.y - 30, `+${count} ENEMIES!`, '#22c55e', 16);
   }
 
   public spawnBoss() {
@@ -451,8 +482,8 @@ export class GameEngine {
     this.isBossLevel = this.levelDef.config.isBossLevel || false;
     this.goblins = [];
 
-    // Initialize Wave System logic & counters
-    this.initWaveSystem();
+    // Initialize 50-Enemy Level Roster
+    this.init50EnemiesRoster();
 
     // Initialize World Boss for Boss Levels (Level 5 of each world)
     if (this.isBossLevel) {
@@ -885,7 +916,6 @@ export class GameEngine {
           SaveSystem.recordEnemyDefeated(goblin.isBoss);
 
           if (!goblin.isShadowClone) {
-            this.waveEnemiesDefeated++;
             this.totalEnemiesDefeated++;
             this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
           }
@@ -910,45 +940,24 @@ export class GameEngine {
       }
     }
 
-    // Handle Wave Progression & Controlled Spawning
+    // Controlled Roster Spawning & 50-Enemy Level Clear Check
     if (!this.isAreaCleared) {
-      if (this.waveTransitionTimer > 0) {
-        this.waveTransitionTimer -= dt;
+      if (this.totalEnemiesDefeated >= 50 && this.activeEnemyCount === 0) {
+        this.isAreaCleared = true;
+        this.areaClearedBannerTimer = 5.0;
+
+        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+        this.particles.createFloatingText(
+          this.player.x,
+          this.player.y - 50,
+          '🏆 AREA CLEARED! ALL 50 ENEMIES DEFEATED! 🏆',
+          '#22c55e',
+          22
+        );
+        audioEngine.playVictory();
       } else {
-        if (this.waveEnemiesDefeated >= this.waveEnemiesTotal && this.activeEnemyCount === 0) {
-          if (this.currentWave < this.totalWaves) {
-            this.currentWave++;
-            this.waveEnemiesSpawned = 0;
-            this.waveEnemiesDefeated = 0;
-            this.waveEnemiesTotal = this.getWaveEnemyCount(this.currentWave);
-            this.waveTransitionTimer = 1.2;
-
-            this.particles.createFloatingText(
-              this.player.x,
-              this.player.y - 45,
-              `WAVE ${this.currentWave} OF ${this.totalWaves} INCOMING! ⚡`,
-              '#facc15',
-              18
-            );
-            audioEngine.playVocal('heavy_punch');
-          } else {
-            this.isAreaCleared = true;
-            this.areaClearedBannerTimer = 4.0;
-
-            this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-            this.particles.createFloatingText(
-              this.player.x,
-              this.player.y - 50,
-              '🏆 AREA CLEARED! ALL ENEMIES DEFEATED! 🏆',
-              '#22c55e',
-              20
-            );
-            audioEngine.playVictory();
-          }
-        } else {
-          if (this.waveEnemiesSpawned < this.waveEnemiesTotal && this.activeEnemyCount < this.MAX_ACTIVE_ENEMIES) {
-            this.spawnWaveEnemy();
-          }
+        if (this.totalEnemiesSpawned < 50 && this.activeEnemyCount < this.MAX_ACTIVE_ENEMIES) {
+          this.spawnNextRosterEnemy();
         }
       }
     }
@@ -984,9 +993,15 @@ export class GameEngine {
         this.player.vx = this.player.facingRight ? -7 : 7;
         this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — DEFEAT THE BOSS FIRST!', '#ef4444', 16);
       } else if (!this.isBossLevel && !this.isAreaCleared) {
-        // Prevent completing level until all waves are cleared!
+        // Prevent completing level until all 50 enemies are defeated!
         this.player.vx = this.player.facingRight ? -7 : 7;
-        this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — CLEAR ALL ENEMIES FIRST!', '#ef4444', 16);
+        this.particles.createFloatingText(
+          goal.x,
+          goal.y - 18,
+          `🔒 PORTAL LOCKED — DEFEAT ALL 50 ENEMIES FIRST! (${this.totalEnemiesDefeated}/50)`,
+          '#ef4444',
+          15
+        );
       } else {
         this.status = 'VICTORY';
         audioEngine.playVictory();
@@ -1097,12 +1112,12 @@ export class GameEngine {
 
     ctx.save();
 
-    const boxW = 180;
-    const boxH = 36;
+    const boxW = 210;
+    const boxH = 44;
     const bx = w - boxW - 16;
     const by = 12;
 
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
     ctx.strokeStyle = this.isAreaCleared ? '#22c55e' : '#38bdf8';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -1116,22 +1131,22 @@ export class GameEngine {
 
     if (this.isAreaCleared) {
       ctx.fillStyle = '#22c55e';
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🏆 AREA CLEARED!', bx + boxW / 2, by + 16);
+      ctx.fillText('🏆 LEVEL CLEARED! 50/50', bx + boxW / 2, by + 18);
 
       ctx.fillStyle = '#fef08a';
-      ctx.font = '9px monospace';
-      ctx.fillText('GOAL PORTAL UNLOCKED', bx + boxW / 2, by + 28);
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText('PORTAL UNLOCKED — PROCEED TO GOAL', bx + boxW / 2, by + 34);
     } else {
       ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`WAVE ${this.currentWave} OF ${this.totalWaves}`, bx + boxW / 2, by + 15);
+      ctx.fillText(`ENEMIES DEFEATED: ${this.totalEnemiesDefeated} / ${this.TOTAL_LEVEL_ENEMIES}`, bx + boxW / 2, by + 18);
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = '10px monospace';
-      ctx.fillText(`ACTIVE: ${this.activeEnemyCount} | DEFEATED: ${this.waveEnemiesDefeated}/${this.waveEnemiesTotal}`, bx + boxW / 2, by + 28);
+      ctx.fillText(`ACTIVE: ${this.activeEnemyCount}/${this.MAX_ACTIVE_ENEMIES} | REMAINING: ${Math.max(0, this.TOTAL_LEVEL_ENEMIES - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
     }
 
     ctx.restore();
