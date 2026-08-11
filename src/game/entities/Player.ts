@@ -393,14 +393,15 @@ export class Player extends Entity {
     // Anchor at feet center for smooth scaling and ground alignment
     ctx.translate(px + this.width / 2, py + this.height);
 
-    // Apply Hero Scale
-    const scaleX = this.facingRight ? 1.32 : -1.32;
-    ctx.scale(scaleX, 1.32);
+    // Apply Hero Scale (1.42x for crisp, highly readable character features)
+    const heroScale = 1.42;
+    const scaleX = this.facingRight ? heroScale : -heroScale;
+    ctx.scale(scaleX, heroScale);
 
     // Ground Drop Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
-    ctx.ellipse(0, -2, 11, 3.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -2, 12, 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Death Pose Handling
@@ -438,9 +439,10 @@ export class Player extends Entity {
     }
 
     // Color Palette for Realistic Human Martial Artist
-    const skinTone = '#f5c28b'; // Warm natural human skin
-    const skinShade = '#e0a96d'; // Skin shadow
+    const skinTone = '#f8c898'; // Warm natural human skin
+    const skinShade = '#e2aa76'; // Skin shadow
     const hairColor = '#1c1917'; // Short modern black hair
+    const hairHighlight = '#334155'; // Subtle top hair volume highlight
     const shirtColor = '#18181b'; // Dark fitted training top
     const pantsColor = '#27272a'; // Dark fitted training pants
     const sashColor = '#dc2626'; // Red martial belt/sash
@@ -449,16 +451,155 @@ export class Player extends Entity {
     const shoeSoleColor = '#e2e8f0'; // Clean white shoe soles
 
     // ----------------------------------------------------
-    // 1. LEGS & MARTIAL ARTS FOOTWEAR
+    // LAYER 1: BACK ARM & HAND (Rear Arm)
+    // ----------------------------------------------------
+    ctx.save();
+    let backArmAngle = -0.2;
+    let backArmReach = 0;
+
+    if (isAttacking && this.attackType === 'CROSS') {
+      // Rear arm is the POWER CROSS PUNCH (Extends forward)
+      let reach = -3;
+      if (attackProgress >= 0.22 && attackProgress <= 0.75) {
+        const ext = Math.sin(((attackProgress - 0.22) / 0.53) * Math.PI);
+        reach = ext * 24;
+      } else if (attackProgress > 0.75) {
+        reach = (1 - (attackProgress - 0.75) / 0.25) * 6;
+      }
+      backArmReach = reach;
+      backArmAngle = 0.1;
+    } else if (isAttacking && this.attackType === 'JAB') {
+      // Rear arm stays in guard at chest while front arm jabs
+      backArmAngle = -0.4;
+    } else if (this.state === 'RUN') {
+      backArmAngle = -Math.sin(this.animFrame * 0.8) * 0.5;
+    } else if (this.state === 'JUMP') {
+      backArmAngle = -0.5;
+    }
+
+    ctx.translate(-5, bodyY + 4);
+    ctx.rotate(backArmAngle);
+
+    if (isAttacking && this.attackType === 'CROSS') {
+      // Extended Rear Arm
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(-2, -3, Math.max(4, 8 + backArmReach), 5);
+      // Wrist Wrap
+      ctx.fillStyle = wrapColor;
+      ctx.fillRect(Math.max(2, 6 + backArmReach), -3, 4, 5);
+      // Bare Fist
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(Math.max(6, 10 + backArmReach), -3.5, 6, 6);
+      ctx.fillStyle = skinShade;
+      ctx.fillRect(Math.max(10, 14 + backArmReach), -2.5, 2, 4);
+
+      if (attackProgress >= 0.22 && attackProgress <= 0.75) {
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(16 + backArmReach, 0, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else {
+      // Guarded Rear Arm
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(-2, -2.5, 7, 4.5);
+      ctx.fillStyle = wrapColor;
+      ctx.fillRect(5, -2.5, 3.5, 4.5);
+      ctx.fillStyle = skinTone;
+      ctx.beginPath();
+      ctx.arc(10, -0.2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // ----------------------------------------------------
+    // LAYER 2: BACK LEG & FOOT (Rear Leg)
     // ----------------------------------------------------
     ctx.fillStyle = pantsColor;
+    if (isAttacking && (this.attackType === 'SPIN_KICK' || this.attackType === 'FINISHER')) {
+      // Handled in special spinning block below
+    } else if (isAttacking && this.attackType === 'KICK') {
+      // Rear leg is support leg grounded
+      ctx.fillRect(-7, bodyY + 16, 6, 12);
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(-8, bodyY + 26, 7, 5);
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(-8, bodyY + 30, 7, 2);
+    } else if (this.state === 'CROUCH') {
+      ctx.fillRect(-9, bodyY + 11, 6, 8);
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(-10, bodyY + 17, 7, 5);
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(-10, bodyY + 21, 7, 2);
+    } else if (this.state === 'JUMP') {
+      ctx.fillRect(-9, bodyY + 16, 6, 10);
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(-10, bodyY + 24, 7, 6);
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(-10, bodyY + 28, 7, 2);
+    } else if (this.state === 'FALL') {
+      ctx.fillRect(-8, bodyY + 16, 5, 12);
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(-9, bodyY + 26, 7, 6);
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(-9, bodyY + 30, 7, 2);
+    } else {
+      // Standing / Running Rear Leg
+      const backLegPos = -8 - legOffset;
+      ctx.fillRect(backLegPos, bodyY + 16, 5, 12);
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(backLegPos - 1, bodyY + 26, 7, 5);
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(backLegPos - 1, bodyY + 30, 7, 2);
+    }
 
+    // ----------------------------------------------------
+    // LAYER 3: TORSO & CLOTHING (Shirt, Red Sash, Pants Hips)
+    // ----------------------------------------------------
+    let torsoRot = 0;
+    if (isAttacking) {
+      if (this.attackType === 'CROSS') torsoRot = 0.15;
+      else if (this.attackType === 'JAB') torsoRot = 0.08;
+    }
+    ctx.save();
+    ctx.rotate(torsoRot);
+
+    // Dark Fitted Training Pants (Hips)
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(-8, bodyY + 13, 16, 4);
+
+    // Red Martial Belt / Sash at Waist
+    ctx.fillStyle = sashColor;
+    ctx.fillRect(-9, bodyY + 11, 18, 3.5);
+    // Hanging Sash Knot Ends
+    ctx.fillRect(-3, bodyY + 14.5, 3, 5);
+    ctx.fillRect(0, bodyY + 14.5, 3, 4);
+
+    // Dark Fitted Training Top (Shirt)
+    ctx.fillStyle = shirtColor;
+    ctx.fillRect(-9, bodyY, 18, 11);
+
+    // Muscle V-Neck Opening showing Skin
+    ctx.fillStyle = skinTone;
+    ctx.beginPath();
+    ctx.moveTo(-3, bodyY);
+    ctx.lineTo(0, bodyY + 4.5);
+    ctx.lineTo(3, bodyY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // ----------------------------------------------------
+    // LAYER 4: FRONT LEG & FOOT (Lead Leg)
+    // ----------------------------------------------------
+    ctx.fillStyle = pantsColor;
     if (isAttacking && this.attackType === 'KICK') {
-      // High Roundhouse Kick Stance
-      let kickAngle = -0.3; // Chambering leg
+      // Front leg is HIGH ROUNDHOUSE KICK
+      let kickAngle = -0.3;
       let legLength = 16;
       if (attackProgress >= 0.22 && attackProgress <= 0.75) {
-        // Full Leg Extension Forward
         const sweepFactor = (attackProgress - 0.22) / 0.53;
         kickAngle = -Math.PI / 2.6 + sweepFactor * (Math.PI / 1.6);
         legLength = 26;
@@ -468,19 +609,16 @@ export class Player extends Entity {
       }
 
       ctx.save();
-      ctx.translate(0, bodyY + 16);
+      ctx.translate(1, bodyY + 15);
       ctx.rotate(kickAngle);
 
-      // Extended Kicking Leg
       ctx.fillStyle = pantsColor;
       ctx.fillRect(0, -4, legLength, 8);
-      // Shoe
       ctx.fillStyle = shoeColor;
       ctx.fillRect(legLength - 2, -5, 8, 9);
       ctx.fillStyle = shoeSoleColor;
       ctx.fillRect(legLength - 2, 3, 9, 2);
 
-      // Clean, unobtrusive Kick Swing Arc (does not cover character)
       if (attackProgress >= 0.22 && attackProgress <= 0.75) {
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2.5;
@@ -490,14 +628,6 @@ export class Player extends Entity {
       }
 
       ctx.restore();
-
-      // Support Leg Grounded
-      ctx.fillStyle = pantsColor;
-      ctx.fillRect(-6, bodyY + 16, 6, 12);
-      ctx.fillStyle = shoeColor;
-      ctx.fillRect(-8, bodyY + 26, 8, 5);
-      ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(-8, bodyY + 30, 8, 2);
     } else if (isAttacking && this.attackType === 'FINISHER') {
       // Spinning Heel Kick
       const spinAngle = attackProgress * Math.PI * 2;
@@ -505,10 +635,8 @@ export class Player extends Entity {
       ctx.translate(0, bodyY + 14);
       ctx.rotate(spinAngle);
 
-      // Extended Spinning Legs
       ctx.fillStyle = pantsColor;
       ctx.fillRect(-20, -4, 40, 8);
-      // Shoes on both feet
       ctx.fillStyle = shoeColor;
       ctx.fillRect(16, -5, 8, 9);
       ctx.fillRect(-24, -5, 8, 9);
@@ -516,7 +644,6 @@ export class Player extends Entity {
       ctx.fillRect(16, 3, 8, 2);
       ctx.fillRect(-24, 3, 8, 2);
 
-      // Readable Spinning Ring
       if (attackProgress >= 0.22 && attackProgress <= 0.78) {
         ctx.strokeStyle = '#facc15';
         ctx.lineWidth = 2.5;
@@ -524,15 +651,13 @@ export class Player extends Entity {
         ctx.arc(0, 0, 30, 0, Math.PI * 2);
         ctx.stroke();
       }
-
       ctx.restore();
     } else if (isAttacking && this.attackType === 'JUMP_KICK') {
       // Flying Side Kick
       ctx.save();
-      ctx.translate(0, bodyY + 16);
+      ctx.translate(0, bodyY + 15);
       ctx.rotate(0.2);
 
-      // Front Extended Leg
       ctx.fillStyle = pantsColor;
       ctx.fillRect(0, -3, 22, 7);
       ctx.fillStyle = shoeColor;
@@ -543,7 +668,6 @@ export class Player extends Entity {
       // Back Tucked Leg
       ctx.fillStyle = pantsColor;
       ctx.fillRect(-10, -1, 10, 6);
-
       ctx.restore();
     } else if (isAttacking && this.attackType === 'SPIN_KICK') {
       // Low Spinning Sweep Kick
@@ -552,7 +676,6 @@ export class Player extends Entity {
       ctx.translate(0, bodyY + 18);
       ctx.rotate(spinAngle);
 
-      // Low extended leg bar
       ctx.fillStyle = pantsColor;
       ctx.fillRect(-22, -4, 44, 7);
       ctx.fillStyle = shoeColor;
@@ -562,262 +685,247 @@ export class Player extends Entity {
       ctx.fillRect(16, 2, 8, 2);
       ctx.fillRect(-24, 2, 8, 2);
 
-      // Low Sweep Ground Arc
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.ellipse(0, 0, 28, 8, 0, 0, Math.PI * 2);
       ctx.stroke();
-
       ctx.restore();
     } else if (this.state === 'CROUCH') {
-      // Crouched Legs
-      ctx.fillRect(-8, bodyY + 11, 6, 8);
       ctx.fillRect(2, bodyY + 11, 6, 8);
       ctx.fillStyle = shoeColor;
-      ctx.fillRect(-9, bodyY + 17, 7, 5);
       ctx.fillRect(2, bodyY + 17, 7, 5);
       ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(-9, bodyY + 21, 7, 2);
       ctx.fillRect(2, bodyY + 21, 7, 2);
     } else if (this.state === 'JUMP') {
-      // Tucked Airborne Knees
-      ctx.fillRect(-8, bodyY + 16, 6, 10);
       ctx.fillRect(2, bodyY + 14, 6, 10);
       ctx.fillStyle = shoeColor;
-      ctx.fillRect(-9, bodyY + 24, 7, 6);
       ctx.fillRect(2, bodyY + 22, 7, 6);
       ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(-9, bodyY + 28, 7, 2);
       ctx.fillRect(2, bodyY + 26, 7, 2);
     } else if (this.state === 'FALL') {
-      // Descending Legs
-      ctx.fillRect(-7, bodyY + 16, 5, 12);
       ctx.fillRect(2, bodyY + 16, 5, 12);
       ctx.fillStyle = shoeColor;
-      ctx.fillRect(-8, bodyY + 26, 7, 6);
       ctx.fillRect(1, bodyY + 26, 7, 6);
       ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(-8, bodyY + 30, 7, 2);
       ctx.fillRect(1, bodyY + 30, 7, 2);
     } else {
-      // Standing / Running Legs
-      ctx.fillRect(-7 + legOffset, bodyY + 16, 5, 12);
-      ctx.fillRect(2 - legOffset, bodyY + 16, 5, 12);
-
-      // Simple Martial Arts Shoes
+      // Standing / Running Lead Leg
+      const frontLegPos = 2 + legOffset;
+      ctx.fillRect(frontLegPos, bodyY + 16, 5, 12);
       ctx.fillStyle = shoeColor;
-      ctx.fillRect(-8 + legOffset, bodyY + 26, 7, 5);
-      ctx.fillRect(1 - legOffset, bodyY + 26, 7, 5);
+      ctx.fillRect(frontLegPos, bodyY + 26, 7, 5);
       ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(-8 + legOffset, bodyY + 30, 7, 2);
-      ctx.fillRect(1 - legOffset, bodyY + 30, 7, 2);
+      ctx.fillRect(frontLegPos, bodyY + 30, 7, 2);
     }
 
     // ----------------------------------------------------
-    // 2. TORSO & SLEEVELESS / SHORT-SLEEVE MARTIAL TOP
+    // LAYER 5: FRONT ARM & HAND (Lead Arm)
     // ----------------------------------------------------
-    // Shoulder Movement for Punching
-    let shoulderRot = 0;
-    if (isAttacking && (this.attackType === 'JAB' || this.attackType === 'CROSS')) {
-      shoulderRot = this.attackType === 'CROSS' ? 0.22 : 0.12;
-    }
-
     ctx.save();
-    ctx.rotate(shoulderRot);
+    let frontArmAngle = -0.2;
+    let frontArmReach = 0;
 
-    // Short-sleeve / Sleeveless Top
-    ctx.fillStyle = shirtColor;
-    ctx.fillRect(-9, bodyY, 18, 16);
+    if (isAttacking && this.attackType === 'JAB') {
+      // Lead Arm is JAB PUNCH (Extends forward)
+      let reach = -2;
+      if (attackProgress >= 0.22 && attackProgress <= 0.72) {
+        const ext = Math.sin(((attackProgress - 0.22) / 0.5) * Math.PI);
+        reach = ext * 20;
+      } else if (attackProgress > 0.72) {
+        reach = (1 - (attackProgress - 0.72) / 0.28) * 6;
+      }
+      frontArmReach = reach;
+      frontArmAngle = 0.05;
+    } else if (isAttacking && this.attackType === 'CROSS') {
+      // Front arm pulls back into chest guard
+      frontArmAngle = -0.5;
+    } else if (this.state === 'RUN') {
+      frontArmAngle = Math.sin(this.animFrame * 0.8) * 0.5;
+    } else if (this.state === 'JUMP') {
+      frontArmAngle = -0.4;
+    }
 
-    // Subtle V-Neck collar line showing skin
-    ctx.fillStyle = skinTone;
-    ctx.beginPath();
-    ctx.moveTo(-3, bodyY);
-    ctx.lineTo(0, bodyY + 4);
-    ctx.lineTo(3, bodyY);
-    ctx.closePath();
-    ctx.fill();
+    ctx.translate(4, bodyY + 4);
+    ctx.rotate(frontArmAngle);
 
-    // Red Martial Belt / Sash at Waist
-    ctx.fillStyle = sashColor;
-    ctx.fillRect(-9, bodyY + 14, 18, 3);
-
-    ctx.restore();
-
-    // ----------------------------------------------------
-    // 3. HUMAN HEAD, FACE & SHORT MODERN BLACK HAIR
-    // ----------------------------------------------------
-    // Natural Human Head (Oval)
-    ctx.fillStyle = skinTone;
-    ctx.beginPath();
-    ctx.ellipse(0, bodyY - 10, 6.5, 7.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ear
-    ctx.fillStyle = skinShade;
-    ctx.beginPath();
-    ctx.arc(-6, bodyY - 10, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Two Natural Human Eyes
-    if (this.state === 'HURT') {
-      // Squinting hurt eyes
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(1, bodyY - 11);
-      ctx.lineTo(4, bodyY - 9);
-      ctx.stroke();
-    } else {
-      // White Sclera
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(1.5, bodyY - 11.5, 3.5, 2.5);
-
-      // Dark Iris / Pupil
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(2.8, bodyY - 11, 1.8, 2);
-
-      // Focused Eyebrow
-      ctx.fillStyle = '#1c1917';
-      ctx.beginPath();
-      ctx.moveTo(0.5, bodyY - 13);
-      ctx.lineTo(5.5, bodyY - 12);
-      ctx.lineTo(5.5, bodyY - 11.2);
-      ctx.closePath();
-      ctx.fill();
-
-      // Nose indication
+    if (isAttacking && this.attackType === 'JAB') {
+      // Extended Lead Arm
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(-2, -2.5, Math.max(4, 7 + frontArmReach), 5);
+      // Wrist Wrap
+      ctx.fillStyle = wrapColor;
+      ctx.fillRect(Math.max(2, 5 + frontArmReach), -2.5, 4, 5);
+      // Bare Fist
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(Math.max(6, 9 + frontArmReach), -3, 5, 6);
       ctx.fillStyle = skinShade;
-      ctx.fillRect(4.5, bodyY - 9, 1.2, 2);
+      ctx.fillRect(Math.max(10, 13 + frontArmReach), -2, 2, 4);
 
-      // Mouth / Serious confident expression
-      ctx.strokeStyle = '#7c2d12';
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      if (isAttacking) {
-        // Grit teeth
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(2, bodyY - 6, 3, 1.5);
-      } else {
-        ctx.moveTo(1.5, bodyY - 5.5);
-        ctx.lineTo(4.5, bodyY - 5);
-      }
-      ctx.stroke();
-    }
-
-    // Short Modern Black Hair (Clean cropped sides with textured top)
-    ctx.fillStyle = hairColor;
-    ctx.beginPath();
-    // Top & sides of hair
-    ctx.arc(0, bodyY - 11.5, 7.2, Math.PI * 0.85, Math.PI * 2.15);
-    ctx.fill();
-
-    // Short modern hair fringe/locks
-    ctx.beginPath();
-    ctx.moveTo(-6.5, bodyY - 12);
-    ctx.lineTo(-3, bodyY - 16);
-    ctx.lineTo(0, bodyY - 16.5);
-    ctx.lineTo(3, bodyY - 16);
-    ctx.lineTo(5.5, bodyY - 13);
-    ctx.lineTo(2, bodyY - 13.5);
-    ctx.lineTo(-2, bodyY - 13.5);
-    ctx.closePath();
-    ctx.fill();
-
-    // ----------------------------------------------------
-    // 4. ARMS, WRIST WRAPS & BARE HANDS / FISTS
-    // ----------------------------------------------------
-    ctx.save();
-    ctx.translate(2, bodyY + 6);
-
-    if (isAttacking) {
-      if (this.attackType === 'JAB') {
-        // Lead Jab Punch Extension
-        let reach = -2;
-        if (attackProgress >= 0.22 && attackProgress <= 0.72) {
-          const extFactor = Math.sin(((attackProgress - 0.22) / 0.5) * Math.PI);
-          reach = extFactor * 20;
-        } else if (attackProgress > 0.72) {
-          reach = (1 - (attackProgress - 0.72) / 0.28) * 6;
-        }
-
-        // Arm Skin
-        ctx.fillStyle = skinTone;
-        ctx.fillRect(-2, -2.5, Math.max(4, 7 + reach), 5);
-        // Wrist Wrap
-        ctx.fillStyle = wrapColor;
-        ctx.fillRect(Math.max(2, 5 + reach), -2.5, 4, 5);
-        // Bare Fist
-        ctx.fillStyle = skinTone;
-        ctx.fillRect(Math.max(6, 9 + reach), -3, 5, 6);
-        ctx.fillStyle = skinShade;
-        ctx.fillRect(Math.max(10, 13 + reach), -2, 2, 4);
-
-        // Impact indicator at fist
-        if (attackProgress >= 0.22 && attackProgress <= 0.72) {
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(14 + reach, 0, 7, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      } else if (this.attackType === 'CROSS') {
-        // Heavy Rear Cross Punch Extension
-        let reach = -4;
-        if (attackProgress >= 0.22 && attackProgress <= 0.75) {
-          const extFactor = Math.sin(((attackProgress - 0.22) / 0.53) * Math.PI);
-          reach = extFactor * 26;
-        } else if (attackProgress > 0.75) {
-          reach = (1 - (attackProgress - 0.75) / 0.25) * 8;
-        }
-
-        ctx.rotate(0.1);
-        // Arm Skin
-        ctx.fillStyle = skinTone;
-        ctx.fillRect(-2, -3, Math.max(4, 9 + reach), 6);
-        // Wrist Wrap
-        ctx.fillStyle = wrapColor;
-        ctx.fillRect(Math.max(2, 7 + reach), -3, 4, 6);
-        // Bare Fist
-        ctx.fillStyle = skinTone;
-        ctx.fillRect(Math.max(6, 11 + reach), -3.5, 6, 7);
-        ctx.fillStyle = skinShade;
-        ctx.fillRect(Math.max(11, 16 + reach), -2.5, 2, 5);
-
-        // Impact indicator
-        if (attackProgress >= 0.22 && attackProgress <= 0.75) {
-          ctx.strokeStyle = '#f97316';
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(17 + reach, 0, 9, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+      if (attackProgress >= 0.22 && attackProgress <= 0.72) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(14 + frontArmReach, 0, 7, 0, Math.PI * 2);
+        ctx.stroke();
       }
     } else {
-      // Guard Stance / Movement Arms
-      if (this.state === 'RUN') {
-        ctx.rotate(Math.sin(this.animFrame * 0.8) * 0.4);
-      } else if (this.state === 'JUMP') {
-        ctx.rotate(-0.4);
-      } else {
-        ctx.rotate(-0.2); // Martial Guard
-      }
-
-      // Arm Skin
+      // Guarded Lead Arm
       ctx.fillStyle = skinTone;
       ctx.fillRect(-2, -2.5, 7, 4.5);
-      // White Wrist Wrap
       ctx.fillStyle = wrapColor;
       ctx.fillRect(5, -2.5, 3.5, 4.5);
-      // Bare Fist
       ctx.fillStyle = skinTone;
       ctx.beginPath();
       ctx.arc(10.5, -0.2, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
-
     ctx.restore();
+
+    // ----------------------------------------------------
+    // LAYER 6: NECK
+    // ----------------------------------------------------
+    ctx.fillStyle = skinTone;
+    ctx.fillRect(-2, bodyY - 3.5, 4, 4);
+
+    // ----------------------------------------------------
+    // LAYER 7: HEAD BASE
+    // ----------------------------------------------------
+    const headX = 0;
+    const headY = bodyY - 11;
+    const headRadiusX = 7.5;
+    const headRadiusY = 8.5;
+
+    ctx.fillStyle = skinTone;
+    ctx.beginPath();
+    ctx.ellipse(headX, headY, headRadiusX, headRadiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ear (skin shade)
+    ctx.fillStyle = skinShade;
+    ctx.beginPath();
+    ctx.arc(headX - 7.0, headY, 2.0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ----------------------------------------------------
+    // LAYER 8: FACE DETAILS (TWO CLEAR EYES, EYEBROWS, NOSE, MOUTH)
+    // ----------------------------------------------------
+    if (this.state === 'HURT') {
+      // Hurt expression with squinting (> <) eyes
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      // Left eye squint
+      ctx.beginPath();
+      ctx.moveTo(-1, headY - 1.5);
+      ctx.lineTo(1.5, headY - 0.5);
+      ctx.lineTo(-1, headY + 0.5);
+      ctx.stroke();
+      // Right eye squint
+      ctx.beginPath();
+      ctx.moveTo(3, headY - 1.5);
+      ctx.lineTo(5.5, headY - 0.5);
+      ctx.lineTo(3, headY + 0.5);
+      ctx.stroke();
+
+      // Grimace mouth
+      ctx.strokeStyle = '#7c2d12';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(1, headY + 5);
+      ctx.lineTo(5, headY + 4.5);
+      ctx.stroke();
+    } else {
+      // TWO CLEARLY DEFINED EYES WITH WHITE SCLERA & DARK PUPILS
+      
+      // LEFT EYE (REAR EYE)
+      ctx.fillStyle = '#ffffff'; // White Sclera
+      ctx.fillRect(headX - 1.5, headY - 3.0, 3.5, 3.2);
+      ctx.fillStyle = '#0f172a'; // Dark Pupil/Iris
+      ctx.fillRect(headX - 0.3, headY - 2.5, 2.0, 2.3);
+      ctx.fillStyle = '#ffffff'; // Pupil Catchlight
+      ctx.fillRect(headX + 0.7, headY - 2.2, 0.8, 0.8);
+
+      // LEFT EYEBROW
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.moveTo(headX - 2.0, headY - 4.5);
+      ctx.lineTo(headX + 2.0, headY - 3.8);
+      ctx.lineTo(headX + 2.0, headY - 3.0);
+      ctx.lineTo(headX - 2.0, headY - 3.8);
+      ctx.closePath();
+      ctx.fill();
+
+      // RIGHT EYE (FRONT EYE)
+      ctx.fillStyle = '#ffffff'; // White Sclera
+      ctx.fillRect(headX + 3.2, headY - 3.0, 4.0, 3.2);
+      ctx.fillStyle = '#0f172a'; // Dark Pupil/Iris
+      ctx.fillRect(headX + 4.5, headY - 2.5, 2.2, 2.3);
+      ctx.fillStyle = '#ffffff'; // Pupil Catchlight
+      ctx.fillRect(headX + 5.7, headY - 2.2, 0.8, 0.8);
+
+      // RIGHT EYEBROW
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.moveTo(headX + 2.8, headY - 4.5);
+      ctx.lineTo(headX + 7.5, headY - 3.6);
+      ctx.lineTo(headX + 7.5, headY - 2.8);
+      ctx.lineTo(headX + 2.8, headY - 3.8);
+      ctx.closePath();
+      ctx.fill();
+
+      // NOSE INDICATION
+      ctx.fillStyle = skinShade;
+      ctx.fillRect(headX + 6.2, headY, 1.6, 2.2);
+
+      // MOUTH / EXPRESSION
+      if (isAttacking) {
+        // Grit teeth
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(headX + 2.5, headY + 3.8, 4.0, 2.0);
+        ctx.strokeStyle = '#7c2d12';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(headX + 2.5, headY + 3.8, 4.0, 2.0);
+      } else {
+        // Serious confident mouth line
+        ctx.strokeStyle = '#7c2d12';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(headX + 2.0, headY + 4.5);
+        ctx.lineTo(headX + 6.0, headY + 4.0);
+        ctx.stroke();
+      }
+    }
+
+    // ----------------------------------------------------
+    // LAYER 9: SHORT MODERN BLACK HAIR
+    // ----------------------------------------------------
+    ctx.fillStyle = hairColor;
+    ctx.beginPath();
+    // Scalp arc covering top and back of head
+    ctx.arc(headX, headY - 0.5, 8.0, Math.PI * 0.8, Math.PI * 2.2);
+    ctx.fill();
+
+    // Sideburns
+    ctx.fillRect(headX - 7.5, headY - 4, 3, 5);
+
+    // Modern styled hair fringe/locks over forehead
+    ctx.beginPath();
+    ctx.moveTo(headX - 7.0, headY - 4.5);
+    ctx.lineTo(headX - 3.5, headY - 9.0);
+    ctx.lineTo(headX, headY - 9.5);
+    ctx.lineTo(headX + 3.5, headY - 9.0);
+    ctx.lineTo(headX + 6.5, headY - 5.5);
+    ctx.lineTo(headX + 3.0, headY - 5.8);
+    ctx.lineTo(headX - 1.5, headY - 5.8);
+    ctx.closePath();
+    ctx.fill();
+
+    // Subtle hair highlight volume stroke
+    ctx.strokeStyle = hairHighlight;
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(headX, headY - 2.0, 7.5, Math.PI * 1.1, Math.PI * 1.6);
+    ctx.stroke();
 
     // Render Status Effects (God Mode / Stun / Slow / Sand)
     if (this.isGodMode && this.isAlive) {
