@@ -144,16 +144,13 @@ export class Player extends Entity {
       this.state = 'ATTACK';
       this.currentAttackId++;
       this.attackType = 'SPIN_KICK';
-      this.attackDuration = 0.28;
-      this.attackTimer = 0.28;
-      this.spinKickCooldownTimer = 0.42; // Short cooldown so it cannot be spammed
+      this.attackDuration = 0.36;
+      this.attackTimer = 0.36;
+      this.spinKickCooldownTimer = 0.45; // Short cooldown so it cannot be spammed
       this.attackCooldownTimer = 180;
       this.currentComboMultiplier = 1.7; // Strong balanced damage
 
       audioEngine.playSpinKick();
-      const kickX = this.x + this.width / 2;
-      particles.createCombatImpact(kickX, this.y + this.height - 10, this.facingRight, ['#38bdf8', '#facc15', '#f97316']);
-      particles.createFloatingText(kickX, this.y - 12, 'SWEEP KICK! 🌀', '#06b6d4', 16);
     }
 
     // Handle Martial Arts Attack Input (Combos + Jump Kick)
@@ -164,15 +161,11 @@ export class Player extends Entity {
       if (!this.isGrounded) {
         // Jump Attack / Flying Side Kick
         this.attackType = 'JUMP_KICK';
-        this.attackDuration = 0.22;
-        this.attackTimer = 0.22;
+        this.attackDuration = 0.32;
+        this.attackTimer = 0.32;
         this.attackCooldownTimer = 160;
         this.currentComboMultiplier = 1.3;
         audioEngine.playJumpKick();
-
-        const kickX = this.facingRight ? this.x + this.width + 12 : this.x - 12;
-        particles.createCombatImpact(kickX, this.y + 24, this.facingRight, this.equippedWeapon.sparkColors);
-        particles.createFloatingText(kickX, this.y + 4, 'FLYING KICK!', '#38bdf8', 15);
       } else {
         // Ground Martial Arts Combo: Punch -> Punch -> Kick -> Finisher Kick
         if (this.comboWindowTimer > 0 && this.comboStep >= 1 && this.comboStep < 4) {
@@ -186,51 +179,35 @@ export class Player extends Entity {
         if (this.comboStep === 1) {
           // Fast Jab Punch
           this.attackType = 'JAB';
-          this.attackDuration = 0.14;
-          this.attackTimer = 0.14;
+          this.attackDuration = 0.22;
+          this.attackTimer = 0.22;
           this.attackCooldownTimer = 90;
           this.currentComboMultiplier = 1.0;
           audioEngine.playLightPunch();
-
-          const punchX = this.facingRight ? this.x + this.width + 10 : this.x - 10;
-          particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);
-          particles.createFloatingText(punchX, this.y, 'JAB!', '#fef08a', 14);
         } else if (this.comboStep === 2) {
           // Heavy Cross Punch
           this.attackType = 'CROSS';
-          this.attackDuration = 0.16;
-          this.attackTimer = 0.16;
+          this.attackDuration = 0.26;
+          this.attackTimer = 0.26;
           this.attackCooldownTimer = 100;
           this.currentComboMultiplier = 1.25;
           audioEngine.playHeavyPunch();
-
-          const punchX = this.facingRight ? this.x + this.width + 14 : this.x - 14;
-          particles.createCombatImpact(punchX, this.y + 18, this.facingRight, this.equippedWeapon.sparkColors);
-          particles.createFloatingText(punchX, this.y, 'CROSS!', '#fbbf24', 15);
         } else if (this.comboStep === 3) {
           // Roundhouse Kick
           this.attackType = 'KICK';
-          this.attackDuration = 0.20;
-          this.attackTimer = 0.20;
+          this.attackDuration = 0.32;
+          this.attackTimer = 0.32;
           this.attackCooldownTimer = 120;
           this.currentComboMultiplier = 1.5;
           audioEngine.playKick();
-
-          const kickX = this.facingRight ? this.x + this.width + 18 : this.x - 18;
-          particles.createCombatImpact(kickX, this.y + 22, this.facingRight, this.equippedWeapon.sparkColors);
-          particles.createFloatingText(kickX, this.y - 4, 'KICK!', '#f97316', 16);
         } else {
           // Strong Finishing Spinning Heel Kick
           this.attackType = 'FINISHER';
-          this.attackDuration = 0.26;
-          this.attackTimer = 0.26;
+          this.attackDuration = 0.38;
+          this.attackTimer = 0.38;
           this.attackCooldownTimer = 220;
           this.currentComboMultiplier = 2.2;
           audioEngine.playFinisher();
-
-          const kickX = this.facingRight ? this.x + this.width + 22 : this.x - 22;
-          particles.createCombatImpact(kickX, this.y + 20, this.facingRight, ['#f43f5e', '#facc15', '#38bdf8']);
-          particles.createFloatingText(kickX, this.y - 8, 'FINISHER! 💥', '#ef4444', 18);
         }
       }
     }
@@ -329,24 +306,30 @@ export class Player extends Entity {
 
   public getAttackHitbox(): Rect | null {
     if (this.state === 'ATTACK' && this.attackTimer > 0.02) {
-      let reach = 36;
+      const attackProgress = (this.attackDuration - this.attackTimer) / (this.attackDuration || 0.2);
+      // Active hit window: Only active during strike extension (22% to 75% of attack duration)
+      if (attackProgress < 0.22 || attackProgress > 0.75) {
+        return null;
+      }
+
+      let reach = 38;
       let attackHeight = 38;
 
       if (this.attackType === 'CROSS') {
-        reach = 42;
+        reach = 44;
         attackHeight = 40;
       } else if (this.attackType === 'KICK') {
-        reach = 50;
+        reach = 52;
         attackHeight = 44;
       } else if (this.attackType === 'FINISHER') {
-        reach = 58;
+        reach = 62;
         attackHeight = 48;
       } else if (this.attackType === 'JUMP_KICK') {
-        reach = 48;
+        reach = 50;
         attackHeight = 44;
       } else if (this.attackType === 'SPIN_KICK') {
         // Low 360-degree sweep kick surrounding lower body
-        const reachX = 32;
+        const reachX = 36;
         return {
           x: this.x - reachX,
           y: this.y + this.height - 26,
@@ -486,29 +469,43 @@ export class Player extends Entity {
 
     if (isAttacking && this.attackType === 'KICK') {
       // High Roundhouse Kick Pose
-      const kickAngle = -Math.PI / 3 + Math.sin(attackProgress * Math.PI) * (Math.PI / 1.7);
+      let kickAngle = -0.5; // Anticipation chamber angle
+      let legLength = 16;
+      if (attackProgress >= 0.28 && attackProgress <= 0.75) {
+        // Extended Arc Sweep
+        const sweepFactor = (attackProgress - 0.28) / 0.47;
+        kickAngle = -Math.PI / 2.8 + sweepFactor * (Math.PI / 1.5);
+        legLength = 26;
+      } else if (attackProgress > 0.75) {
+        // Recovery
+        kickAngle = 0.2;
+        legLength = 18;
+      }
+
       ctx.save();
       ctx.translate(0, bodyY + 16);
       ctx.rotate(kickAngle);
 
       // Extended Leg
       ctx.fillStyle = pantColor;
-      ctx.fillRect(0, -4, 22, 8);
+      ctx.fillRect(0, -4, legLength, 8);
       // Knee Brace
       ctx.fillStyle = buckleColor;
-      ctx.fillRect(10, -5, 3, 10);
+      ctx.fillRect(Math.round(legLength * 0.5), -5, 3, 10);
       // Boot
       ctx.fillStyle = bootColor;
-      ctx.fillRect(18, -5, 9, 10);
+      ctx.fillRect(legLength - 4, -5, 10, 10);
       ctx.fillStyle = '#09090b'; // Sole
-      ctx.fillRect(18, 4, 10, 2);
+      ctx.fillRect(legLength - 4, 4, 11, 2);
 
-      // Kick Crescent Arc Trail
-      ctx.strokeStyle = auraColor;
-      ctx.lineWidth = 4.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 28, -Math.PI / 2.5, Math.PI / 2.5);
-      ctx.stroke();
+      // Kick Crescent Arc Trail (visible during strike extension)
+      if (attackProgress >= 0.28 && attackProgress <= 0.75) {
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 32, -Math.PI / 2.2, Math.PI / 2.2);
+        ctx.stroke();
+      }
 
       ctx.restore();
 
@@ -525,17 +522,19 @@ export class Player extends Entity {
       ctx.rotate(spinAngle);
 
       ctx.fillStyle = pantColor;
-      ctx.fillRect(-18, -4, 36, 8);
+      ctx.fillRect(-20, -4, 40, 8);
       ctx.fillStyle = bootColor;
-      ctx.fillRect(14, -5, 8, 10);
-      ctx.fillRect(-22, -5, 8, 10);
+      ctx.fillRect(16, -5, 9, 10);
+      ctx.fillRect(-24, -5, 9, 10);
 
-      // Whirlwind Energy Aura Ring
-      ctx.strokeStyle = auraColor;
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 30, 0, Math.PI * 2);
-      ctx.stroke();
+      if (attackProgress >= 0.25 && attackProgress <= 0.78) {
+        // Whirlwind Energy Aura Ring
+        ctx.strokeStyle = auraColor;
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 34, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
       ctx.restore();
     } else if (isAttacking && this.attackType === 'JUMP_KICK') {
@@ -756,39 +755,59 @@ export class Player extends Entity {
 
     if (isAttacking) {
       if (this.attackType === 'JAB') {
-        // Fast Jab Punch
-        const reach = Math.sin(attackProgress * Math.PI) * 18;
+        // Fast Lead Jab Punch
+        let reach = -4; // Anticipation chambering back
+        if (attackProgress >= 0.22 && attackProgress <= 0.72) {
+          const extFactor = Math.sin(((attackProgress - 0.22) / 0.50) * Math.PI);
+          reach = extFactor * 22; // Extended reach
+        } else if (attackProgress > 0.72) {
+          reach = (1 - (attackProgress - 0.72) / 0.28) * 8;
+        }
+
         ctx.fillStyle = '#1e1b4b'; // Sleeve
-        ctx.fillRect(-2, -3, 8 + reach, 6);
+        ctx.fillRect(-2, -3, Math.max(4, 8 + reach), 6);
         ctx.fillStyle = '#fbbf24'; // Gold Wrist Wrap
-        ctx.fillRect(6 + reach, -3, 3, 6);
+        ctx.fillRect(Math.max(2, 6 + reach), -3, 3, 6);
         ctx.fillStyle = '#27272a'; // Glove
-        ctx.fillRect(9 + reach, -3.5, 5, 7);
+        ctx.fillRect(Math.max(5, 9 + reach), -3.5, 6, 7);
         ctx.fillStyle = '#fed7aa'; // Knuckles
-        ctx.fillRect(13 + reach, -2.5, 2, 5);
+        ctx.fillRect(Math.max(11, 15 + reach), -2.5, 2, 5);
 
-        // Punch Energy Burst Ring
-        ctx.strokeStyle = auraColor;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(14 + reach, 0, 9, 0, Math.PI * 2);
-        ctx.stroke();
+        // Punch Energy Burst Ring (during active extension phase)
+        if (attackProgress >= 0.22 && attackProgress <= 0.72) {
+          ctx.strokeStyle = auraColor;
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(16 + reach, 0, 10, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       } else if (this.attackType === 'CROSS') {
-        // Heavy Power Cross Punch
-        const reach = Math.sin(attackProgress * Math.PI) * 24;
-        ctx.rotate(0.15);
-        ctx.fillStyle = '#1e1b4b';
-        ctx.fillRect(-2, -3, 10 + reach, 7);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillRect(8 + reach, -3, 4, 7);
-        ctx.fillStyle = '#27272a';
-        ctx.fillRect(12 + reach, -4, 6, 8);
+        // Heavy Power Rear Cross Punch
+        let reach = -6; // Anticipation windup
+        if (attackProgress >= 0.25 && attackProgress <= 0.75) {
+          const extFactor = Math.sin(((attackProgress - 0.25) / 0.50) * Math.PI);
+          reach = extFactor * 30; // Maximum extension
+        } else if (attackProgress > 0.75) {
+          reach = (1 - (attackProgress - 0.75) / 0.25) * 10;
+        }
 
-        // Power Shockwave
-        ctx.fillStyle = auraColor;
-        ctx.beginPath();
-        ctx.arc(16 + reach, 0, 11 * Math.sin(attackProgress * Math.PI), 0, Math.PI * 2);
-        ctx.fill();
+        ctx.rotate(0.12);
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(-2, -3, Math.max(4, 10 + reach), 7);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(Math.max(2, 8 + reach), -3, 4, 7);
+        ctx.fillStyle = '#27272a';
+        ctx.fillRect(Math.max(6, 12 + reach), -4, 7, 8);
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(Math.max(13, 19 + reach), -3, 3, 6);
+
+        // Power Shockwave Burst
+        if (attackProgress >= 0.25 && attackProgress <= 0.75) {
+          ctx.fillStyle = auraColor;
+          ctx.beginPath();
+          ctx.arc(20 + reach, 0, 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     } else {
       // Idle / Running Arms in Martial Guard Stance

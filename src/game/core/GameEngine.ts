@@ -56,6 +56,9 @@ export class GameEngine {
   public comboTimer: number = 0;
   public readonly maxComboTimer: number = 2.5;
 
+  // Impact Hit-Stop (Freeze Frame on punch/kick connection)
+  public hitStopTimer: number = 0;
+
   constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1', isResume: boolean = false) {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
@@ -491,6 +494,14 @@ export class GameEngine {
   };
 
   private update(dt: number) {
+    // 0. Process Impact Hit-Stop (Short freeze frame on punch/kick connection for strike clarity)
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer -= dt;
+      this.particles.update(dt * 0.2);
+      this.camera.follow(this.player.x, this.player.y, this.tileMap.widthInPixels, this.tileMap.heightInPixels);
+      return;
+    }
+
     const inputState = this.input.getState();
 
     // Update Combat Combo Inactivity Timer
@@ -515,7 +526,39 @@ export class GameEngine {
       return;
     }
 
-    // 2. Martial Arts Attack Collisions (Single-hit per attack swing)
+    // 2. Enforce Martial Combat Spacing (maintain readable separation during fight)
+    for (const goblin of this.goblins) {
+      if (goblin.isAlive) {
+        const dx = (goblin.x + goblin.width / 2) - (this.player.x + this.player.width / 2);
+        const distX = Math.abs(dx);
+        const minSpacing = (this.player.state === 'ATTACK') ? 44 : 38;
+
+        if (distX < minSpacing && Math.abs(goblin.y - this.player.y) < 32) {
+          const overlap = minSpacing - distX;
+          const pushDir = dx >= 0 ? 1 : -1;
+          goblin.x += pushDir * overlap * 0.75;
+          if (this.player.state !== 'ATTACK') {
+            this.player.x -= pushDir * overlap * 0.25;
+          }
+        }
+      }
+    }
+    if (this.bossMonster && this.bossMonster.isAlive) {
+      const dx = (this.bossMonster.x + this.bossMonster.width / 2) - (this.player.x + this.player.width / 2);
+      const distX = Math.abs(dx);
+      const minSpacing = (this.player.state === 'ATTACK') ? 56 : 48;
+
+      if (distX < minSpacing && Math.abs(this.bossMonster.y - this.player.y) < 40) {
+        const overlap = minSpacing - distX;
+        const pushDir = dx >= 0 ? 1 : -1;
+        this.bossMonster.x += pushDir * overlap * 0.8;
+        if (this.player.state !== 'ATTACK') {
+          this.player.x -= pushDir * overlap * 0.2;
+        }
+      }
+    }
+
+    // 3. Martial Arts Attack Collisions (Single-hit per attack swing)
     if (this.player.currentAttackId !== this.lastAttackId) {
       this.lastAttackId = this.player.currentAttackId;
       this.hitEnemiesThisAttack.clear();
@@ -533,6 +576,7 @@ export class GameEngine {
         this.bossMonster.takeDamage(damage, this.particles, this.player.attackType);
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
 
+        this.hitStopTimer = 0.06; // 60ms Boss hit stop
         this.camera.addShake(0.15, 6);
         this.onImpactCallback?.('BOSS');
 
@@ -574,49 +618,97 @@ export class GameEngine {
           const comboMult = this.player.currentComboMultiplier || 1.0;
           const damage = Math.round(this.player.stats.attackDamage * comboMult);
 
-          goblin.takeDamage(damage, this.particles, this.player.attackType);
+          const isBlocked = goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
 
-          // Physical Knockback and Hit Reactions
-          if (this.player.attackType === 'SPIN_KICK') {
-            goblin.vx = (goblin.x > this.player.x) ? 7.5 : -7.5;
-            goblin.vy = -4.5;
-            this.camera.addShake(0.14, 6);
-            this.onImpactCallback?.('HEAVY');
-          } else if (this.player.attackType === 'FINISHER' || this.player.attackType === 'KICK') {
-            goblin.vx = this.player.facingRight ? 8 : -8;
-            goblin.vy = -4.5;
-            this.camera.addShake(0.16, 7);
-            this.onImpactCallback?.('HEAVY');
-          } else if (this.player.attackType === 'JUMP_KICK') {
-            goblin.vx = this.player.facingRight ? 6.5 : -6.5;
-            goblin.vy = -2;
-            this.camera.addShake(0.12, 5);
-            this.onImpactCallback?.('HEAVY');
+          const impactX = goblin.x + goblin.width / 2;
+          const impactY = goblin.y + goblin.height / 2 - 10;
+
+          if (isBlocked) {
+            // Blocked Attack Feedback
+            this.hitStopTimer = 0.03; // Short block hit-stop
+            this.camera.addShake(0.06, 2.0);
+            this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, ['#f59e0b', '#94a3b8', '#ffffff']);
+            this.particles.createFloatingText(impactX, goblin.y - 10, 'BLOCKED!', '#facc15', 14);
+            audioEngine.playHitImpact('enemy', 'JAB');
+            goblin.vx = this.player.facingRight ? 3.0 : -3.0;
           } else {
-            goblin.vx = this.player.facingRight ? 4.5 : -4.5;
-            goblin.vy = -2.5;
-            this.camera.addShake(0.1, 3.5);
-            this.onImpactCallback?.('LIGHT');
+            // Successful Hit Feedback
+            this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, this.player.equippedWeapon.sparkColors);
+
+            let labelText = 'JAB!';
+            let labelColor = '#fef08a';
+
+            if (this.player.attackType === 'CROSS') {
+              labelText = 'CROSS!';
+              labelColor = '#fbbf24';
+              this.hitStopTimer = 0.05;
+              this.camera.addShake(0.08, 3.8);
+              goblin.vx = this.player.facingRight ? 5.5 : -5.5;
+              goblin.vy = -2.2;
+              this.onImpactCallback?.('LIGHT');
+            } else if (this.player.attackType === 'KICK') {
+              labelText = 'ROUNDHOUSE!';
+              labelColor = '#f97316';
+              this.hitStopTimer = 0.08;
+              this.camera.addShake(0.12, 6.5);
+              goblin.vx = this.player.facingRight ? 8.5 : -8.5;
+              goblin.vy = -4.5;
+              this.onImpactCallback?.('HEAVY');
+            } else if (this.player.attackType === 'FINISHER') {
+              labelText = 'FINISHER! 💥';
+              labelColor = '#ef4444';
+              this.hitStopTimer = 0.09;
+              this.camera.addShake(0.14, 7.5);
+              goblin.vx = this.player.facingRight ? 9.5 : -9.5;
+              goblin.vy = -4.8;
+              this.onImpactCallback?.('HEAVY');
+            } else if (this.player.attackType === 'SPIN_KICK') {
+              labelText = 'SWEEP KICK! 🌀';
+              labelColor = '#06b6d4';
+              this.hitStopTimer = 0.08;
+              this.camera.addShake(0.12, 6.0);
+              goblin.vx = (goblin.x > this.player.x) ? 8.0 : -8.0;
+              goblin.vy = -4.5;
+              this.onImpactCallback?.('HEAVY');
+            } else if (this.player.attackType === 'JUMP_KICK') {
+              labelText = 'FLYING KICK!';
+              labelColor = '#38bdf8';
+              this.hitStopTimer = 0.07;
+              this.camera.addShake(0.10, 5.0);
+              goblin.vx = this.player.facingRight ? 7.0 : -7.0;
+              goblin.vy = -2.8;
+              this.onImpactCallback?.('HEAVY');
+            } else {
+              // Lead Jab
+              this.hitStopTimer = 0.04;
+              this.camera.addShake(0.07, 3.2);
+              goblin.vx = this.player.facingRight ? 4.5 : -4.5;
+              goblin.vy = -2.0;
+              this.onImpactCallback?.('LIGHT');
+            }
+
+            this.particles.createFloatingText(impactX, goblin.y - 12, labelText, labelColor, 15);
+            audioEngine.playHitImpact('enemy', this.player.attackType);
           }
 
           // Apply stance special effects
           const effect = this.player.equippedWeapon.specialEffect;
           if (effect === 'ICE_SLOW') {
             goblin.slowTimer = 2.0;
-            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'FROST!', '#38bdf8', 12);
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'FROST!', '#38bdf8', 12);
           } else if (effect === 'FLAME_BURN') {
             goblin.burnTimer = 1.6;
-            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'BURN!', '#f97316', 12);
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'BURN!', '#f97316', 12);
           } else if (effect === 'SHADOW_CRIT') {
             if (Math.random() < 0.35) {
               goblin.takeDamage(22, this.particles, this.player.attackType);
-              this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'CRIT!', '#c084fc', 13);
+              this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'CRIT!', '#c084fc', 13);
             }
           } else if (effect === 'GOLDEN_RADIANCE') {
-            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'RADIANT!', '#facc15', 12);
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'RADIANT!', '#facc15', 12);
           } else if (effect === 'CELESTIAL_BURST') {
-            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 12, 'CELESTIAL!', '#f43f5e', 14);
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 20, 'CELESTIAL!', '#f43f5e', 14);
           }
 
           // Drop coin on goblin death

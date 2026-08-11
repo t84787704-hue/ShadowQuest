@@ -829,7 +829,13 @@ export class ForestGoblin extends Entity {
 
     const bob = Math.sin(this.animFrame * Math.PI / 2) * 2;
     const walk = Math.sin(this.animFrame * Math.PI / 2);
-    const hit = this.hitFlashTimer > 0;
+    const hit = this.hitFlashTimer > 0 || this.combatState === 'HIT';
+
+    // Apply visible head & body recoil stagger when hit
+    if (hit) {
+      ctx.rotate(-0.22); // Tilt backward from impact direction
+      ctx.translate(-4, -2); // Push back slightly
+    }
 
     const [wStr] = this.levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
