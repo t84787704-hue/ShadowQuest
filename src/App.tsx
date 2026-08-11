@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameScreen, SaveData } from './types/game';
 import { SaveSystem } from './game/save/SaveSystem';
@@ -12,9 +12,6 @@ import { WorldMap } from './components/WorldMap';
 import { StoryModal } from './components/StoryModal';
 import { WorldIntroModal } from './components/WorldIntroModal';
 import { AchievementsMenu } from './components/AchievementsMenu';
-import { DebugMenuModal } from './components/DebugMenuModal';
-import { DebugManager } from './game/debug/DebugManager';
-import { GameEngine } from './game/core/GameEngine';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('MAIN_MENU');
@@ -22,8 +19,6 @@ export default function App() {
   const [selectedLevelId, setSelectedLevelId] = useState<string>('1-1');
   const [pendingLevelId, setPendingLevelId] = useState<string | null>(null);
   const [isResumeRun, setIsResumeRun] = useState<boolean>(false);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
-  const activeEngineRef = useRef<GameEngine | null>(null);
 
   useEffect(() => {
     // Synchronize sound settings on initial load
@@ -72,59 +67,6 @@ export default function App() {
     }
   };
 
-  // Debug Actions Handlers
-  const handleDebugStartLevel = (levelId: string) => {
-    setSelectedLevelId(levelId);
-    setIsResumeRun(false);
-    setCurrentScreen('PLAYING');
-    setIsDebugModalOpen(false);
-  };
-
-  const handleDebugRestartLevel = () => {
-    if (activeEngineRef.current) {
-      activeEngineRef.current.restart();
-    } else {
-      setIsResumeRun(false);
-      setCurrentScreen('PLAYING');
-    }
-    setIsDebugModalOpen(false);
-  };
-
-  const handleDebugSetHp100 = () => {
-    if (activeEngineRef.current) {
-      activeEngineRef.current.setPlayerHp(100);
-    }
-  };
-
-  const handleDebugAddCoins1000 = () => {
-    SaveSystem.addCoins(1000);
-    const updated = SaveSystem.load();
-    setSaveData(updated);
-    if (activeEngineRef.current) {
-      activeEngineRef.current.addCoins(1000);
-    }
-  };
-
-  const handleDebugToggleGodMode = (): boolean => {
-    const newState = DebugManager.toggleGodMode();
-    if (activeEngineRef.current) {
-      activeEngineRef.current.setGodMode(newState);
-    }
-    return newState;
-  };
-
-  const handleDebugSkipLevel = () => {
-    if (activeEngineRef.current) {
-      activeEngineRef.current.triggerVictory();
-    }
-    setIsDebugModalOpen(false);
-  };
-
-  const handleDebugBackToMainMenu = () => {
-    setCurrentScreen('MAIN_MENU');
-    setIsDebugModalOpen(false);
-  };
-
   return (
     <div className="w-screen h-screen bg-slate-950 flex items-center justify-center overflow-hidden font-sans">
       <div className="w-full h-full max-w-[1280px] max-h-[720px] relative flex flex-col bg-slate-950">
@@ -148,7 +90,6 @@ export default function App() {
                 }}
                 onClearQuickSave={handleClearQuickSave}
                 onSoundToggle={handleSoundToggle}
-                onOpenDebugMenu={() => setIsDebugModalOpen(true)}
               />
             </motion.div>
           )}
@@ -293,10 +234,6 @@ export default function App() {
                   setSaveData(freshSave);
                   setCurrentScreen('WORLD_MAP');
                 }}
-                onOpenDebugMenu={() => setIsDebugModalOpen(true)}
-                onEngineReady={(engine) => {
-                  activeEngineRef.current = engine;
-                }}
               />
             </motion.div>
           )}
@@ -310,25 +247,6 @@ export default function App() {
               levelId={pendingLevelId}
               onStart={handleConfirmStartLevel}
               onBack={() => setPendingLevelId(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Development Debug Menu Overlay */}
-        <AnimatePresence>
-          {isDebugModalOpen && (
-            <DebugMenuModal
-              key="debug-menu-modal"
-              onClose={() => setIsDebugModalOpen(false)}
-              onStartLevel={handleDebugStartLevel}
-              onRestartLevel={handleDebugRestartLevel}
-              onSetHp100={handleDebugSetHp100}
-              onAddCoins1000={handleDebugAddCoins1000}
-              onToggleGodMode={handleDebugToggleGodMode}
-              onSkipLevel={handleDebugSkipLevel}
-              onBackToMainMenu={handleDebugBackToMainMenu}
-              currentLevelId={selectedLevelId}
-              isPlaying={currentScreen === 'PLAYING'}
             />
           )}
         </AnimatePresence>

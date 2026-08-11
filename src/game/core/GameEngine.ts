@@ -14,7 +14,6 @@ import { WeatherSystem } from './WeatherSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
-import { DebugManager } from '../debug/DebugManager';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -388,9 +387,6 @@ export class GameEngine {
 
   private update(dt: number) {
     const inputState = this.input.getState();
-
-    // Sync Debug God Mode
-    this.player.isGodMode = DebugManager.isGodMode();
 
     // Update Combat Combo Inactivity Timer
     if (this.comboTimer > 0) {
