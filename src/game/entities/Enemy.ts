@@ -47,6 +47,18 @@ export class ForestGoblin extends Entity {
   public isGuarding: boolean = false;
   public guardTimer: number = 0;
 
+  // AI Cooldowns & Hit Stun
+  public guardCooldown: number = 0;
+  public dodgeCooldown: number = 0;
+  public counterCooldown: number = 0;
+  public consecutiveHitsTaken: number = 0;
+  public hitStunTimer: number = 0;
+
+  // Debug Force Flags
+  public forceBlockFlag: boolean = false;
+  public forceDodgeFlag: boolean = false;
+  public forceCounterattackFlag: boolean = false;
+
   // World Specific Powers
   public hasBlockShield: boolean = false;
   public isDashing: boolean = false;
@@ -101,50 +113,50 @@ export class ForestGoblin extends Entity {
     // Set Serious World Names
     this.enemyName = this.getEnemyName(w, this.enemyClass);
 
-    // HP Scaling according to World (Early: 90-115, Late: 200-260)
-    let baseWorldHp = 90 + (w - 1) * 30; // W1: 90, W2: 120, W3: 150, W4: 180, W5: 210, W6: 240
+    // HP Scaling according to World (W1: 110-350 HP, W6: 320-1000 HP)
+    let baseWorldHp = 110 + (w - 1) * 40;
     let hpMultiplier = 1.0;
     let speedMult = 1.0;
     let damageMult = 1.0;
 
     switch (this.enemyClass) {
       case 'FAST_FIGHTER':
-        hpMultiplier = 0.85;
-        speedMult = 1.15; // Speed ~4.0
+        hpMultiplier = 0.88; // ~97 HP in W1 => ~9 hits
+        speedMult = 1.2; // Speed ~4.2
         damageMult = 0.9;
         this.maxComboSteps = 2;
         break;
 
       case 'HEAVY_FIGHTER':
-        hpMultiplier = 1.45; // ~130 HP in W1, ~350 HP in W6
-        speedMult = 0.85; // Speed ~2.9
-        damageMult = 1.3;
+        hpMultiplier = 2.1; // ~230 HP in W1 => ~21 hits
+        speedMult = 0.82; // Speed ~2.8
+        damageMult = 1.35;
         this.maxComboSteps = 1;
         break;
 
       case 'MARTIAL_ARTIST':
-        hpMultiplier = 1.0;
+        hpMultiplier = 1.1; // ~120 HP in W1 => ~11 hits
         speedMult = 1.0;
         damageMult = 1.0;
         this.maxComboSteps = 3;
         break;
 
       case 'ELITE_FIGHTER':
-        hpMultiplier = 1.35;
+        hpMultiplier = 3.2; // ~350 HP in W1 => ~32 hits
         speedMult = 1.08;
-        damageMult = 1.25;
+        damageMult = 1.3;
         this.maxComboSteps = 3;
         break;
     }
 
     if (isFinalBoss) {
-      this.maxHp = 600;
-      this.attackDamage = 12;
-      this.moveSpeed = 2.6;
+      this.maxHp = 1200;
+      this.attackDamage = 14;
+      this.moveSpeed = 2.8;
     } else if (isBoss) {
-      this.maxHp = 300 + w * 50;
-      this.attackDamage = 8 + Math.floor(w * 0.5);
-      this.moveSpeed = 2.4;
+      this.maxHp = 800 + w * 250;
+      this.attackDamage = 9 + Math.floor(w * 0.8);
+      this.moveSpeed = 2.5;
     } else {
       this.maxHp = Math.round(baseWorldHp * hpMultiplier);
       this.attackDamage = Math.round((6 + Math.floor(w * 0.5)) * damageMult);
@@ -236,6 +248,10 @@ export class ForestGoblin extends Entity {
     if (this.abilityCooldown > 0) this.abilityCooldown -= dt;
     if (this.retreatTimer > 0) this.retreatTimer -= dt;
     if (this.dodgeTimer > 0) this.dodgeTimer -= dt;
+    if (this.guardCooldown > 0) this.guardCooldown -= dt;
+    if (this.dodgeCooldown > 0) this.dodgeCooldown -= dt;
+    if (this.counterCooldown > 0) this.counterCooldown -= dt;
+    if (this.hitStunTimer > 0) this.hitStunTimer -= dt;
 
     if (this.isGuarding) {
       this.guardTimer -= dt;
@@ -281,9 +297,86 @@ export class ForestGoblin extends Entity {
     const dy = player.y - this.y;
     const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
+    // Multi-enemy physical separation so enemies don't overlap into a single stack
+    if (goblins && goblins.length > 1) {
+      for (const other of goblins) {
+        if (other !== this && other.isAlive) {
+          const sepDx = this.x - other.x;
+          if (Math.abs(sepDx) < 28 && Math.abs(this.y - other.y) < 30) {
+            this.vx += sepDx >= 0 ? 0.9 : -0.9;
+          }
+        }
+      }
+    }
+
     // Body contact damage check
     if (this.intersects(player) && player.isAlive) {
       player.takeDamage(this.attackDamage, particles);
+    }
+
+    // ------------------------------------
+    // REACTIVE DEFENSE AI (BLOCK, DODGE & COUNTER)
+    // ------------------------------------
+    const isPlayerAttacking = player.state === 'ATTACKING';
+    const playerFacingUs = (player.facingRight && dx < 0) || (!player.facingRight && dx > 0);
+
+    // 1. Check Dodge Reaction
+    let dodgeProb = 0.0;
+    if (this.enemyClass === 'FAST_FIGHTER') dodgeProb = 0.40;
+    else if (this.enemyClass === 'ELITE_FIGHTER') dodgeProb = 0.35;
+    else if (this.enemyClass === 'MARTIAL_ARTIST') dodgeProb = 0.25;
+    else if (this.enemyClass === 'HEAVY_FIGHTER') dodgeProb = 0.10;
+
+    if (
+      this.forceDodgeFlag ||
+      (isPlayerAttacking && playerFacingUs && distToPlayer < 75 && this.dodgeCooldown <= 0 && this.dodgeTimer <= 0 && Math.random() < dodgeProb)
+    ) {
+      this.forceDodgeFlag = false;
+      this.dodgeTimer = 0.35;
+      this.dodgeCooldown = 1.8;
+      this.vx = dx > 0 ? -7.5 : 7.5; // Sideways / evasive dash
+      this.vy = -2.2;
+      particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'DODGE! 💨', '#38bdf8', 13);
+      audioEngine.playVocal('spin_kick');
+    }
+
+    // 2. Check Block Reaction
+    let blockProb = 0.0;
+    if (this.enemyClass === 'HEAVY_FIGHTER') blockProb = 0.45;
+    else if (this.enemyClass === 'ELITE_FIGHTER') blockProb = 0.40;
+    else if (this.enemyClass === 'MARTIAL_ARTIST') blockProb = 0.30;
+    else if (this.enemyClass === 'FAST_FIGHTER') blockProb = 0.15;
+
+    if (
+      this.forceBlockFlag ||
+      (isPlayerAttacking && playerFacingUs && distToPlayer < 75 && this.guardCooldown <= 0 && !this.isGuarding && this.dodgeTimer <= 0 && Math.random() < blockProb)
+    ) {
+      this.forceBlockFlag = false;
+      this.isGuarding = true;
+      this.guardTimer = 0.55;
+      this.guardCooldown = 1.5;
+      particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD! 🛡️', '#f59e0b', 13);
+    }
+
+    // 3. Counterattack Check
+    let counterProb = 0.0;
+    if (this.enemyClass === 'ELITE_FIGHTER') counterProb = 0.60;
+    else if (this.enemyClass === 'MARTIAL_ARTIST') counterProb = 0.45;
+    else if (this.enemyClass === 'FAST_FIGHTER') counterProb = 0.35;
+    else if (this.enemyClass === 'HEAVY_FIGHTER') counterProb = 0.25;
+
+    if (
+      this.forceCounterattackFlag ||
+      (this.counterCooldown <= 0 && distToPlayer < 60 && (this.isGuarding || this.dodgeTimer > 0) && Math.random() < counterProb)
+    ) {
+      this.forceCounterattackFlag = false;
+      this.isGuarding = false;
+      this.combatState = 'TELEGRAPH';
+      this.activeAttack = 'ROUNDHOUSE_KICK';
+      this.attackStateTimer = 0.15;
+      this.counterCooldown = 2.2;
+      particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'COUNTERSTRIKE! ⚡', '#ef4444', 14);
+      audioEngine.playVocal('heavy_punch');
     }
 
     // ------------------------------------
@@ -415,7 +508,7 @@ export class ForestGoblin extends Entity {
           else this.activeAttack = 'FLYING_KNEE';
 
           this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.18 : 0.26;
-          ForestGoblin.groupAttackCooldown = 0.25; // Brief stagger so multiple enemies don't hit simultaneously
+          ForestGoblin.groupAttackCooldown = 0.35; // Stagger so multiple enemies don't hit simultaneously
         } else if (Math.random() < 0.15 && !this.isGuarding) {
           // Guard Stance
           this.isGuarding = true;
@@ -517,21 +610,46 @@ export class ForestGoblin extends Entity {
   public takeDamage(damage: number, particles: ParticleSystem, attackType?: string): boolean {
     if (!this.isAlive) return false;
 
-    // Guarding reduces incoming damage by 50%
-    const finalDamage = this.isGuarding ? Math.max(1, Math.round(damage * 0.5)) : damage;
+    const hitX = this.x + this.width / 2;
+    const hitY = this.y - 10;
+
+    // 1. Dodge Invulnerability
+    if (this.dodgeTimer > 0) {
+      particles.createFloatingText(hitX, hitY, 'DODGED! 💨', '#38bdf8', 14);
+      return false;
+    }
+
+    // 2. Guarding reduces incoming damage by 80%
+    const finalDamage = this.isGuarding ? Math.max(1, Math.round(damage * 0.2)) : damage;
 
     this.hp -= finalDamage;
     this.hitFlashTimer = 0.22;
 
     audioEngine.playHitImpact('enemy', attackType);
 
-    const hitX = this.x + this.width / 2;
-    const hitY = this.y - 10;
-
     if (this.isGuarding) {
-      particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage}`, '#94a3b8', 13);
+      particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
+      // Chance to trigger instant guard counterattack
+      if (this.counterCooldown <= 0 && Math.random() < 0.5) {
+        this.counterCooldown = 2.0;
+        this.isGuarding = false;
+        this.combatState = 'TELEGRAPH';
+        this.activeAttack = 'ROUNDHOUSE_KICK';
+        this.attackStateTimer = 0.14;
+        particles.createFloatingText(hitX, hitY - 15, 'GUARD COUNTER! ⚡', '#ef4444', 14);
+      }
     } else {
       particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
+      this.consecutiveHitsTaken++;
+      this.hitStunTimer = 0.18;
+
+      // Anti Stun-Lock Guard Burst after 3 consecutive hits
+      if (this.consecutiveHitsTaken >= 3) {
+        this.consecutiveHitsTaken = 0;
+        this.retreatTimer = 0.35;
+        this.vx = this.facingRight ? -8 : 8;
+        particles.createFloatingText(hitX, hitY - 15, 'GUARD BURST! ⚡', '#facc15', 13);
+      }
     }
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
@@ -546,10 +664,23 @@ export class ForestGoblin extends Entity {
 
     // Reaction backstep on strong hits
     if (attackType === 'FINISHER' || attackType === 'SPIN_KICK') {
-      this.retreatTimer = 0.25;
+      this.retreatTimer = 0.35;
     }
 
     return false;
+  }
+
+  // Force Debug Triggers
+  public triggerForceBlock() {
+    this.forceBlockFlag = true;
+  }
+
+  public triggerForceDodge() {
+    this.forceDodgeFlag = true;
+  }
+
+  public triggerForceCounterattack() {
+    this.forceCounterattackFlag = true;
   }
 
   // ==========================================

@@ -347,6 +347,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               onSpawnBoss={() => engineRef.current?.spawnBoss()}
               onSetEnemyHp={(hp) => engineRef.current?.setEnemyHp(hp)}
               onSetEnemyDamage={(dmg) => engineRef.current?.setEnemyDamage(dmg)}
+              onForceEnemyBlock={() => engineRef.current?.forceEnemyBlock()}
+              onForceEnemyDodge={() => engineRef.current?.forceEnemyDodge()}
+              onForceEnemyCounterattack={() => engineRef.current?.forceEnemyCounterattack()}
               onToggleGodMode={() => {
                 const next = !engineRef.current?.player.isGodMode;
                 if (engineRef.current) engineRef.current.player.isGodMode = next;

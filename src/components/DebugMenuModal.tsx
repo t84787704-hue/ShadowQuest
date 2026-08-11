@@ -19,6 +19,9 @@ interface DebugMenuModalProps {
   onSpawnBoss?: () => void;
   onSetEnemyHp?: (hp: number) => void;
   onSetEnemyDamage?: (damage: number) => void;
+  onForceEnemyBlock?: () => void;
+  onForceEnemyDodge?: () => void;
+  onForceEnemyCounterattack?: () => void;
   onToggleGodMode?: () => boolean;
   onSkipLevel?: () => void;
   onResetProgress?: () => void;
@@ -41,6 +44,9 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
   onSpawnBoss,
   onSetEnemyHp,
   onSetEnemyDamage,
+  onForceEnemyBlock,
+  onForceEnemyDodge,
+  onForceEnemyCounterattack,
   onToggleGodMode,
   onSkipLevel,
   onResetProgress,
@@ -431,27 +437,61 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
                       if (onSetEnemyHp) onSetEnemyHp(1);
                       showToast('Enemy HP set to 1 (1-Hit Kill)');
                     }}
-                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold"
+                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
                     1 HP (1 Hit)
                   </button>
                   <button
                     onClick={() => {
-                      if (onSetEnemyHp) onSetEnemyHp(50);
-                      showToast('Enemy HP set to 50');
+                      if (onSetEnemyHp) onSetEnemyHp(100);
+                      showToast('Enemy HP set to 100');
                     }}
-                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold"
+                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
-                    50 HP
+                    100 HP
                   </button>
                   <button
                     onClick={() => {
-                      if (onSetEnemyHp) onSetEnemyHp(200);
-                      showToast('Enemy HP set to 200 (Tank)');
+                      if (onSetEnemyHp) onSetEnemyHp(300);
+                      showToast('Enemy HP set to 300 (Tank)');
                     }}
-                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold"
+                    className="py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-semibold cursor-pointer"
                   >
-                    200 HP
+                    300 HP
+                  </button>
+                </div>
+              </div>
+
+              {/* Force AI Defense Actions */}
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                <span className="text-xs font-bold text-amber-400 block">FORCE ENEMY AI DEFENSE ACTIONS:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      if (onForceEnemyBlock) onForceEnemyBlock();
+                      showToast('🛡️ Enemy Guard Forced!');
+                    }}
+                    className="py-2 bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-xs text-amber-300 rounded-lg font-bold transition cursor-pointer"
+                  >
+                    🛡️ Force Block
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (onForceEnemyDodge) onForceEnemyDodge();
+                      showToast('💨 Enemy Dodge Forced!');
+                    }}
+                    className="py-2 bg-sky-950/70 hover:bg-sky-900 border border-sky-600/60 text-xs text-sky-300 rounded-lg font-bold transition cursor-pointer"
+                  >
+                    💨 Force Dodge
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (onForceEnemyCounterattack) onForceEnemyCounterattack();
+                      showToast('⚡ Enemy Counter Forced!');
+                    }}
+                    className="py-2 bg-rose-950/70 hover:bg-rose-900 border border-rose-600/60 text-xs text-rose-300 rounded-lg font-bold transition cursor-pointer"
+                  >
+                    ⚡ Counterattack
                   </button>
                 </div>
               </div>

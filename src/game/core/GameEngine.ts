@@ -275,6 +275,30 @@ export class GameEngine {
     }
   }
 
+  public forceEnemyBlock() {
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        g.triggerForceBlock();
+      }
+    }
+  }
+
+  public forceEnemyDodge() {
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        g.triggerForceDodge();
+      }
+    }
+  }
+
+  public forceEnemyCounterattack() {
+    for (const g of this.goblins) {
+      if (g.isAlive) {
+        g.triggerForceCounterattack();
+      }
+    }
+  }
+
   public triggerVictory() {
     this.status = 'VICTORY';
     if (this.onStateChangeCallback) {
