@@ -477,6 +477,32 @@ class AudioEngine {
     });
   }
 
+  public playSecretDiscovered() {
+    if (!this.soundFxEnabled) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const arpeggio = [440, 554.37, 659.25, 880, 1108.73];
+    arpeggio.forEach((freq, idx) => {
+      const t = now + idx * 0.08;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.28, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.28);
+    });
+  }
+
   public playGameOver() {
     if (!this.soundFxEnabled) return;
     this.initContext();

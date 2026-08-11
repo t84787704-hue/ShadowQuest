@@ -56,6 +56,16 @@ export interface LevelConfig {
   isBossLevel?: boolean;
 }
 
+export interface LevelState {
+  levelId: string;
+  isAreaCleared: boolean;
+  totalEnemies: number;
+  defeatedEnemies: number;
+  secretRoomsFound: number;
+  totalSecretRooms: number;
+  secretRooms?: SecretRoomDef[];
+}
+
 export interface QuickSaveData {
   levelId: string;
   playerX: number;
@@ -72,11 +82,40 @@ export interface QuickSaveData {
   timestamp: number;
 }
 
+export type SecretRoomEntranceType = 'BREAKABLE_WALL' | 'FAKE_WALL' | 'HIDDEN_PASSAGE' | 'PLATFORM_ROUTE';
+export type SecretRoomRewardType = 'COIN_CACHE' | 'HP_PERMANENT' | 'ATTACK_UPGRADE' | 'ANCIENT_RELIC' | 'RARE_WEAPON';
+export type SecretRoomChallengeType = 'ELITE_COMBAT' | 'HAZARD_PLATFORM' | 'TREASURE_ONLY';
+
+export interface SecretRoomDef {
+  id: number; // 0 or 1 per level
+  title: string;
+  worldTheme: number; // 1 to 6
+  x: number; // Room bounds X (col * 32)
+  y: number; // Room bounds Y (row * 32)
+  width: number; // Room width in px
+  height: number; // Room height in px
+  entranceX: number; // Entrance tile X
+  entranceY: number; // Entrance tile Y
+  entranceWidth: number; // Entrance width (e.g. 32)
+  entranceHeight: number; // Entrance height (e.g. 64)
+  entranceType: SecretRoomEntranceType;
+  rewardType: SecretRoomRewardType;
+  rewardX: number;
+  rewardY: number;
+  challengeType: SecretRoomChallengeType;
+  eliteEnemyX?: number;
+  eliteEnemyY?: number;
+  eliteEnemyClass?: 'MARTIAL_ARTIST' | 'FAST_FIGHTER' | 'HEAVY_FIGHTER' | 'ELITE_FIGHTER';
+  discovered?: boolean;
+  rewardClaimed?: boolean;
+}
+
 export interface SaveDataStats {
   enemiesDefeated: number;
   bossesDefeated: number;
   coinsCollectedLifetime: number;
   upgradesPurchased: number;
+  secretRoomsDiscoveredLifetime?: number;
 }
 
 export interface SaveData {
@@ -91,6 +130,12 @@ export interface SaveData {
   quickSave?: QuickSaveData | null;
   stats: SaveDataStats;
   claimedAchievements: string[]; // list of achievement IDs whose coin rewards have been claimed
+  discoveredSecretRooms?: Record<string, number[]>; // levelId -> secret room IDs discovered [0, 1]
+  statBonuses?: {
+    maxHpBonus: number;
+    attackBonus: number;
+    speedBonus: number;
+  };
   upgrades: {
     maxHealth: number; // level 0-5
     attackPower: number;

@@ -9,6 +9,8 @@ export enum TileType {
   STONE_PLATFORM = 3,
   WOOD_BRIDGE = 4,
   HAZARD_SPIKES = 5,
+  BREAKABLE_WALL = 6,
+  FAKE_WALL = 7,
 }
 
 export class TileMap {
@@ -50,7 +52,8 @@ export class TileMap {
       tile === TileType.GRASS_TOP ||
       tile === TileType.DIRT_MIDDLE ||
       tile === TileType.STONE_PLATFORM ||
-      tile === TileType.WOOD_BRIDGE
+      tile === TileType.WOOD_BRIDGE ||
+      tile === TileType.BREAKABLE_WALL
     );
   }
 
@@ -251,6 +254,51 @@ export class TileMap {
               ctx.fillRect(px + i * 8 + 3, py + this.tileSize - 18, 2, 4);
               ctx.fillStyle = '#64748b';
             }
+            break;
+
+          case TileType.BREAKABLE_WALL:
+            // Cracked Brick / Wall Block with golden crack highlights
+            ctx.fillStyle = palette.stoneMain;
+            ctx.fillRect(px, py, this.tileSize, this.tileSize);
+
+            ctx.strokeStyle = palette.stoneStroke;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(px, py, this.tileSize, this.tileSize);
+
+            // Visible Crack Lines & Golden Glow
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(px + 4, py + 6);
+            ctx.lineTo(px + 14, py + 18);
+            ctx.lineTo(px + 22, py + 12);
+            ctx.lineTo(px + 28, py + 26);
+            ctx.stroke();
+
+            // Subtle sparkling clue particle dots
+            const timeGlow = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(250, 204, 21, ${0.4 + timeGlow * 0.4})`;
+            ctx.fillRect(px + 8, py + 8, 3, 3);
+            ctx.fillRect(px + 20, py + 20, 3, 3);
+            break;
+
+          case TileType.FAKE_WALL:
+            // Fake Passage Wall - looks like stone but with a faint shimmering curtain
+            ctx.fillStyle = palette.stoneMain;
+            ctx.fillRect(px, py, this.tileSize, this.tileSize);
+
+            // Translucent Shimmer overlay
+            const shimmerPulse = Math.sin(Date.now() * 0.004 + c * 0.5) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(56, 189, 248, ${0.12 + shimmerPulse * 0.18})`;
+            ctx.fillRect(px, py, this.tileSize, this.tileSize);
+
+            // Subtle vine or fissure outline hint
+            ctx.strokeStyle = palette.stoneAccent;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(px + 16, py);
+            ctx.lineTo(px + 16, py + this.tileSize);
+            ctx.stroke();
             break;
         }
       }

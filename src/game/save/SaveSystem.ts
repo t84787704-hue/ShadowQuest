@@ -161,6 +161,79 @@ export class SaveSystem {
     return { claimedCount, totalRewards, data };
   }
 
+  public static isSecretRoomDiscovered(levelId: string, secretRoomId: number): boolean {
+    const data = this.load();
+    const discovered = data.discoveredSecretRooms?.[levelId] || [];
+    return discovered.includes(secretRoomId);
+  }
+
+  public static recordSecretRoomDiscovered(levelId: string, secretRoomId: number): SaveData {
+    const data = this.load();
+    if (!data.discoveredSecretRooms) {
+      data.discoveredSecretRooms = {};
+    }
+    if (!data.discoveredSecretRooms[levelId]) {
+      data.discoveredSecretRooms[levelId] = [];
+    }
+    if (!data.discoveredSecretRooms[levelId].includes(secretRoomId)) {
+      data.discoveredSecretRooms[levelId].push(secretRoomId);
+      data.stats.secretRoomsDiscoveredLifetime = (data.stats.secretRoomsDiscoveredLifetime || 0) + 1;
+      this.save(data);
+    }
+    return data;
+  }
+
+  public static claimSecretRoomReward(
+    levelId: string,
+    secretRoomId: number,
+    rewardType: string
+  ): { coinGain: number; maxHpGain: number; attackGain: number; data: SaveData } {
+    const data = this.recordSecretRoomDiscovered(levelId, secretRoomId);
+    if (!data.statBonuses) {
+      data.statBonuses = { maxHpBonus: 0, attackBonus: 0, speedBonus: 0 };
+    }
+
+    let coinGain = 0;
+    let maxHpGain = 0;
+    let attackGain = 0;
+
+    switch (rewardType) {
+      case 'COIN_CACHE':
+        coinGain = 50;
+        break;
+      case 'HP_PERMANENT':
+        maxHpGain = 5;
+        coinGain = 20;
+        break;
+      case 'ATTACK_UPGRADE':
+        attackGain = 2;
+        coinGain = 20;
+        break;
+      case 'ANCIENT_RELIC':
+        coinGain = 100;
+        maxHpGain = 5;
+        break;
+      case 'RARE_WEAPON':
+        coinGain = 75;
+        attackGain = 2;
+        break;
+    }
+
+    if (coinGain > 0) {
+      data.coins += coinGain;
+      data.stats.coinsCollectedLifetime += coinGain;
+    }
+    if (maxHpGain > 0) {
+      data.statBonuses.maxHpBonus = (data.statBonuses.maxHpBonus || 0) + maxHpGain;
+    }
+    if (attackGain > 0) {
+      data.statBonuses.attackBonus = (data.statBonuses.attackBonus || 0) + attackGain;
+    }
+
+    this.save(data);
+    return { coinGain, maxHpGain, attackGain, data };
+  }
+
   public static completeLevel(levelId: string, stars: number, coinsEarned: number): SaveData {
     const data = this.load();
     data.coins += coinsEarned;

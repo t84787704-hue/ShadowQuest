@@ -1,4 +1,4 @@
-import { LevelConfig } from '../../types/game';
+import { LevelConfig, SecretRoomDef } from '../../types/game';
 import { TileType } from './TileMap';
 
 export interface TutorialSign {
@@ -19,6 +19,7 @@ export interface LevelDefinition {
   coins: { x: number; y: number; value?: number }[];
   healthPickups?: { x: number; y: number; healAmount?: number }[];
   goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[];
+  secretRooms?: SecretRoomDef[];
 }
 
 export const WORLD_NAMES: Record<number, string> = {
@@ -98,7 +99,7 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
   const isBoss = l === 5;
   const isFinalLevel = w === 6 && isBoss; // Level 30
   const cols = getLevelCols(w, l);
-  const rows = 15;
+  const rows = 18;
 
   const wName = WORLD_NAMES[w] || `WORLD ${w}`;
   const titles = WORLD_TITLES[w] || WORLD_TITLES[1];
@@ -108,11 +109,12 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
 
   const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(TileType.EMPTY));
 
-  // Base ground baseline setup (row 12, 13, 14)
+  // Base ground baseline setup (row 12 ground, rows 13-17 dirt layer)
   for (let c = 0; c < cols; c++) {
     grid[12][c] = TileType.GRASS_TOP;
-    grid[13][c] = TileType.DIRT_MIDDLE;
-    grid[14][c] = TileType.DIRT_MIDDLE;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
   }
 
   const coins: { x: number; y: number; value?: number }[] = [];
@@ -365,6 +367,9 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     checkpoints.push({ x: Math.floor(cols / 2) * 32, y: 11 * 32 - 16 });
   }
 
+  // Build secret rooms for this level layout
+  const secretRooms = buildSecretRooms(w, l, cols, grid);
+
   return {
     config: {
       id: levelId,
@@ -373,7 +378,7 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
       title: isFinalLevel ? "30 GOBLIN KING'S THRONE (FINAL FINALE)" : title,
       worldName: isBoss ? `${wName} (BOSS)` : wName,
       width: cols * 32,
-      height: 15 * 32,
+      height: 18 * 32,
       unlocked: w === 1 && l === 1,
       completed: false,
       stars: 0,
@@ -389,5 +394,129 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     healthPickups,
     coins,
     goblins,
+    secretRooms,
   };
+}
+
+function buildSecretRooms(w: number, l: number, cols: number, grid: number[][]): SecretRoomDef[] {
+  const isBoss = l === 5;
+  const secretRooms: SecretRoomDef[] = [];
+  const rows = grid.length;
+
+  const carveRoom = (
+    id: number,
+    title: string,
+    startCol: number,
+    endCol: number,
+    startRow: number,
+    endRow: number,
+    entranceCol: number,
+    entranceRow: number,
+    entranceType: 'BREAKABLE_WALL' | 'FAKE_WALL' | 'HIDDEN_PASSAGE' | 'PLATFORM_ROUTE',
+    rewardType: 'COIN_CACHE' | 'HP_PERMANENT' | 'ATTACK_UPGRADE' | 'ANCIENT_RELIC' | 'RARE_WEAPON',
+    challengeType: 'ELITE_COMBAT' | 'HAZARD_PLATFORM' | 'TREASURE_ONLY',
+    eliteClass?: 'MARTIAL_ARTIST' | 'FAST_FIGHTER' | 'HEAVY_FIGHTER' | 'ELITE_FIGHTER'
+  ): SecretRoomDef => {
+    // Solid Outer Shell
+    for (let c = startCol - 1; c <= endCol + 1; c++) {
+      if (startRow - 1 >= 0) grid[startRow - 1][c] = TileType.STONE_PLATFORM;
+      if (endRow + 1 < rows) grid[endRow + 1][c] = TileType.STONE_PLATFORM;
+    }
+    for (let r = startRow - 1; r <= endRow + 1; r++) {
+      if (r >= 0 && r < rows) {
+        if (startCol - 1 >= 0) grid[r][startCol - 1] = TileType.STONE_PLATFORM;
+        if (endCol + 1 < cols) grid[r][endCol + 1] = TileType.STONE_PLATFORM;
+      }
+    }
+
+    // Clear Interior Space
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
+          grid[r][c] = TileType.EMPTY;
+        }
+      }
+    }
+
+    // Entrance Tiles (2-tile tall door/passage)
+    const eTileType = entranceType === 'BREAKABLE_WALL' ? TileType.BREAKABLE_WALL : TileType.FAKE_WALL;
+    grid[entranceRow][entranceCol] = eTileType;
+    if (entranceRow + 1 < rows) {
+      grid[entranceRow + 1][entranceCol] = eTileType;
+    }
+
+    const roomX = (startCol - 1) * 32;
+    const roomY = (startRow - 1) * 32;
+    const roomWidth = (endCol - startCol + 3) * 32;
+    const roomHeight = (endRow - startRow + 3) * 32;
+
+    const rewardX = Math.floor((startCol + endCol) / 2) * 32;
+    const rewardY = endRow * 32 - 16;
+
+    const eliteX = (startCol + 1) * 32;
+    const eliteY = endRow * 32 - 32;
+
+    return {
+      id,
+      title,
+      worldTheme: w,
+      x: roomX,
+      y: roomY,
+      width: roomWidth,
+      height: roomHeight,
+      entranceX: entranceCol * 32,
+      entranceY: entranceRow * 32,
+      entranceWidth: 32,
+      entranceHeight: 64,
+      entranceType,
+      rewardType,
+      rewardX,
+      rewardY,
+      challengeType,
+      eliteEnemyX: challengeType === 'ELITE_COMBAT' ? eliteX : undefined,
+      eliteEnemyY: challengeType === 'ELITE_COMBAT' ? eliteY : undefined,
+      eliteEnemyClass: eliteClass,
+    };
+  };
+
+  // World-Specific Secret Room Setups
+  if (w === 1) {
+    secretRooms.push(
+      carveRoom(0, 'Tree Canopy Secret Vault', 54, 62, 3, 6, 52, 5, 'FAKE_WALL', 'COIN_CACHE', 'TREASURE_ONLY'),
+      carveRoom(1, 'Ancient Forest Cave Shrine', 138, 146, 11, 14, 136, 11, 'BREAKABLE_WALL', 'HP_PERMANENT', 'ELITE_COMBAT', 'MARTIAL_ARTIST')
+    );
+  } else if (w === 2) {
+    secretRooms.push(
+      carveRoom(0, 'Hidden Sand Tomb Chamber', 48, 56, 14, 17, 46, 14, 'FAKE_WALL', 'ANCIENT_RELIC', 'ELITE_COMBAT', 'FAST_FIGHTER'),
+      carveRoom(1, 'Sun Temple Secret Altar', 132, 140, 8, 11, 130, 9, 'BREAKABLE_WALL', 'ATTACK_UPGRADE', 'HAZARD_PLATFORM')
+    );
+  } else if (w === 3) {
+    secretRooms.push(
+      carveRoom(0, 'Glacier Frost Cavern', 50, 58, 11, 14, 48, 11, 'BREAKABLE_WALL', 'HP_PERMANENT', 'HAZARD_PLATFORM'),
+      carveRoom(1, 'Frozen Summit Shrine', 136, 144, 3, 6, 134, 5, 'FAKE_WALL', 'ANCIENT_RELIC', 'ELITE_COMBAT', 'HEAVY_FIGHTER')
+    );
+  } else if (w === 4) {
+    secretRooms.push(
+      carveRoom(0, 'Volcanic Ridge Hearth', 52, 60, 7, 10, 50, 8, 'FAKE_WALL', 'ATTACK_UPGRADE', 'HAZARD_PLATFORM'),
+      carveRoom(1, 'Underground Magma Treasury', 140, 148, 14, 17, 138, 14, 'BREAKABLE_WALL', 'COIN_CACHE', 'ELITE_COMBAT', 'HEAVY_FIGHTER')
+    );
+  } else if (w === 5) {
+    secretRooms.push(
+      carveRoom(0, 'Obsidian Void Sanctuary', 50, 58, 8, 11, 48, 9, 'FAKE_WALL', 'ANCIENT_RELIC', 'ELITE_COMBAT', 'ELITE_FIGHTER'),
+      carveRoom(1, 'Eclipse Secret Spire', 136, 144, 3, 6, 134, 4, 'BREAKABLE_WALL', 'HP_PERMANENT', 'HAZARD_PLATFORM')
+    );
+  } else if (w === 6) {
+    if (!isBoss) {
+      secretRooms.push(
+        carveRoom(0, 'Royal Citadel Treasury Vault', 56, 64, 10, 13, 54, 11, 'BREAKABLE_WALL', 'RARE_WEAPON', 'ELITE_COMBAT', 'ELITE_FIGHTER'),
+        carveRoom(1, 'Secret Tapestry Armory', 143, 151, 8, 11, 141, 9, 'FAKE_WALL', 'ATTACK_UPGRADE', 'TREASURE_ONLY')
+      );
+    } else {
+      secretRooms.push(
+        carveRoom(0, "Goblin King's Secret Royal Vault", 65, 73, 10, 13, 63, 11, 'BREAKABLE_WALL', 'ANCIENT_RELIC', 'ELITE_COMBAT', 'ELITE_FIGHTER')
+      );
+    }
+  }
+
+  return secretRooms;
 }

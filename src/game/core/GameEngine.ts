@@ -1,11 +1,11 @@
-import { GameStateStatus, SaveData, PlayerStats, QuickSaveData } from '../../types/game';
+import { GameStateStatus, SaveData, PlayerStats, QuickSaveData, LevelState } from '../../types/game';
 import { Player } from '../entities/Player';
-import { ForestGoblin } from '../entities/Enemy';
+import { ForestGoblin, EnemyClass } from '../entities/Enemy';
 import { BossMonster } from '../entities/BossMonster';
 import { BossProjectile } from '../entities/BossProjectile';
 import { Coin, HealthPickup } from '../entities/Collectible';
 import { Checkpoint } from '../entities/Checkpoint';
-import { TileMap } from '../world/TileMap';
+import { TileMap, TileType } from '../world/TileMap';
 import { LevelDefinition, getLevelDefinition } from '../world/LevelData';
 import { Camera } from './Camera';
 import { InputManager } from './InputManager';
@@ -15,6 +15,7 @@ import { audioEngine } from '../audio/AudioEngine';
 import { SaveSystem } from '../save/SaveSystem';
 import { DebugManager } from '../debug/DebugManager';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
+import { SecretRoomManager } from '../entities/SecretRoomManager';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -55,6 +56,8 @@ export class GameEngine {
   public input: InputManager;
   public particles: ParticleSystem;
   public weather: WeatherSystem;
+  public secretRoomManager: SecretRoomManager;
+  public levelState: LevelState;
 
   public levelDef: LevelDefinition;
   public startingCoins: number = 0;
@@ -106,9 +109,26 @@ export class GameEngine {
 
     this.activeSpawn = { ...this.levelDef.playerSpawn };
 
-    // Create Player BLAZE with upgrade stats bonus and equipped weapon
-    const hpBonus = (saveData.upgrades?.maxHealth || 0) * 15;
-    const dmgBonus = (saveData.upgrades?.attackPower || 0) * 5;
+    // Secret Room Manager initialization
+    this.secretRoomManager = new SecretRoomManager(this.levelDef.secretRooms || [], levelId);
+
+    // Track LevelState for secret rooms and progression
+    this.levelState = {
+      levelId,
+      isAreaCleared: false,
+      totalEnemies: this.TOTAL_LEVEL_ENEMIES,
+      defeatedEnemies: 0,
+      secretRoomsFound: this.secretRoomManager.discoveredCount,
+      totalSecretRooms: this.secretRoomManager.totalRooms,
+      secretRooms: this.levelDef.secretRooms,
+    };
+
+    // Create Player BLAZE with upgrade stats bonus, permanent secret stat bonuses, and equipped weapon
+    const permHpBonus = saveData.statBonuses?.maxHpBonus || 0;
+    const permDmgBonus = saveData.statBonuses?.attackBonus || 0;
+
+    const hpBonus = (saveData.upgrades?.maxHealth || 0) * 15 + permHpBonus;
+    const dmgBonus = (saveData.upgrades?.attackPower || 0) * 5 + permDmgBonus;
     const speedBonus = (saveData.upgrades?.moveSpeed || 0) * 0.3;
 
     this.statsBonus = {
@@ -883,6 +903,57 @@ export class GameEngine {
           }
         }
       }
+
+      // Check player attacks breaking BREAKABLE_WALL tiles
+      const hitCol = Math.floor((attackHitbox.x + attackHitbox.width / 2) / this.tileMap.tileSize);
+      const hitRow = Math.floor((attackHitbox.y + attackHitbox.height / 2) / this.tileMap.tileSize);
+      for (let r = hitRow - 1; r <= hitRow + 1; r++) {
+        for (let c = hitCol - 1; c <= hitCol + 1; c++) {
+          if (r >= 0 && r < this.tileMap.rows && c >= 0 && c < this.tileMap.cols) {
+            if (this.tileMap.grid[r][c] === TileType.BREAKABLE_WALL) {
+              const tileRect = { x: c * 32, y: r * 32, width: 32, height: 32 };
+              if (
+                attackHitbox.x + attackHitbox.width >= tileRect.x &&
+                attackHitbox.x <= tileRect.x + tileRect.width &&
+                attackHitbox.y + attackHitbox.height >= tileRect.y &&
+                attackHitbox.y <= tileRect.y + tileRect.height
+              ) {
+                // Shatter the breakable wall tile!
+                this.tileMap.grid[r][c] = TileType.EMPTY;
+                this.particles.createCombatImpact(tileRect.x + 16, tileRect.y + 16, true, ['#f59e0b', '#fbbf24', '#94a3b8']);
+                this.camera.addShake(0.12, 5);
+                audioEngine.playHitImpact('enemy', 'FINISHER');
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Secret Room Manager Update & Discovery Trigger
+    if (this.secretRoomManager) {
+      this.secretRoomManager.update(
+        dt,
+        this.player,
+        this.tileMap,
+        this.particles,
+        this.camera,
+        (x: number, y: number, enemyClass: string, worldTheme: number) => {
+          const elite = new ForestGoblin(x, y, 120, false, `${worldTheme}-1`);
+          elite.enemyClass = enemyClass as EnemyClass;
+          elite.maxHp = Math.round(elite.maxHp * 1.6);
+          elite.hp = elite.maxHp;
+          elite.attackDamage = Math.round(elite.attackDamage * 1.3);
+          this.goblins.push(elite);
+        }
+      );
+
+      if (this.levelState) {
+        this.levelState.secretRoomsFound = this.secretRoomManager.discoveredCount;
+        this.levelState.totalSecretRooms = this.secretRoomManager.totalRooms;
+        this.levelState.defeatedEnemies = this.totalEnemiesDefeated;
+        this.levelState.isAreaCleared = this.isAreaCleared;
+      }
     }
 
     // 3. Update World Boss & Boss Projectiles
@@ -1051,6 +1122,11 @@ export class GameEngine {
     // 3. TileMap Terrain
     this.tileMap.render(this.ctx, offsetX, offsetY, width, height);
 
+    // 3b. Secret Rooms Clues & Altar
+    if (this.secretRoomManager) {
+      this.secretRoomManager.render(this.ctx, offsetX, offsetY);
+    }
+
     // 4. Checkpoint Flag / Shrine
     for (const cp of this.checkpoints) {
       cp.render(this.ctx, offsetX, offsetY);
@@ -1113,7 +1189,7 @@ export class GameEngine {
     ctx.save();
 
     const boxW = 210;
-    const boxH = 44;
+    const boxH = 58;
     const bx = w - boxW - 16;
     const by = 12;
 
@@ -1129,6 +1205,9 @@ export class GameEngine {
     ctx.fill();
     ctx.stroke();
 
+    const secretsFound = this.secretRoomManager?.discoveredCount || 0;
+    const secretsTotal = this.secretRoomManager?.totalRooms || 0;
+
     if (this.isAreaCleared) {
       ctx.fillStyle = '#22c55e';
       ctx.font = 'bold 12px sans-serif';
@@ -1137,7 +1216,7 @@ export class GameEngine {
 
       ctx.fillStyle = '#fef08a';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText('PORTAL UNLOCKED — PROCEED TO GOAL', bx + boxW / 2, by + 34);
+      ctx.fillText(`PORTAL UNLOCKED | SECRETS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 38);
     } else {
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 12px sans-serif';
@@ -1147,6 +1226,10 @@ export class GameEngine {
       ctx.fillStyle = '#f8fafc';
       ctx.font = '10px monospace';
       ctx.fillText(`ACTIVE: ${this.activeEnemyCount}/${this.MAX_ACTIVE_ENEMIES} | REMAINING: ${Math.max(0, this.TOTAL_LEVEL_ENEMIES - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
+
+      ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
     }
 
     ctx.restore();
