@@ -367,6 +367,9 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     checkpoints.push({ x: Math.floor(cols / 2) * 32, y: 11 * 32 - 16 });
   }
 
+  // Generate EXACTLY 50 enemies distributed across 6 waves for the level
+  const levelGoblins = generate50EnemiesForLevel(cols, rows, grid, rng);
+
   // Build secret rooms for this level layout
   const secretRooms = buildSecretRooms(w, l, cols, grid);
 
@@ -393,9 +396,113 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     signs,
     healthPickups,
     coins,
-    goblins,
+    goblins: levelGoblins,
     secretRooms,
   };
+}
+
+function generate50EnemiesForLevel(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  rng: () => number
+): { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] {
+  const result: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] = [];
+
+  // Wave 1: 8 enemies (Early section)
+  // Wave 2: 8 enemies (Lower area / early-mid)
+  // Wave 3: 8 enemies (Middle section)
+  // Wave 4: 8 enemies (Upper platforms / mid-late)
+  // Wave 5: 8 enemies (Later section)
+  // Wave 6: 10 enemies (Near final area)
+  // TOTAL = 50 enemies!
+  const waveCounts = [8, 8, 8, 8, 8, 10];
+  const startCol = 18;
+  const endCol = cols - 16;
+  const totalUsableCols = Math.max(60, endCol - startCol);
+
+  const enemyHeight = 44;
+
+  const findValidGroundYAtCol = (c: number): number | null => {
+    if (c < 4 || c >= cols - 4) return null;
+
+    for (let r = 2; r <= 15; r++) {
+      const tile = grid[r][c];
+      const tileAbove1 = grid[r - 1][c];
+      const tileAbove2 = grid[r - 2][c];
+
+      const isSolid =
+        tile === TileType.GRASS_TOP ||
+        tile === TileType.DIRT_MIDDLE ||
+        tile === TileType.STONE_PLATFORM ||
+        tile === TileType.WOOD_BRIDGE;
+
+      const isAbove1Empty =
+        tileAbove1 === TileType.EMPTY || tileAbove1 === TileType.FAKE_WALL;
+      const isAbove2Empty =
+        tileAbove2 === TileType.EMPTY || tileAbove2 === TileType.FAKE_WALL;
+
+      if (isSolid && isAbove1Empty && isAbove2Empty) {
+        return r * 32 - enemyHeight;
+      }
+    }
+    return null;
+  };
+
+  const occupiedPositions: { x: number; y: number }[] = [];
+
+  for (let waveIdx = 0; waveIdx < 6; waveIdx++) {
+    const waveEnemyCount = waveCounts[waveIdx];
+    const waveStartCol = startCol + Math.floor((totalUsableCols / 6) * waveIdx);
+    const waveEndCol = startCol + Math.floor((totalUsableCols / 6) * (waveIdx + 1)) - 1;
+    const waveSpan = Math.max(1, waveEndCol - waveStartCol);
+
+    for (let i = 0; i < waveEnemyCount; i++) {
+      const targetCol = Math.floor(waveStartCol + (waveSpan / waveEnemyCount) * i + (rng() * 2 - 1));
+      let chosenX: number | null = null;
+      let chosenY: number | null = null;
+
+      for (let offset = 0; offset <= 10; offset++) {
+        const testCols = offset === 0 ? [targetCol] : [targetCol + offset, targetCol - offset];
+        let found = false;
+
+        for (const testCol of testCols) {
+          if (testCol < waveStartCol || testCol > waveEndCol) continue;
+          const groundY = findValidGroundYAtCol(testCol);
+          if (groundY !== null) {
+            const posX = testCol * 32;
+            const tooClose = occupiedPositions.some(
+              (p) => Math.hypot(p.x - posX, p.y - groundY) < 48
+            );
+
+            if (!tooClose) {
+              chosenX = posX;
+              chosenY = groundY;
+              found = true;
+              break;
+            }
+          }
+        }
+        if (found) break;
+      }
+
+      if (chosenX === null || chosenY === null) {
+        const fallbackCol = Math.max(startCol, Math.min(endCol, targetCol));
+        const fallbackY = findValidGroundYAtCol(fallbackCol) || 320;
+        chosenX = fallbackCol * 32;
+        chosenY = fallbackY;
+      }
+
+      occupiedPositions.push({ x: chosenX, y: chosenY });
+      result.push({
+        x: chosenX,
+        y: chosenY,
+        patrolRange: 50 + Math.floor(rng() * 40),
+      });
+    }
+  }
+
+  return result;
 }
 
 function buildSecretRooms(w: number, l: number, cols: number, grid: number[][]): SecretRoomDef[] {

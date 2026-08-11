@@ -501,9 +501,57 @@ export class GameEngine {
     this.bossProjectiles = [];
     this.isBossLevel = this.levelDef.config.isBossLevel || false;
     this.goblins = [];
+    this.totalEnemiesInLevel = 50;
+    this.totalEnemiesSpawned = 50;
+    this.totalEnemiesDefeated = 0;
+    this.isAreaCleared = false;
 
-    // Initialize 50-Enemy Level Roster
-    this.init50EnemiesRoster();
+    // Instantiate all 50 actual combat enemies from levelDef.goblins across 6 level waves
+    const rawGoblins = this.levelDef.goblins || [];
+    for (let i = 0; i < rawGoblins.length; i++) {
+      const spawn = rawGoblins[i];
+      if (spawn.isBoss) continue;
+
+      const enemy = new ForestGoblin(spawn.x, spawn.y, 100, false, this.levelDef.config.id);
+
+      // Assign Enemy Class & stats based on wave progression (0..49)
+      if (i >= 32) {
+        enemy.enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
+        enemy.maxHp = 180;
+        enemy.hp = 180;
+        enemy.attackDamage = 12;
+      } else if (i >= 16) {
+        enemy.enemyClass = i % 2 === 0 ? 'HEAVY_FIGHTER' : 'MARTIAL_ARTIST';
+        enemy.maxHp = 130;
+        enemy.hp = 130;
+        enemy.attackDamage = 9;
+      } else {
+        enemy.enemyClass = i % 2 === 0 ? 'MARTIAL_ARTIST' : 'FAST_FIGHTER';
+        enemy.maxHp = 90;
+        enemy.hp = 90;
+        enemy.attackDamage = 7;
+      }
+
+      this.goblins.push(enemy);
+    }
+
+    // QuickSave restoration
+    if (qs?.defeatedEnemyIndices && qs.defeatedEnemyIndices.length > 0) {
+      const set = new Set(qs.defeatedEnemyIndices);
+      this.goblins.forEach((g, idx) => {
+        if (set.has(idx)) {
+          g.hp = 0;
+          g.isAlive = false;
+          g.combatState = 'DEAD';
+          g.hasRegisteredDeath = true;
+          this.totalEnemiesDefeated++;
+        }
+      });
+    }
+
+    if (this.totalEnemiesDefeated >= 50) {
+      this.isAreaCleared = true;
+    }
 
     // Initialize World Boss for Boss Levels (Level 5 of each world)
     if (this.isBossLevel) {
@@ -989,6 +1037,29 @@ export class GameEngine {
           if (!goblin.isShadowClone) {
             this.totalEnemiesDefeated++;
             this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
+
+            this.particles.createFloatingText(
+              goblin.x + goblin.width / 2,
+              goblin.y - 18,
+              `ENEMIES: ${this.totalEnemiesDefeated}/50 ⚔️`,
+              '#ef4444',
+              14
+            );
+
+            if (this.totalEnemiesDefeated >= 50 && !this.isAreaCleared) {
+              this.isAreaCleared = true;
+              this.areaClearedBannerTimer = 5.0;
+
+              this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+              this.particles.createFloatingText(
+                this.player.x,
+                this.player.y - 50,
+                'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
+                '#22c55e',
+                22
+              );
+              audioEngine.playVictory();
+            }
           }
 
           if (goblin.isBoss) {
@@ -1003,34 +1074,35 @@ export class GameEngine {
 
         goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
 
-        if (!goblin.isAlive) {
+        if (!goblin.isAlive && goblin.deathTimer > 2.0) {
           this.goblins.splice(i, 1);
         }
       } else {
-        goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
+        const distToPlayer = Math.hypot(
+          goblin.x + goblin.width / 2 - (this.player.x + this.player.width / 2),
+          goblin.y + goblin.height / 2 - (this.player.y + this.player.height / 2)
+        );
+
+        if (distToPlayer < 750) {
+          goblin.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles, this.goblins);
+        }
       }
     }
 
-    // Controlled Roster Spawning & 50-Enemy Level Clear Check
-    if (!this.isAreaCleared) {
-      if (this.totalEnemiesDefeated >= 50 && this.activeEnemyCount === 0) {
-        this.isAreaCleared = true;
-        this.areaClearedBannerTimer = 5.0;
+    // 50-Enemy Level Clear Check
+    if (!this.isAreaCleared && this.totalEnemiesDefeated >= 50) {
+      this.isAreaCleared = true;
+      this.areaClearedBannerTimer = 5.0;
 
-        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-        this.particles.createFloatingText(
-          this.player.x,
-          this.player.y - 50,
-          '🏆 AREA CLEARED! ALL 50 ENEMIES DEFEATED! 🏆',
-          '#22c55e',
-          22
-        );
-        audioEngine.playVictory();
-      } else {
-        if (this.totalEnemiesSpawned < 50 && this.activeEnemyCount < this.MAX_ACTIVE_ENEMIES) {
-          this.spawnNextRosterEnemy();
-        }
-      }
+      this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+      this.particles.createFloatingText(
+        this.player.x,
+        this.player.y - 50,
+        'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
+        '#22c55e',
+        22
+      );
+      audioEngine.playVictory();
     }
 
     // 6. Update Collectibles
@@ -1208,24 +1280,28 @@ export class GameEngine {
     const secretsFound = this.secretRoomManager?.discoveredCount || 0;
     const secretsTotal = this.secretRoomManager?.totalRooms || 0;
 
-    if (this.isAreaCleared) {
+    if (this.isAreaCleared || this.totalEnemiesDefeated >= 50) {
       ctx.fillStyle = '#22c55e';
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🏆 LEVEL CLEARED! 50/50', bx + boxW / 2, by + 18);
+      ctx.fillText('ALL 50 ENEMIES DEFEATED!', bx + boxW / 2, by + 18);
 
       ctx.fillStyle = '#fef08a';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(`PORTAL UNLOCKED | SECRETS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 38);
+      ctx.fillText(`🔓 EXIT PORTAL UNLOCKED | 50/50`, bx + boxW / 2, by + 34);
+
+      ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
     } else {
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`ENEMIES: ${this.totalEnemiesDefeated} / ${this.TOTAL_LEVEL_ENEMIES}`, bx + boxW / 2, by + 18);
+      ctx.fillText(`ENEMIES: ${this.totalEnemiesDefeated} / 50`, bx + boxW / 2, by + 18);
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = '10px monospace';
-      ctx.fillText(`ACTIVE: ${this.activeEnemyCount}/${this.MAX_ACTIVE_ENEMIES} | REMAINING: ${Math.max(0, this.TOTAL_LEVEL_ENEMIES - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
+      ctx.fillText(`ACTIVE: ${this.activeEnemyCount} | REMAINING: ${Math.max(0, 50 - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
 
       ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
       ctx.font = 'bold 10px monospace';
