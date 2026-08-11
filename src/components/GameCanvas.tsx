@@ -18,7 +18,6 @@ interface GameCanvasProps {
   onSaveUpdate: (updatedSave: SaveData) => void;
   onSelectNextLevel?: (nextLevelId: string) => void;
   onReturnToMainMenu: () => void;
-  onOpenDebugMenu?: () => void;
   onEngineReady?: (engine: GameEngine | null) => void;
 }
 
@@ -29,7 +28,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onSaveUpdate,
   onSelectNextLevel,
   onReturnToMainMenu,
-  onOpenDebugMenu,
   onEngineReady,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -325,7 +323,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               onQuickSave={handleQuickSave}
               onRestart={handleRestart}
               onMainMenu={onReturnToMainMenu}
-              onOpenDebugMenu={onOpenDebugMenu}
             />
           )}
 

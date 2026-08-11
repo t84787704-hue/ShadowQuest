@@ -3,14 +3,11 @@ import { motion } from 'motion/react';
 import { Play, RotateCcw, Home, Pause, HelpCircle, Volume2, VolumeX, Music, Save, CheckCircle2 } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 
-import { DebugManager } from '../game/debug/DebugManager';
-
 interface PauseModalProps {
   onResume: () => void;
   onQuickSave: () => void;
   onRestart: () => void;
   onMainMenu: () => void;
-  onOpenDebugMenu?: () => void;
 }
 
 export const PauseModal: React.FC<PauseModalProps> = ({
@@ -18,7 +15,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onQuickSave,
   onRestart,
   onMainMenu,
-  onOpenDebugMenu,
 }) => {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(audioEngine.isSoundEnabled());
@@ -49,8 +45,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
     onQuickSave();
     onMainMenu();
   };
-
-  const isDebugUnlocked = DebugManager.isDebugMenuOpen();
 
   return (
     <motion.div
@@ -132,18 +126,6 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             <Save className="w-4 h-4 text-emerald-200" />
             QUICK SAVE PROGRESS
           </button>
-
-          {(isDebugUnlocked || onOpenDebugMenu) && (
-            <button
-              onClick={() => {
-                audioEngine.playButtonClick();
-                if (onOpenDebugMenu) onOpenDebugMenu();
-              }}
-              className="w-full py-2.5 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 font-bold text-xs uppercase rounded-xl border border-amber-500/50 flex items-center justify-center gap-2 transition"
-            >
-              <span>🛠️ DEBUG MENU</span>
-            </button>
-          )}
 
           <button
             onClick={() => {
