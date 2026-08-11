@@ -108,7 +108,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               activeTab === 'LEVELS' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Play className="w-3.5 h-3.5" /> SELECT LEVEL
+            <Play className="w-3.5 h-3.5" /> SELECT LEVEL (1-1 to 6-5)
           </button>
           <button
             onClick={() => setActiveTab('PLAYER')}
@@ -116,7 +116,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               activeTab === 'PLAYER' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Heart className="w-3.5 h-3.5" /> PLAYER & COINS
+            <Heart className="w-3.5 h-3.5" /> PLAYER & CHEATS
           </button>
           <button
             onClick={() => setActiveTab('ENEMIES')}
@@ -124,7 +124,7 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               activeTab === 'ENEMIES' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Skull className="w-3.5 h-3.5" /> ENEMIES
+            <Skull className="w-3.5 h-3.5" /> SPAWN ENEMIES
           </button>
           <button
             onClick={() => setActiveTab('FLOW')}
@@ -132,8 +132,87 @@ export const DebugMenuModal: React.FC<DebugMenuModalProps> = ({
               activeTab === 'FLOW' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Zap className="w-3.5 h-3.5" /> FLOW & RESET
+            <Zap className="w-3.5 h-3.5" /> GAME FLOW
           </button>
+        </div>
+
+        {/* Quick Actions Bar */}
+        <div className="bg-slate-950/90 border-b border-slate-800 p-2.5 px-4">
+          <span className="text-[10px] font-black tracking-wider text-amber-400 uppercase block mb-1.5">⚡ QUICK TEST ACTIONS</span>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+            <button
+              onClick={() => {
+                if (onSetHpFull) onSetHpFull();
+                showToast('❤️ Full HP Restored!');
+              }}
+              className="py-1.5 px-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/60 rounded-lg text-emerald-300 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Full HP
+            </button>
+            <button
+              onClick={() => {
+                if (onAddCoins) onAddCoins(1000);
+                showToast('💰 +1000 Coins Added!');
+              }}
+              className="py-1.5 px-2 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/60 rounded-lg text-amber-300 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              +1000 Coins
+            </button>
+            <button
+              onClick={() => {
+                onRestartLevel();
+                showToast('🔄 Level Restarted');
+              }}
+              className="py-1.5 px-2 bg-blue-950/80 hover:bg-blue-900 border border-blue-600/60 rounded-lg text-blue-300 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Restart
+            </button>
+            <button
+              onClick={() => {
+                if (onSkipLevel) onSkipLevel();
+                showToast('🏆 Level Completed!');
+              }}
+              className="py-1.5 px-2 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/60 rounded-lg text-teal-200 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Complete
+            </button>
+            <button
+              onClick={() => {
+                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(1);
+                showToast('🥊 Spawned 1 Enemy');
+              }}
+              className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Spawn 1 Enemy
+            </button>
+            <button
+              onClick={() => {
+                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(3);
+                showToast('🥊 Spawned 3 Enemies');
+              }}
+              className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Spawn 3 Enemies
+            </button>
+            <button
+              onClick={() => {
+                if (onSpawnMultipleEnemies) onSpawnMultipleEnemies(5);
+                showToast('🥊 Spawned 5 Enemies');
+              }}
+              className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-200 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Spawn 5 Enemies
+            </button>
+            <button
+              onClick={() => {
+                if (onSpawnBoss) onSpawnBoss();
+                showToast('👑 World Boss Spawned!');
+              }}
+              className="py-1.5 px-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/60 rounded-lg text-rose-200 font-extrabold text-[10px] transition cursor-pointer text-center"
+            >
+              Spawn Boss
+            </button>
+          </div>
         </div>
 
         {/* Tab Contents */}

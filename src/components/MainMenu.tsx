@@ -69,17 +69,32 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           <span className="text-amber-300 font-black text-base">{saveData.coins}</span>
         </div>
 
-        <button
-          onClick={onSoundToggle}
-          className="p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 rounded-full text-slate-200 transition shadow-lg"
-          title="Toggle Sound FX"
-        >
-          {isSoundOn ? (
-            <Volume2 className="w-5 h-5 text-sky-400" />
-          ) : (
-            <VolumeX className="w-5 h-5 text-rose-400" />
+        <div className="flex items-center gap-2">
+          {onOpenDebug && (
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
+                onOpenDebug();
+              }}
+              className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 active:scale-95 text-slate-950 font-black text-xs rounded-full border border-amber-300 shadow-lg flex items-center gap-1 transition cursor-pointer"
+              title="Open Developer Debug Menu"
+            >
+              <span>🛠️</span> DEBUG
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={onSoundToggle}
+            className="p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 rounded-full text-slate-200 transition shadow-lg"
+            title="Toggle Sound FX"
+          >
+            {isSoundOn ? (
+              <Volume2 className="w-5 h-5 text-sky-400" />
+            ) : (
+              <VolumeX className="w-5 h-5 text-rose-400" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Main Title & Hero Banner */}
