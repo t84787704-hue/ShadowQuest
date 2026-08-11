@@ -4,8 +4,23 @@ import { TileMap } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { BossProjectile } from './BossProjectile';
+import { DebugManager } from '../debug/DebugManager';
 
 export type EnemyClass = 'FAST_FIGHTER' | 'HEAVY_FIGHTER' | 'MARTIAL_ARTIST' | 'ELITE_FIGHTER';
+
+export type AICombatState =
+  | 'IDLE'
+  | 'ALERT'
+  | 'APPROACH'
+  | 'COMBAT'
+  | 'TELEGRAPH'
+  | 'ATTACK'
+  | 'DEFEND'
+  | 'DODGE'
+  | 'COUNTER'
+  | 'RETREAT'
+  | 'RECOVER'
+  | 'HIT';
 
 export class ForestGoblin extends Entity {
   public hp: number = 90;
@@ -37,7 +52,7 @@ export class ForestGoblin extends Entity {
 
   // Martial Arts Fighter State
   public martialStyle: 'STRIKER' | 'BRAWLER' | 'ACROBAT' | 'BALANCED' = 'BALANCED';
-  public combatState: 'IDLE' | 'APPROACH' | 'TELEGRAPH' | 'ATTACK' | 'RECOVERY' | 'RETREAT' | 'DODGE' | 'GUARD' = 'IDLE';
+  public combatState: AICombatState = 'IDLE';
   public activeAttack: 'FAST_PUNCH' | 'HEAVY_PUNCH' | 'FRONT_KICK' | 'LOW_KICK' | 'ROUNDHOUSE_KICK' | 'FLYING_KNEE' | 'JUMP_KICK' = 'FAST_PUNCH';
   public attackStateTimer: number = 0;
   public comboStep: number = 0;
@@ -47,12 +62,29 @@ export class ForestGoblin extends Entity {
   public isGuarding: boolean = false;
   public guardTimer: number = 0;
 
+  // AI Perception, Reaction & Group Combat
+  public reactionTimer: number = 0;
+  public reactionDelay: number = 0.20;
+  public perceivedPlayerAttack: string | null = null;
+  public playerAttackWindowTimer: number = 0;
+  public playerAttacksCount: number = 0;
+  public hasAttackToken: boolean = false;
+
   // AI Cooldowns & Hit Stun
   public guardCooldown: number = 0;
   public dodgeCooldown: number = 0;
   public counterCooldown: number = 0;
   public consecutiveHitsTaken: number = 0;
   public hitStunTimer: number = 0;
+
+  // AI Debug Information Overlay
+  public debugInfo = {
+    state: 'IDLE',
+    target: 'PLAYER',
+    distance: 0,
+    lastPlayerAction: 'NONE',
+    world: 1,
+  };
 
   // Debug Force Flags
   public forceBlockFlag: boolean = false;
@@ -219,6 +251,61 @@ export class ForestGoblin extends Entity {
     return names[worldId]?.[enemyClass] || 'Martial Arts Warrior';
   }
 
+  public static manageGroupCombat(goblins: ForestGoblin[], player: Player, dt: number) {
+    if (this.groupAttackCooldown > 0) {
+      this.groupAttackCooldown -= dt;
+    }
+
+    const alive = goblins.filter((g) => g.isAlive && !g.isShadowClone);
+    if (alive.length === 0) return;
+
+    const sampleLevel = alive[0].levelId || '1-1';
+    const worldId = parseInt(sampleLevel.split('-')[0], 10) || 1;
+    const maxTokens = worldId <= 2 ? 1 : 2;
+
+    let activeTokens = 0;
+    const isPlayerAttacking = player.state === 'ATTACK';
+
+    for (const g of alive) {
+      const dx = player.x - g.x;
+      const dy = player.y - g.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Alert nearby goblins if player attacks one or enters detection radius
+      if ((isPlayerAttacking && dist < 240) || dist < g.detectionRadius) {
+        if (g.combatState === 'IDLE') {
+          g.combatState = 'ALERT';
+        }
+      }
+
+      if (g.hasAttackToken) {
+        if (g.combatState === 'TELEGRAPH' || g.combatState === 'ATTACK') {
+          activeTokens++;
+        } else if (g.combatState === 'RECOVER' || g.combatState === 'RETREAT' || g.combatState === 'HIT' || g.combatState === 'DODGE') {
+          g.hasAttackToken = false;
+        }
+      }
+    }
+
+    if (activeTokens < maxTokens && this.groupAttackCooldown <= 0) {
+      const candidates = alive.filter(
+        (g) =>
+          !g.hasAttackToken &&
+          g.attackCooldown <= 0 &&
+          g.hitStunTimer <= 0 &&
+          (g.combatState === 'APPROACH' || g.combatState === 'COMBAT' || g.combatState === 'ALERT') &&
+          Math.abs(player.x - g.x) < g.detectionRadius
+      );
+
+      candidates.sort((a, b) => Math.abs(player.x - a.x) - Math.abs(player.x - b.x));
+
+      for (let i = 0; i < candidates.length && activeTokens < maxTokens; i++) {
+        candidates[i].hasAttackToken = true;
+        activeTokens++;
+      }
+    }
+  }
+
   public update(
     dt: number,
     player: Player,
@@ -228,6 +315,11 @@ export class ForestGoblin extends Entity {
     goblins?: ForestGoblin[]
   ) {
     if (!this.isAlive) return;
+
+    // Run Group Combat Coordinator
+    if (goblins && goblins.length > 0) {
+      ForestGoblin.manageGroupCombat(goblins, player, dt);
+    }
 
     if (ForestGoblin.groupAttackCooldown > 0) {
       ForestGoblin.groupAttackCooldown -= dt;
@@ -252,6 +344,11 @@ export class ForestGoblin extends Entity {
     if (this.dodgeCooldown > 0) this.dodgeCooldown -= dt;
     if (this.counterCooldown > 0) this.counterCooldown -= dt;
     if (this.hitStunTimer > 0) this.hitStunTimer -= dt;
+    if (this.reactionTimer > 0) this.reactionTimer -= dt;
+    if (this.playerAttackWindowTimer > 0) {
+      this.playerAttackWindowTimer -= dt;
+      if (this.playerAttackWindowTimer <= 0) this.playerAttacksCount = 0;
+    }
 
     if (this.isGuarding) {
       this.guardTimer -= dt;
@@ -275,9 +372,36 @@ export class ForestGoblin extends Entity {
       }
     }
 
-    // World 6 Rage Mode Trigger (<35% HP)
     const [wStr] = this.levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
+
+    // Handle HIT State Stagger & Recoil
+    if (this.combatState === 'HIT') {
+      this.facingRight = player.x > this.x; // Always face attacker
+      this.vx *= 0.85;
+
+      if (this.hitStunTimer <= 0) {
+        if (this.consecutiveHitsTaken >= 3) {
+          this.consecutiveHitsTaken = 0;
+          this.combatState = 'RETREAT';
+          this.retreatTimer = 0.42;
+          this.vx = this.facingRight ? -8.0 : 8.0;
+          this.isGuarding = true;
+          this.guardTimer = 0.60;
+          particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD BURST! ⚡', '#facc15', 14);
+        } else {
+          const dx = player.x - this.x;
+          const dy = player.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          this.combatState = dist < 70 ? 'COMBAT' : 'ALERT';
+        }
+      }
+
+      this.applyPhysics(tileMap);
+      return;
+    }
+
+    // World 6 Rage Mode Trigger (<35% HP)
     if (w === 6 && !this.isRageMode && this.hp < this.maxHp * 0.35) {
       this.isRageMode = true;
       particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'AURA BURST! ⚡', '#facc15', 16);
@@ -297,6 +421,23 @@ export class ForestGoblin extends Entity {
     const dy = player.y - this.y;
     const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
+    // Record Debug Info
+    const isPlayerAttacking = player.state === 'ATTACK';
+    const playerFacingUs = (player.facingRight && dx < 0) || (!player.facingRight && dx > 0);
+
+    let playerAction = 'NONE';
+    if (isPlayerAttacking) playerAction = player.attackType || 'ATTACK';
+    else if (!player.isGrounded) playerAction = 'JUMP';
+    else if (Math.abs(player.vx) > 1.0) playerAction = 'APPROACHING';
+
+    this.debugInfo = {
+      state: this.combatState,
+      target: 'PLAYER',
+      distance: Math.round(distToPlayer),
+      lastPlayerAction: playerAction,
+      world: w,
+    };
+
     // Multi-enemy physical separation so enemies don't overlap into a single stack
     if (goblins && goblins.length > 1) {
       for (const other of goblins) {
@@ -314,118 +455,97 @@ export class ForestGoblin extends Entity {
       player.takeDamage(this.attackDamage, particles);
     }
 
-    // ------------------------------------
-    // REACTIVE DEFENSE AI (BLOCK, DODGE & COUNTER)
-    // ------------------------------------
-    const isPlayerAttacking = player.state === 'ATTACK';
-    const playerFacingUs = (player.facingRight && dx < 0) || (!player.facingRight && dx > 0);
+    // Continuous Player Attack Perception
+    if (isPlayerAttacking && playerFacingUs && distToPlayer < 110) {
+      if (this.perceivedPlayerAttack === null) {
+        this.perceivedPlayerAttack = player.attackType || 'JAB';
+        this.playerAttacksCount++;
+        this.playerAttackWindowTimer = 1.4;
 
-    // 1. Check Dodge Reaction
-    let dodgeProb = 0.0;
-    if (this.enemyClass === 'FAST_FIGHTER') dodgeProb = 0.40;
-    else if (this.enemyClass === 'ELITE_FIGHTER') dodgeProb = 0.35;
-    else if (this.enemyClass === 'MARTIAL_ARTIST') dodgeProb = 0.25;
-    else if (this.enemyClass === 'HEAVY_FIGHTER') dodgeProb = 0.10;
+        let baseDelay = 0.22 - (w - 1) * 0.025;
+        if (this.enemyClass === 'FAST_FIGHTER') baseDelay -= 0.03;
+        if (this.enemyClass === 'ELITE_FIGHTER') baseDelay -= 0.04;
+        if (this.isBoss) baseDelay -= 0.05;
 
-    if (
-      this.forceDodgeFlag ||
-      (isPlayerAttacking && playerFacingUs && distToPlayer < 75 && this.dodgeCooldown <= 0 && this.dodgeTimer <= 0 && Math.random() < dodgeProb)
-    ) {
-      this.forceDodgeFlag = false;
-      this.dodgeTimer = 0.35;
-      this.dodgeCooldown = 1.8;
-      this.vx = dx > 0 ? -7.5 : 7.5; // Sideways / evasive dash
-      this.vy = -2.2;
-      particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'DODGE! 💨', '#38bdf8', 13);
-      audioEngine.playVocal('spin_kick');
+        this.reactionDelay = Math.max(0.06, baseDelay);
+        this.reactionTimer = this.reactionDelay;
+      }
+    } else if (!isPlayerAttacking) {
+      this.perceivedPlayerAttack = null;
     }
 
-    // 2. Check Block Reaction
-    let blockProb = 0.0;
-    if (this.enemyClass === 'HEAVY_FIGHTER') blockProb = 0.45;
-    else if (this.enemyClass === 'ELITE_FIGHTER') blockProb = 0.40;
-    else if (this.enemyClass === 'MARTIAL_ARTIST') blockProb = 0.30;
-    else if (this.enemyClass === 'FAST_FIGHTER') blockProb = 0.15;
-
+    // Perform Tactical Defense Decision on reaction expiry
     if (
-      this.forceBlockFlag ||
-      (isPlayerAttacking && playerFacingUs && distToPlayer < 75 && this.guardCooldown <= 0 && !this.isGuarding && this.dodgeTimer <= 0 && Math.random() < blockProb)
+      this.reactionTimer <= 0 &&
+      isPlayerAttacking &&
+      distToPlayer < 90 &&
+      this.combatState !== 'TELEGRAPH' &&
+      this.combatState !== 'ATTACK' &&
+      this.combatState !== 'DODGE' &&
+      !this.isGuarding
     ) {
-      this.forceBlockFlag = false;
-      this.isGuarding = true;
-      this.guardTimer = 0.55;
-      this.guardCooldown = 1.5;
-      particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD! 🛡️', '#f59e0b', 13);
+      const isHeavyAtk = player.attackType === 'FINISHER' || player.attackType === 'SPIN_KICK' || player.attackType === 'JUMP_KICK';
+      const isSpam = this.playerAttacksCount >= 3;
+
+      let blockProb = 0.20 + (w - 1) * 0.09;
+      let dodgeProb = 0.10 + (w - 1) * 0.08;
+
+      if (this.enemyClass === 'HEAVY_FIGHTER') { blockProb += 0.20; dodgeProb -= 0.05; }
+      if (this.enemyClass === 'FAST_FIGHTER') { dodgeProb += 0.25; blockProb -= 0.05; }
+      if (this.enemyClass === 'ELITE_FIGHTER') { blockProb += 0.15; dodgeProb += 0.15; }
+
+      if (isHeavyAtk) dodgeProb += 0.30;
+      if (isSpam) { dodgeProb += 0.20; blockProb += 0.15; }
+
+      if (this.forceDodgeFlag || (this.dodgeCooldown <= 0 && Math.random() < dodgeProb)) {
+        this.forceDodgeFlag = false;
+        this.combatState = 'DODGE';
+        this.dodgeTimer = 0.38;
+        this.dodgeCooldown = Math.max(0.8, 2.0 - w * 0.2);
+        this.vx = dx > 0 ? -7.5 : 7.5;
+        this.vy = -2.2;
+        particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'DODGE! 💨', '#38bdf8', 13);
+        audioEngine.playVocal('spin_kick');
+      } else if (this.forceBlockFlag || (this.guardCooldown <= 0 && Math.random() < blockProb)) {
+        this.forceBlockFlag = false;
+        this.combatState = 'DEFEND';
+        this.isGuarding = true;
+        this.guardTimer = 0.55;
+        this.guardCooldown = Math.max(0.7, 1.6 - w * 0.15);
+        particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD! 🛡️', '#f59e0b', 13);
+      } else if (this.forceCounterattackFlag || (this.counterCooldown <= 0 && distToPlayer < 50 && Math.random() < (0.25 + w * 0.08))) {
+        this.forceCounterattackFlag = false;
+        this.combatState = 'TELEGRAPH';
+        this.activeAttack = 'ROUNDHOUSE_KICK';
+        this.attackStateTimer = 0.14;
+        this.counterCooldown = Math.max(1.0, 2.5 - w * 0.2);
+        particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'COUNTERSTRIKE! ⚡', '#ef4444', 14);
+        audioEngine.playVocal('heavy_punch');
+      }
     }
 
-    // 3. Counterattack Check
-    let counterProb = 0.0;
-    if (this.enemyClass === 'ELITE_FIGHTER') counterProb = 0.60;
-    else if (this.enemyClass === 'MARTIAL_ARTIST') counterProb = 0.45;
-    else if (this.enemyClass === 'FAST_FIGHTER') counterProb = 0.35;
-    else if (this.enemyClass === 'HEAVY_FIGHTER') counterProb = 0.25;
-
-    if (
-      this.forceCounterattackFlag ||
-      (this.counterCooldown <= 0 && distToPlayer < 60 && (this.isGuarding || this.dodgeTimer > 0) && Math.random() < counterProb)
-    ) {
-      this.forceCounterattackFlag = false;
-      this.isGuarding = false;
-      this.combatState = 'TELEGRAPH';
-      this.activeAttack = 'ROUNDHOUSE_KICK';
-      this.attackStateTimer = 0.15;
-      this.counterCooldown = 2.2;
-      particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'COUNTERSTRIKE! ⚡', '#ef4444', 14);
-      audioEngine.playVocal('heavy_punch');
-    }
-
-    // ------------------------------------
-    // MARTIAL ARTS COMBAT STATE MACHINE
-    // ------------------------------------
+    // State Executions
     if (this.combatState === 'TELEGRAPH') {
+      this.facingRight = dx > 0;
+      this.vx = 0;
       this.attackStateTimer -= dt;
-      this.vx = 0; // Pause during telegraph windup pose
-
       if (this.attackStateTimer <= 0) {
         this.combatState = 'ATTACK';
         this.attackStateTimer = 0.18;
+        audioEngine.playPunch();
 
-        // Play Martial Arts Vocals & Sounds
-        if (this.activeAttack === 'FAST_PUNCH') {
-          audioEngine.playPunch('light');
-        } else if (this.activeAttack === 'HEAVY_PUNCH') {
-          audioEngine.playPunch('heavy');
-        } else if (this.activeAttack === 'FRONT_KICK' || this.activeAttack === 'LOW_KICK') {
-          audioEngine.playKick();
-        } else if (this.activeAttack === 'ROUNDHOUSE_KICK') {
-          audioEngine.playSpinKick();
-        } else if (this.activeAttack === 'FLYING_KNEE' || this.activeAttack === 'JUMP_KICK') {
-          audioEngine.playJumpKick();
-          if (this.isGrounded) {
-            this.vy = -5.8;
-          }
-        }
-
-        // Strike Hitbox Detection
-        const strikeRange = (this.activeAttack === 'JUMP_KICK' || this.activeAttack === 'FLYING_KNEE') ? 54 : 48;
-        if (distToPlayer <= strikeRange && player.isAlive) {
-          const isHeavy = this.activeAttack === 'HEAVY_PUNCH' || this.activeAttack === 'ROUNDHOUSE_KICK';
-          const hitDamage = isHeavy ? Math.round(this.attackDamage * 1.3) : this.attackDamage;
-          player.takeDamage(hitDamage, particles);
-          audioEngine.playHitImpact('enemy', this.activeAttack);
-
-          const impactX = this.x + (this.facingRight ? this.width + 12 : -12);
-          particles.createSlashSparks(impactX, this.y + 14, this.facingRight, ['#f59e0b', '#ef4444']);
+        if (distToPlayer <= this.attackRange + 12 && player.isAlive) {
+          player.takeDamage(this.attackDamage, particles);
+          audioEngine.playHitImpact('enemy', 'PUNCH');
         }
       }
-
       this.applyPhysics(tileMap);
       return;
     }
 
     if (this.combatState === 'ATTACK') {
+      this.facingRight = dx > 0;
       this.attackStateTimer -= dt;
-
       if (this.attackStateTimer <= 0) {
         if (this.comboStep < this.maxComboSteps) {
           this.comboStep++;
@@ -434,12 +554,12 @@ export class ForestGoblin extends Entity {
           this.attackStateTimer = 0.16;
 
           audioEngine.playKick();
-          if (distToPlayer <= 50 && player.isAlive) {
+          if (distToPlayer <= this.attackRange + 12 && player.isAlive) {
             player.takeDamage(Math.round(this.attackDamage * 1.1), particles);
             audioEngine.playHitImpact('enemy', 'KICK');
           }
         } else {
-          this.combatState = 'RECOVERY';
+          this.combatState = 'RECOVER';
           this.attackStateTimer = 0.22;
           this.attackCooldown = this.isRageMode ? 0.6 : 1.1;
 
@@ -448,12 +568,12 @@ export class ForestGoblin extends Entity {
           }
         }
       }
-
       this.applyPhysics(tileMap);
       return;
     }
 
-    if (this.combatState === 'RECOVERY') {
+    if (this.combatState === 'RECOVER') {
+      this.facingRight = dx > 0;
       this.attackStateTimer -= dt;
       if (this.retreatTimer > 0) {
         this.vx = this.facingRight ? -currentSpeed * 0.8 : currentSpeed * 0.8;
@@ -462,61 +582,67 @@ export class ForestGoblin extends Entity {
       }
 
       if (this.attackStateTimer <= 0) {
-        this.combatState = 'IDLE';
+        this.combatState = 'COMBAT';
       }
 
       this.applyPhysics(tileMap);
       return;
     }
 
-    // ------------------------------------
-    // PURSUIT & TACTICAL MOVEMENT AI
-    // ------------------------------------
+    // Pursuit & Tactical Movement AI
     if (distToPlayer <= this.detectionRadius && player.isAlive) {
       this.facingRight = dx > 0;
 
-      // Check World Special Martial Arts Ability Trigger
+      // Special Ability Check
       if (this.abilityCooldown <= 0 && distToPlayer < 180 && Math.random() < 0.35) {
         this.executeWorldSpecialAbility(w, dx, dy, player, particles, goblins);
         this.abilityCooldown = 4.5 + Math.random() * 2.0;
       }
 
       if (this.retreatTimer > 0) {
+        this.combatState = 'RETREAT';
         this.vx = this.facingRight ? -currentSpeed * 0.9 : currentSpeed * 0.9;
       } else if (distToPlayer > this.attackRange) {
         this.combatState = 'APPROACH';
-        const speedMult = this.isDashing ? 1.8 : 1.0;
-        this.vx = (dx > 0 ? currentSpeed : -currentSpeed) * speedMult;
+        if (this.hasAttackToken) {
+          const speedMult = this.isDashing ? 1.8 : 1.0;
+          this.vx = (dx > 0 ? currentSpeed : -currentSpeed) * speedMult;
+        } else {
+          // Circle or maintain distance (65px to 105px)
+          if (distToPlayer < 65) {
+            this.vx = dx > 0 ? -currentSpeed * 0.6 : currentSpeed * 0.6;
+          } else if (distToPlayer > 105) {
+            this.vx = (dx > 0 ? currentSpeed : -currentSpeed) * 0.7;
+          } else {
+            this.vx = 0;
+            this.combatState = 'COMBAT';
+          }
+        }
 
-        // Auto-jump over obstacles
         if (this.isGrounded && this.isSolidTileAtPixel(tileMap, this.x + (this.facingRight ? 36 : -8), this.y + 20)) {
           this.vy = -8.2;
         }
       } else {
         // Within Attack Range
         this.vx = 0;
+        this.combatState = 'COMBAT';
 
-        if (this.attackCooldown <= 0 && ForestGoblin.groupAttackCooldown <= 0) {
+        if (this.hasAttackToken && this.attackCooldown <= 0 && ForestGoblin.groupAttackCooldown <= 0) {
           this.combatState = 'TELEGRAPH';
           this.comboStep = 1;
 
-          // Select Attack Motion
           const rand = Math.random();
           if (rand < 0.35) this.activeAttack = 'FAST_PUNCH';
           else if (rand < 0.65) this.activeAttack = 'FRONT_KICK';
           else if (rand < 0.85) this.activeAttack = 'ROUNDHOUSE_KICK';
           else this.activeAttack = 'FLYING_KNEE';
 
-          this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.18 : 0.26;
-          ForestGoblin.groupAttackCooldown = 0.35; // Stagger so multiple enemies don't hit simultaneously
-        } else if (Math.random() < 0.15 && !this.isGuarding) {
-          // Guard Stance
-          this.isGuarding = true;
-          this.guardTimer = 0.8;
+          this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.16 : 0.24;
+          ForestGoblin.groupAttackCooldown = 0.35;
         }
       }
     } else {
-      // PATROL BEHAVIOR
+      // Patrol behavior
       this.combatState = 'IDLE';
       this.vx = currentSpeed * 0.5 * this.patrolDirection;
       this.facingRight = this.patrolDirection > 0;
@@ -544,7 +670,6 @@ export class ForestGoblin extends Entity {
     goblins?: ForestGoblin[]
   ) {
     if (w === 1) {
-      // Forest Shadow Leap Dash
       this.isDashing = true;
       this.dashTimer = 0.45;
       this.vx = dx > 0 ? 8.5 : -8.5;
@@ -552,26 +677,22 @@ export class ForestGoblin extends Entity {
       particles.createFloatingText(this.x + this.width / 2, this.y - 15, 'SHADOW LEAP! 🍃', '#22c55e', 14);
       audioEngine.playVocal('jump_kick');
     } else if (w === 2) {
-      // Desert Dust Sweep & Iron Guard
       this.isGuarding = true;
       this.guardTimer = 1.2;
       particles.createFloatingText(this.x + this.width / 2, this.y - 15, 'IRON GUARD! 🛡️', '#f59e0b', 14);
       audioEngine.playCustomSFX('land');
     } else if (w === 3) {
-      // Frozen Mist Step
       this.dodgeTimer = 0.35;
-      this.vx = dx > 0 ? -7.0 : 7.0; // Evasive backstep
+      this.vx = dx > 0 ? -7.0 : 7.0;
       particles.createFloatingText(this.x + this.width / 2, this.y - 15, 'MIST STEP! ❄️', '#38bdf8', 14);
       audioEngine.playVocal('spin_kick');
     } else if (w === 4) {
-      // Volcanic Inferno Strike
       this.isDashing = true;
       this.dashTimer = 0.35;
       this.vx = dx > 0 ? 9.0 : -9.0;
       particles.createFloatingText(this.x + this.width / 2, this.y - 15, 'INFERNO STRIKE! 🔥', '#f97316', 15);
       audioEngine.playVocal('heavy_punch');
     } else if (w === 5) {
-      // Shadow Decoy / Afterimage
       if (goblins && goblins.length < 12) {
         const clone = new ForestGoblin(this.x + 20, this.y, 60, false, this.levelId);
         clone.isShadowClone = true;
@@ -581,7 +702,6 @@ export class ForestGoblin extends Entity {
         particles.createFloatingText(this.x + this.width / 2, this.y - 15, 'SHADOW DECOY! 👁️', '#c084fc', 14);
       }
     } else if (w === 6) {
-      // Citadel Imperial Counter-Combo
       this.isGuarding = true;
       this.guardTimer = 1.0;
       this.activeAttack = 'ROUNDHOUSE_KICK';
@@ -595,7 +715,6 @@ export class ForestGoblin extends Entity {
     if (this.vy > 12) this.vy = 12;
     tileMap.resolveEntityCollision(this);
 
-    // Hazard Pit Recovery
     if (this.y > tileMap.heightInPixels - 60) {
       this.y = tileMap.heightInPixels - 180;
       this.vy = -6;
@@ -614,57 +733,59 @@ export class ForestGoblin extends Entity {
     const hitY = this.y - 10;
 
     // 1. Dodge Invulnerability
-    if (this.dodgeTimer > 0) {
+    if (this.combatState === 'DODGE' || this.dodgeTimer > 0) {
       particles.createFloatingText(hitX, hitY, 'DODGED! 💨', '#38bdf8', 14);
       return false;
     }
 
     // 2. Guarding reduces incoming damage by 80%
-    const finalDamage = this.isGuarding ? Math.max(1, Math.round(damage * 0.2)) : damage;
+    if (this.isGuarding || this.combatState === 'DEFEND') {
+      const finalDamage = Math.max(1, Math.round(damage * 0.2));
+      this.hp -= finalDamage;
+      this.hitFlashTimer = 0.18;
 
-    this.hp -= finalDamage;
-    this.hitFlashTimer = 0.22;
-
-    audioEngine.playHitImpact('enemy', attackType);
-
-    if (this.isGuarding) {
+      audioEngine.playHitImpact('enemy', attackType);
       particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
-      // Chance to trigger instant guard counterattack
+
       if (this.counterCooldown <= 0 && Math.random() < 0.5) {
-        this.counterCooldown = 2.0;
+        this.counterCooldown = 1.8;
         this.isGuarding = false;
         this.combatState = 'TELEGRAPH';
         this.activeAttack = 'ROUNDHOUSE_KICK';
         this.attackStateTimer = 0.14;
         particles.createFloatingText(hitX, hitY - 15, 'GUARD COUNTER! ⚡', '#ef4444', 14);
       }
-    } else {
-      particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
-      this.consecutiveHitsTaken++;
-      this.hitStunTimer = 0.18;
 
-      // Anti Stun-Lock Guard Burst after 3 consecutive hits
-      if (this.consecutiveHitsTaken >= 3) {
-        this.consecutiveHitsTaken = 0;
-        this.retreatTimer = 0.35;
-        this.vx = this.facingRight ? -8 : 8;
-        particles.createFloatingText(hitX, hitY - 15, 'GUARD BURST! ⚡', '#facc15', 13);
+      if (this.hp <= 0) {
+        this.hp = 0;
+        this.isAlive = false;
+        return true;
       }
+      return false;
     }
+
+    // 3. Direct Hit -> Enter HIT Stagger state
+    const finalDamage = damage;
+    this.hp -= finalDamage;
+    this.hitFlashTimer = 0.22;
+    this.combatState = 'HIT';
+    this.hitStunTimer = (attackType === 'FINISHER' || attackType === 'SPIN_KICK' || attackType === 'KICK') ? 0.36 : 0.22;
+
+    this.vx = this.facingRight ? -5.5 : 5.5;
+    this.vy = -2.2;
+
+    audioEngine.playHitImpact('enemy', attackType);
+    particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
+    this.consecutiveHitsTaken++;
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
 
     if (this.hp <= 0) {
       this.hp = 0;
       this.isAlive = false;
-      audioEngine.playPlayerHurt(); // Human defeat groan
+      audioEngine.playPlayerHurt();
       particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
       return true;
-    }
-
-    // Reaction backstep on strong hits
-    if (attackType === 'FINISHER' || attackType === 'SPIN_KICK') {
-      this.retreatTimer = 0.35;
     }
 
     return false;
@@ -740,6 +861,40 @@ export class ForestGoblin extends Entity {
 
     // Render Health Bar & Serious Name Above Head
     this.renderHealthBar(ctx, renderX, renderY);
+
+    if (DebugManager.isAiDebugInfoEnabled()) {
+      this.renderAiDebugOverlay(ctx, renderX, renderY);
+    }
+  }
+
+  private renderAiDebugOverlay(ctx: CanvasRenderingContext2D, rx: number, ry: number) {
+    const boxW = 126;
+    const boxH = 46;
+    const bx = Math.round(rx + (this.width - boxW) / 2);
+    const by = Math.round(ry - 66);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`State: ${this.combatState}`, bx + 6, by + 12);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(`Target: ${this.debugInfo.target} (${this.debugInfo.distance}px)`, bx + 6, by + 24);
+
+    ctx.fillStyle = '#facc15';
+    ctx.fillText(`Player: ${this.debugInfo.lastPlayerAction}`, bx + 6, by + 36);
+
+    ctx.restore();
   }
 
   private renderHealthBar(ctx: CanvasRenderingContext2D, rx: number, ry: number) {

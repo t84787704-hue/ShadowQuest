@@ -6,6 +6,7 @@ export class DebugManager {
   private static godMode: boolean = false;
   private static enemyHpOverride: number | null = null;
   private static enemyDamageOverride: number | null = null;
+  private static showAiDebugInfo: boolean = false;
 
   public static isUnlocked(): boolean {
     // In dev environment or if manually unlocked by developer tap code
@@ -67,5 +68,18 @@ export class DebugManager {
 
   public static getEnemyDamageOverride(): number | null {
     return this.enemyDamageOverride;
+  }
+
+  public static toggleShowAiDebugInfo(): boolean {
+    this.showAiDebugInfo = !this.showAiDebugInfo;
+    return this.showAiDebugInfo;
+  }
+
+  public static setShowAiDebugInfo(enabled: boolean) {
+    this.showAiDebugInfo = enabled;
+  }
+
+  public static isAiDebugInfoEnabled(): boolean {
+    return this.showAiDebugInfo;
   }
 }

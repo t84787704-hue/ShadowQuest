@@ -4,6 +4,7 @@ import { TileMap } from '../world/TileMap';
 import { ParticleSystem } from '../core/ParticleSystem';
 import { audioEngine } from '../audio/AudioEngine';
 import { BossProjectile } from './BossProjectile';
+import { DebugManager } from '../debug/DebugManager';
 
 export type BossState =
   | 'IDLE'
@@ -577,6 +578,40 @@ export class BossMonster extends Entity {
         this.renderGoblinKing(ctx, bob, isFlash, isWindup, isAttacking);
         break;
     }
+
+    ctx.restore();
+
+    if (DebugManager.isAiDebugInfoEnabled()) {
+      this.renderAiDebugOverlay(ctx, px, py);
+    }
+  }
+
+  private renderAiDebugOverlay(ctx: CanvasRenderingContext2D, px: number, py: number) {
+    const boxW = 140;
+    const boxH = 48;
+    const bx = Math.round(px + (this.width - boxW) / 2);
+    const by = Math.round(py - 72);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.92)';
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(`BOSS State: ${this.state}`, bx + 6, by + 12);
+
+    ctx.fillStyle = '#facc15';
+    ctx.fillText(`Phase: ${this.currentPhase}/${this.maxPhases}`, bx + 6, by + 24);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`Attack Cd: ${this.attackTimer.toFixed(1)}s`, bx + 6, by + 36);
 
     ctx.restore();
   }
