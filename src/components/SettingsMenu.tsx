@@ -52,29 +52,89 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       </div>
 
       <div className="max-w-2xl mx-auto w-full flex flex-col gap-4">
-        {/* Audio Toggle */}
-        <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-sky-500/10 text-sky-400 rounded-xl">
-              <Volume2 className="w-5 h-5" />
+        {/* Audio Toggles & Sliders */}
+        <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-sky-500/10 text-sky-400 rounded-xl">
+                <Volume2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-100">AUDIO MASTER TOGGLE</h4>
+                <p className="text-xs text-slate-400">Synthesized offline retro sound FX & music</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-sm text-slate-100">SOUND EFFECTS & AUDIO</h4>
-              <p className="text-xs text-slate-400">Synthesized offline retro sound FX & music</p>
-            </div>
+
+            <button
+              onClick={onSoundToggle}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+                isSoundOn
+                  ? 'bg-sky-500 text-slate-950 hover:bg-sky-400'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              {isSoundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {isSoundOn ? 'ENABLED' : 'MUTED'}
+            </button>
           </div>
 
-          <button
-            onClick={onSoundToggle}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
-              isSoundOn
-                ? 'bg-sky-500 text-slate-950 hover:bg-sky-400'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-            }`}
-          >
-            {isSoundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            {isSoundOn ? 'ENABLED' : 'MUTED'}
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800/80">
+            {/* Music Volume */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-300">
+                <span>🎶 MUSIC VOLUME</span>
+                <span className="text-amber-400">{Math.round(audioEngine.getMusicVolume() * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(audioEngine.getMusicVolume() * 100)}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) / 100;
+                  audioEngine.setMusicVolume(val);
+                  const updated = {
+                    ...saveData,
+                    settings: {
+                      ...saveData.settings,
+                      musicVolume: val,
+                    },
+                  };
+                  SaveSystem.save(updated);
+                  onSaveUpdate(updated);
+                }}
+                className="w-full accent-amber-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
+              />
+            </div>
+
+            {/* SFX Volume */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-300">
+                <span>💥 SFX VOLUME</span>
+                <span className="text-sky-400">{Math.round(audioEngine.getSfxVolume() * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(audioEngine.getSfxVolume() * 100)}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) / 100;
+                  audioEngine.setSfxVolume(val);
+                  const updated = {
+                    ...saveData,
+                    settings: {
+                      ...saveData.settings,
+                      sfxVolume: val,
+                    },
+                  };
+                  SaveSystem.save(updated);
+                  onSaveUpdate(updated);
+                }}
+                className="w-full accent-sky-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Offline & Android Platform Info */}

@@ -30,6 +30,8 @@ const DEFAULT_SAVE_DATA: SaveData = {
     soundFxEnabled: true,
     musicEnabled: true,
     touchControlsOpacity: 0.85,
+    musicVolume: 0.7,
+    sfxVolume: 0.8,
   },
 };
 

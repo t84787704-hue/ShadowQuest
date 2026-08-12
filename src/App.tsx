@@ -40,12 +40,32 @@ export default function App() {
     // Synchronize sound settings on initial load
     audioEngine.setSoundFxEnabled(saveData.settings.soundFxEnabled);
     audioEngine.setMusicEnabled(saveData.settings.musicEnabled);
+    if (saveData.settings.musicVolume !== undefined) {
+      audioEngine.setMusicVolume(saveData.settings.musicVolume);
+    }
+    if (saveData.settings.sfxVolume !== undefined) {
+      audioEngine.setSfxVolume(saveData.settings.sfxVolume);
+    }
   }, []);
+
+  useEffect(() => {
+    if (currentScreen !== 'PLAYING') {
+      if (audioEngine.isMusicEnabled()) {
+        audioEngine.playMusic('MENU');
+      }
+    }
+  }, [currentScreen]);
 
   const handleSaveUpdate = (updated: SaveData) => {
     setSaveData(updated);
     audioEngine.setSoundFxEnabled(updated.settings.soundFxEnabled);
     audioEngine.setMusicEnabled(updated.settings.musicEnabled);
+    if (updated.settings.musicVolume !== undefined) {
+      audioEngine.setMusicVolume(updated.settings.musicVolume);
+    }
+    if (updated.settings.sfxVolume !== undefined) {
+      audioEngine.setSfxVolume(updated.settings.sfxVolume);
+    }
   };
 
   const handleClearQuickSave = () => {

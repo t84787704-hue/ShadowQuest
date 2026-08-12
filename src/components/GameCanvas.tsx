@@ -109,6 +109,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const engine = new GameEngine(canvas, currentSave, levelId, isResume);
     engineRef.current = engine;
 
+    audioEngine.resetTriggerFlags();
+    audioEngine.playMusic(engine.isBossLevel ? 'BOSS' : 'GAMEPLAY');
+
     engine.onImpactCallback = (type) => {
       if (type === 'HEAVY' || type === 'BOSS') {
         if (impactTimeoutRef.current) {
@@ -188,6 +191,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         engineRef.current.stop();
         engineRef.current = null;
       }
+      audioEngine.playMusic('MENU');
     };
   }, []);
 

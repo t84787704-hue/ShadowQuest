@@ -221,7 +221,7 @@ export class BossMonster extends Entity {
       this.isTriggered = true;
       this.state = 'INTRO';
       this.introTimer = 1.4;
-      audioEngine.playCustomSFX('finisher');
+      audioEngine.playBossIntro();
       particles.createVictoryConfetti(this.x + this.width / 2, this.y);
     }
 
@@ -727,6 +727,7 @@ export class BossMonster extends Entity {
       this.hp = 0;
       this.state = 'DEAD';
       this.isAlive = false;
+      audioEngine.playBossDefeat();
       audioEngine.playVictory();
       particles.createVictoryConfetti(this.x + this.width / 2, this.y + 20);
       particles.createFloatingText(
@@ -745,7 +746,7 @@ export class BossMonster extends Entity {
     this.currentPhase = nextPhase;
     this.state = 'PHASE_CHANGE';
     this.phaseTimer = 1.2;
-    audioEngine.playCustomSFX('finisher');
+    audioEngine.playBossPhaseTransition();
     particles.createVictoryConfetti(this.x + this.width / 2, this.y);
 
     const phaseMsg =

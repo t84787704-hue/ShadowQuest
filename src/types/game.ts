@@ -152,6 +152,8 @@ export interface SaveData {
     soundFxEnabled: boolean;
     musicEnabled: boolean;
     touchControlsOpacity: number;
+    musicVolume?: number;
+    sfxVolume?: number;
   };
 }
 

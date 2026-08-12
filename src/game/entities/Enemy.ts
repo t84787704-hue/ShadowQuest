@@ -799,6 +799,7 @@ export class ForestGoblin extends Entity {
 
     // 1. Dodge Invulnerability
     if (this.combatState === 'DODGE' || this.dodgeTimer > 0) {
+      audioEngine.playEnemyDodge();
       particles.createFloatingText(hitX, hitY, 'DODGED! 💨', '#38bdf8', 14);
       return false;
     }
@@ -809,7 +810,7 @@ export class ForestGoblin extends Entity {
       this.hp -= finalDamage;
       this.hitFlashTimer = 0.18;
 
-      audioEngine.playHitImpact('enemy', attackType);
+      audioEngine.playEnemyBlock();
       particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
 
       if (this.counterCooldown <= 0 && Math.random() < 0.5) {
@@ -828,7 +829,7 @@ export class ForestGoblin extends Entity {
         this.vx = 0;
         this.isGuarding = false;
         this.hasAttackToken = false;
-        audioEngine.playPlayerHurt();
+        audioEngine.playEnemyDeath();
         particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
         return true;
       }
@@ -875,7 +876,7 @@ export class ForestGoblin extends Entity {
       this.vx = 0;
       this.isGuarding = false;
       this.hasAttackToken = false;
-      audioEngine.playPlayerHurt();
+      audioEngine.playEnemyDeath();
       particles.createSlashSparks(this.x + this.width / 2, this.y + this.height / 2, true, ['#facc15', '#ef4444']);
       return true;
     }
