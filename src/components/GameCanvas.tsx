@@ -13,6 +13,7 @@ import { LevelStartOverlay } from './LevelStartOverlay';
 import { DebugMenuModal } from './DebugMenuModal';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { DebugManager } from '../game/debug/DebugManager';
+import { audioEngine } from '../game/audio/AudioEngine';
 
 interface GameCanvasProps {
   saveData: SaveData;
