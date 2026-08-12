@@ -150,54 +150,56 @@ export class ForestGoblin extends Entity {
     // Set Serious World Names
     this.enemyName = this.getEnemyName(w, this.enemyClass);
 
-    // HP Scaling according to World (W1: 110-350 HP, W6: 320-1000 HP)
-    let baseWorldHp = 110 + (w - 1) * 40;
+    // HP Scaling according to World (Balanced for 4-15 hits based on archetype)
+    const worldScale = 1 + (w - 1) * 0.12; // 1.0 in W1 -> 1.6 in W6
+    const baseWorldHp = 90 * worldScale;
     let hpMultiplier = 1.0;
     let speedMult = 1.0;
-    let damageMult = 1.0;
+    let dmgOffset = 0;
 
     switch (this.enemyClass) {
       case 'FAST_FIGHTER':
-        hpMultiplier = 0.88; // ~97 HP in W1 => ~9 hits
-        speedMult = 1.2; // Speed ~4.2
-        damageMult = 0.9;
+        hpMultiplier = 0.75; // ~68 HP in W1 (4-5 hits) -> ~108 HP in W6 (5-6 hits)
+        speedMult = 1.15;
+        dmgOffset = 0; // Light attack: 4-6 dmg
         this.maxComboSteps = 2;
         break;
 
       case 'HEAVY_FIGHTER':
-        hpMultiplier = 2.1; // ~230 HP in W1 => ~21 hits
-        speedMult = 0.82; // Speed ~2.8
-        damageMult = 1.35;
+        hpMultiplier = 1.5; // ~135 HP in W1 (8-9 hits) -> ~216 HP in W6 (10-12 hits)
+        speedMult = 0.85;
+        dmgOffset = 2; // Heavy attack: 6-8 dmg (heavy punch: 7-10 dmg)
         this.maxComboSteps = 1;
         break;
 
       case 'MARTIAL_ARTIST':
-        hpMultiplier = 1.1; // ~120 HP in W1 => ~11 hits
+        hpMultiplier = 1.0; // ~90 HP in W1 (5-6 hits) -> ~144 HP in W6 (7-8 hits)
         speedMult = 1.0;
-        damageMult = 1.0;
-        this.maxComboSteps = 3;
+        dmgOffset = 0; // Normal attack: 4-6 dmg
+        this.maxComboSteps = 2;
         break;
 
       case 'ELITE_FIGHTER':
-        hpMultiplier = 3.2; // ~350 HP in W1 => ~32 hits
-        speedMult = 1.08;
-        damageMult = 1.3;
+        hpMultiplier = 1.8; // ~162 HP in W1 (10-11 hits) -> ~259 HP in W6 (13-14 hits)
+        speedMult = 1.05;
+        dmgOffset = 3; // Elite attack: 7-9 dmg (special: 9-12 dmg)
         this.maxComboSteps = 3;
         break;
     }
 
     if (isFinalBoss) {
-      this.maxHp = 1200;
-      this.attackDamage = 14;
+      this.maxHp = 1400;
+      this.attackDamage = 12;
       this.moveSpeed = 2.8;
     } else if (isBoss) {
-      this.maxHp = 800 + w * 250;
-      this.attackDamage = 9 + Math.floor(w * 0.8);
-      this.moveSpeed = 2.5;
+      this.maxHp = 450 + w * 150;
+      this.attackDamage = 8 + Math.floor(w * 0.7);
+      this.moveSpeed = 2.4;
     } else {
       this.maxHp = Math.round(baseWorldHp * hpMultiplier);
-      this.attackDamage = Math.max(2, Math.round((2.5 + w * 0.4) * damageMult));
-      this.moveSpeed = (3.40 + (w % 3) * 0.08) * speedMult;
+      const baseDmg = 4 + Math.floor((w - 1) * 0.4); // 4 in W1 -> 6 in W6
+      this.attackDamage = baseDmg + dmgOffset;
+      this.moveSpeed = (3.30 + (w % 3) * 0.08) * speedMult;
     }
 
     this.hp = this.maxHp;
@@ -266,7 +268,8 @@ export class ForestGoblin extends Entity {
 
     const sampleLevel = alive[0].levelId || '1-1';
     const worldId = parseInt(sampleLevel.split('-')[0], 10) || 1;
-    const maxTokens = worldId <= 2 ? 1 : 2;
+    // Strictly 1 enemy can hold an active attack token at any given time across all worlds
+    const maxTokens = 1;
 
     let activeTokens = 0;
     const isPlayerAttacking = player.state === 'ATTACK';
@@ -616,11 +619,12 @@ export class ForestGoblin extends Entity {
           }
         } else {
           this.combatState = 'RECOVER';
-          this.attackStateTimer = 0.22;
-          this.attackCooldown = this.isRageMode ? 0.6 : 1.1;
+          this.attackStateTimer = 0.30;
+          this.attackCooldown = this.isRageMode ? 0.8 : 1.3;
+          ForestGoblin.groupAttackCooldown = 0.45;
 
           if (Math.random() < 0.45) {
-            this.retreatTimer = 0.32;
+            this.retreatTimer = 0.35;
           }
         }
       }
@@ -695,8 +699,8 @@ export class ForestGoblin extends Entity {
           else if (rand < 0.85) this.activeAttack = 'ROUNDHOUSE_KICK';
           else this.activeAttack = 'FLYING_KNEE';
 
-          this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.16 : 0.24;
-          ForestGoblin.groupAttackCooldown = 0.35;
+          this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.20 : 0.28;
+          ForestGoblin.groupAttackCooldown = 0.45;
         } else if (!this.hasAttackToken) {
           // Step back slightly if inside attack range without token so player isn't crowded
           this.vx = dx > 0 ? -currentSpeed * 0.5 : currentSpeed * 0.5;

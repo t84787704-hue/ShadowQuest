@@ -45,9 +45,9 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'MASTER KENJI',
     title: 'FOREST WARLORD MARTIAL MASTER',
     worldId: 1,
-    maxHp: 500,
-    attackDamage: 10,
-    baseSpeed: 2.3,
+    maxHp: 450,
+    attackDamage: 8,
+    baseSpeed: 2.2,
     maxPhases: 1,
     primaryColor: '#15803d',
     glowColor: '#4ade80',
@@ -56,8 +56,8 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'MASTER BROK',
     title: 'DESERT TITAN HEAVY WARRIOR',
     worldId: 2,
-    maxHp: 750,
-    attackDamage: 14,
+    maxHp: 600,
+    attackDamage: 9,
     baseSpeed: 2.0,
     maxPhases: 2,
     primaryColor: '#b45309',
@@ -67,9 +67,9 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'VIPER KAEL',
     title: 'DESERT SPEEDSTER FIGHTER',
     worldId: 3,
-    maxHp: 950,
-    attackDamage: 12,
-    baseSpeed: 3.2,
+    maxHp: 750,
+    attackDamage: 10,
+    baseSpeed: 3.0,
     maxPhases: 2,
     primaryColor: '#0284c7',
     glowColor: '#38bdf8',
@@ -78,9 +78,9 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'MASTER SHEN',
     title: 'MISTY MOUNTAIN MARTIAL MASTER',
     worldId: 4,
-    maxHp: 1200,
-    attackDamage: 16,
-    baseSpeed: 2.8,
+    maxHp: 900,
+    attackDamage: 10,
+    baseSpeed: 2.7,
     maxPhases: 2,
     primaryColor: '#b91c1c',
     glowColor: '#f97316',
@@ -89,9 +89,9 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'SHADOW MALAKOR',
     title: 'ELITE VOID DARK MARTIAL ARTIST',
     worldId: 5,
-    maxHp: 1500,
-    attackDamage: 18,
-    baseSpeed: 3.0,
+    maxHp: 1100,
+    attackDamage: 11,
+    baseSpeed: 2.9,
     maxPhases: 2,
     primaryColor: '#6b21a8',
     glowColor: '#c084fc',
@@ -100,9 +100,9 @@ export const BOSS_SPECS: Record<number, BossInfo> = {
     name: 'GRANDMASTER MARCUS',
     title: 'SUPREME GRANDMASTER OF MARTIAL ARTS',
     worldId: 6,
-    maxHp: 2000,
-    attackDamage: 22,
-    baseSpeed: 3.2,
+    maxHp: 1400,
+    attackDamage: 12,
+    baseSpeed: 3.0,
     maxPhases: 3,
     primaryColor: '#854d0e',
     glowColor: '#facc15',
@@ -313,8 +313,8 @@ export class BossMonster extends Entity {
           this.vx = 0;
           if (this.attackCooldown <= 0) {
             this.state = 'WINDUP';
-            const baseWindup = 0.42 - (this.currentPhase - 1) * 0.08;
-            this.windupTimer = Math.max(0.25, baseWindup);
+            const baseWindup = 0.48 - (this.currentPhase - 1) * 0.08;
+            this.windupTimer = Math.max(0.32, baseWindup);
             this.chooseMartialAttack(dist);
           }
         }
@@ -356,8 +356,8 @@ export class BossMonster extends Entity {
         this.vulnerableTimer -= dt;
         if (this.vulnerableTimer <= 0) {
           this.state = 'COMBAT';
-          const cdBase = 1.5 - (this.currentPhase - 1) * 0.3;
-          this.attackCooldown = Math.max(0.7, this.isRageMode ? 0.5 : cdBase);
+          const cdBase = 1.6 - (this.currentPhase - 1) * 0.2;
+          this.attackCooldown = Math.max(0.9, this.isRageMode ? 0.7 : cdBase);
         }
         break;
 
