@@ -880,17 +880,28 @@ export class GameEngine {
         this.bossMonster.takeDamage(damage, this.particles, this.player.attackType);
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
 
-        if (this.player.attackType === 'KICK') {
-          const bossContactX = this.player.facingRight
-            ? Math.min(this.bossMonster.x + 12, this.player.x + this.player.width + 50)
-            : Math.max(this.bossMonster.x + this.bossMonster.width - 12, this.player.x - 50);
-          const bossContactY = this.bossMonster.y + this.bossMonster.height * 0.4;
+        const bossContactX = this.player.facingRight
+          ? Math.min(this.bossMonster.x + 12, this.player.x + this.player.width + 50)
+          : Math.max(this.bossMonster.x + this.bossMonster.width - 12, this.player.x - 50);
+        const bossContactY = this.bossMonster.y + this.bossMonster.height * 0.4;
+
+        if (this.player.attackType === 'KICK' || this.player.attackType === 'FINISHER' || this.player.attackType === 'SPIN_KICK') {
           this.particles.createKickImpact(bossContactX, bossContactY, this.player.facingRight);
+        } else {
+          this.particles.createCombatImpact(bossContactX, bossContactY, this.player.facingRight, this.player.equippedWeapon.sparkColors);
         }
 
-        this.hitStopTimer = 0.06; // 60ms Boss hit stop
-        this.camera.addShake(0.15, 6);
-        this.onImpactCallback?.('BOSS');
+        let bossHitStop = 0.08;
+        if (this.player.attackType === 'FINISHER') bossHitStop = 0.12;
+        else if (this.player.attackType === 'KICK' || this.player.attackType === 'SPIN_KICK') bossHitStop = 0.10;
+        else if (this.player.attackType === 'CROSS') bossHitStop = 0.09;
+        this.hitStopTimer = bossHitStop;
+
+        let shakeMag = 5.0;
+        if (this.player.attackType === 'FINISHER') shakeMag = 8.0;
+        else if (this.player.attackType === 'KICK' || this.player.attackType === 'SPIN_KICK') shakeMag = 6.5;
+        this.camera.addShake(bossHitStop, shakeMag);
+        this.onImpactCallback?.(this.player.attackType === 'JAB' ? 'LIGHT' : 'HEAVY');
 
         // Apply weapon stance effects
         const effect = this.player.equippedWeapon.specialEffect;
@@ -946,14 +957,42 @@ export class GameEngine {
           const isBlocked = goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
 
+          // Calculate precise contact point between player's striking limb and enemy
           let impactX = goblin.x + goblin.width / 2;
-          let impactY = goblin.y + goblin.height / 2 - 10;
+          let impactY = goblin.y + goblin.height / 2;
+          const isFacingRight = this.player.facingRight;
 
           if (this.player.attackType === 'KICK') {
-            impactX = this.player.facingRight
+            impactX = isFacingRight
               ? Math.min(goblin.x + 6, this.player.x + this.player.width + 48)
               : Math.max(goblin.x + goblin.width - 6, this.player.x - 48);
             impactY = goblin.y + goblin.height * 0.35;
+          } else if (this.player.attackType === 'FINISHER') {
+            impactX = isFacingRight
+              ? Math.min(goblin.x + 8, this.player.x + this.player.width + 56)
+              : Math.max(goblin.x + goblin.width - 8, this.player.x - 56);
+            impactY = goblin.y + goblin.height * 0.30;
+          } else if (this.player.attackType === 'SPIN_KICK') {
+            impactX = (goblin.x > this.player.x)
+              ? Math.min(goblin.x + 6, this.player.x + this.player.width + 44)
+              : Math.max(goblin.x + goblin.width - 6, this.player.x - 44);
+            impactY = goblin.y + goblin.height * 0.65;
+          } else if (this.player.attackType === 'JUMP_KICK') {
+            impactX = isFacingRight
+              ? Math.min(goblin.x + 6, this.player.x + this.player.width + 42)
+              : Math.max(goblin.x + goblin.width - 6, this.player.x - 42);
+            impactY = goblin.y + goblin.height * 0.30;
+          } else if (this.player.attackType === 'CROSS') {
+            impactX = isFacingRight
+              ? Math.min(goblin.x + 4, this.player.x + this.player.width + 36)
+              : Math.max(goblin.x + goblin.width - 4, this.player.x - 36);
+            impactY = goblin.y + goblin.height * 0.32;
+          } else {
+            // Lead Jab
+            impactX = isFacingRight
+              ? Math.min(goblin.x + 4, this.player.x + this.player.width + 28)
+              : Math.max(goblin.x + goblin.width - 4, this.player.x - 28);
+            impactY = goblin.y + goblin.height * 0.30;
           }
 
           if (isBlocked) {
@@ -961,70 +1000,79 @@ export class GameEngine {
             this.hitStopTimer = 0.03; // Short block hit-stop
             this.camera.addShake(0.06, 2.0);
             this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, ['#f59e0b', '#94a3b8', '#ffffff']);
-            this.particles.createFloatingText(impactX, goblin.y - 10, 'BLOCKED!', '#facc15', 14);
+            this.particles.createFloatingText(impactX, goblin.y - 12, `BLOCKED! -${damage}`, '#facc15', 14);
             audioEngine.playHitImpact('enemy', 'JAB');
             goblin.vx = this.player.facingRight ? 3.0 : -3.0;
           } else {
             // Successful Hit Feedback
-            if (this.player.attackType === 'KICK') {
+            if (this.player.attackType === 'KICK' || this.player.attackType === 'FINISHER') {
               this.particles.createKickImpact(impactX, impactY, this.player.facingRight);
             } else {
               this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, this.player.equippedWeapon.sparkColors);
             }
 
-            let labelText = 'JAB!';
+            let labelText = `-${damage}`;
             let labelColor = '#fef08a';
+            let labelSize = 15;
 
             if (this.player.attackType === 'CROSS') {
-              labelText = 'CROSS!';
+              labelText = `-${damage} CROSS!`;
               labelColor = '#fbbf24';
-              this.hitStopTimer = 0.05;
-              this.camera.addShake(0.08, 3.8);
-              goblin.vx = this.player.facingRight ? 5.5 : -5.5;
-              goblin.vy = -2.2;
+              labelSize = 17;
+              this.hitStopTimer = 0.09;
+              this.camera.addShake(0.09, 4.5);
+              goblin.vx = isFacingRight ? 7.2 : -7.2;
+              goblin.vy = -2.8;
               this.onImpactCallback?.('LIGHT');
             } else if (this.player.attackType === 'KICK') {
-              labelText = 'ROUNDHOUSE!';
+              labelText = `-${damage} KICK!`;
               labelColor = '#f97316';
-              this.hitStopTimer = 0.08;
-              this.camera.addShake(0.12, 6.5);
-              goblin.vx = this.player.facingRight ? 9.0 : -9.0;
+              labelSize = 18;
+              this.hitStopTimer = 0.10;
+              this.camera.addShake(0.10, 6.2);
+              goblin.vx = isFacingRight ? 9.8 : -9.8;
               goblin.vy = -4.5;
               this.onImpactCallback?.('HEAVY');
             } else if (this.player.attackType === 'FINISHER') {
-              labelText = 'FINISHER! 💥';
+              labelText = `-${damage} FINISHER! 💥`;
               labelColor = '#ef4444';
-              this.hitStopTimer = 0.09;
-              this.camera.addShake(0.14, 7.5);
-              goblin.vx = this.player.facingRight ? 9.5 : -9.5;
-              goblin.vy = -4.8;
+              labelSize = 20;
+              this.hitStopTimer = 0.12;
+              this.camera.addShake(0.14, 8.2);
+              goblin.vx = isFacingRight ? 12.0 : -12.0;
+              goblin.vy = -5.5;
               this.onImpactCallback?.('HEAVY');
             } else if (this.player.attackType === 'SPIN_KICK') {
-              labelText = 'SWEEP KICK! 🌀';
+              labelText = `-${damage} SWEEP! 🌀`;
               labelColor = '#06b6d4';
-              this.hitStopTimer = 0.08;
-              this.camera.addShake(0.12, 6.0);
-              goblin.vx = (goblin.x > this.player.x) ? 8.0 : -8.0;
-              goblin.vy = -4.5;
+              labelSize = 18;
+              this.hitStopTimer = 0.10;
+              this.camera.addShake(0.10, 6.0);
+              goblin.vx = (goblin.x > this.player.x) ? 10.0 : -10.0;
+              goblin.vy = -4.8;
               this.onImpactCallback?.('HEAVY');
             } else if (this.player.attackType === 'JUMP_KICK') {
-              labelText = 'FLYING KICK!';
+              labelText = `-${damage} FLYING KICK!`;
               labelColor = '#38bdf8';
-              this.hitStopTimer = 0.07;
-              this.camera.addShake(0.10, 5.0);
-              goblin.vx = this.player.facingRight ? 7.0 : -7.0;
-              goblin.vy = -2.8;
+              labelSize = 17;
+              this.hitStopTimer = 0.09;
+              this.camera.addShake(0.09, 5.0);
+              goblin.vx = isFacingRight ? 8.2 : -8.2;
+              goblin.vy = -3.2;
               this.onImpactCallback?.('HEAVY');
             } else {
               // Lead Jab
-              this.hitStopTimer = 0.04;
-              this.camera.addShake(0.07, 3.2);
-              goblin.vx = this.player.facingRight ? 4.5 : -4.5;
-              goblin.vy = -2.0;
+              labelText = `-${damage} JAB!`;
+              labelColor = '#fef08a';
+              labelSize = 15;
+              this.hitStopTimer = 0.06;
+              this.camera.addShake(0.06, 2.5);
+              goblin.vx = isFacingRight ? 4.8 : -4.8;
+              goblin.vy = -1.8;
               this.onImpactCallback?.('LIGHT');
             }
 
-            this.particles.createFloatingText(impactX, goblin.y - 12, labelText, labelColor, 15);
+            this.particles.createFloatingText(impactX, goblin.y - 12, labelText, labelColor, labelSize);
             audioEngine.playHitImpact('enemy', this.player.attackType);
           }
 

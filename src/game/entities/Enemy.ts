@@ -798,15 +798,24 @@ export class ForestGoblin extends Entity {
     // 3. Direct Hit -> Enter HIT Stagger state
     const finalDamage = damage;
     this.hp -= finalDamage;
-    this.hitFlashTimer = 0.22;
+    this.hitFlashTimer = 0.10; // Crisp brief 100ms white hit flash
     this.combatState = 'HIT';
-    this.hitStunTimer = (attackType === 'FINISHER' || attackType === 'SPIN_KICK' || attackType === 'KICK') ? 0.36 : 0.22;
+
+    let hitStunDuration = 0.20;
+    if (attackType === 'FINISHER') hitStunDuration = 0.45;
+    else if (attackType === 'SPIN_KICK' || attackType === 'KICK') hitStunDuration = 0.35;
+    else if (attackType === 'CROSS') hitStunDuration = 0.28;
+    else if (attackType === 'JUMP_KICK') hitStunDuration = 0.32;
+
+    this.hitStunTimer = hitStunDuration;
 
     this.vx = this.facingRight ? -5.5 : 5.5;
     this.vy = -2.2;
 
     audioEngine.playHitImpact('enemy', attackType);
-    particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
+    if (!attackType) {
+      particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
+    }
     this.consecutiveHitsTaken++;
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
@@ -864,14 +873,15 @@ export class ForestGoblin extends Entity {
 
     const bob = Math.sin(this.animFrame * Math.PI / 2) * 2;
     const walk = Math.sin(this.animFrame * Math.PI / 2);
-    const hit = this.hitFlashTimer > 0 || this.combatState === 'HIT';
+    const isHitFlash = this.hitFlashTimer > 0;
+    const isHitStagger = isHitFlash || this.combatState === 'HIT';
 
     if (this.combatState === 'DEAD') {
       const alpha = Math.max(0, Math.min(1, this.deathTimer / 0.5));
       ctx.globalAlpha = alpha;
       ctx.rotate(-0.45);
       ctx.translate(-8, 6);
-    } else if (hit) {
+    } else if (isHitStagger) {
       // Apply visible head & body recoil stagger when hit
       ctx.rotate(-0.22); // Tilt backward from impact direction
       ctx.translate(-4, -2); // Push back slightly
@@ -883,23 +893,23 @@ export class ForestGoblin extends Entity {
     // Render World Specific Serious Martial Artist
     switch (w) {
       case 1:
-        this.renderForestMartialArtist(ctx, bob, walk, hit);
+        this.renderForestMartialArtist(ctx, bob, walk, isHitFlash);
         break;
       case 2:
-        this.renderDesertBrawler(ctx, bob, walk, hit);
+        this.renderDesertBrawler(ctx, bob, walk, isHitFlash);
         break;
       case 3:
-        this.renderFrostMercenary(ctx, bob, walk, hit);
+        this.renderFrostMercenary(ctx, bob, walk, isHitFlash);
         break;
       case 4:
-        this.renderAshBrawler(ctx, bob, walk, hit);
+        this.renderAshBrawler(ctx, bob, walk, isHitFlash);
         break;
       case 5:
-        this.renderShadowAssassin(ctx, bob, walk, hit);
+        this.renderShadowAssassin(ctx, bob, walk, isHitFlash);
         break;
       case 6:
       default:
-        this.renderCitadelGrandmaster(ctx, bob, walk, hit);
+        this.renderCitadelGrandmaster(ctx, bob, walk, isHitFlash);
         break;
     }
 
