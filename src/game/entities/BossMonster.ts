@@ -626,10 +626,10 @@ export class BossMonster extends Entity {
 
     // Check Dodge Probability
     let dodgeChance = 0;
-    if (this.worldId === 3) dodgeChance = 0.32;
-    else if (this.worldId === 4) dodgeChance = 0.25;
-    else if (this.worldId === 5) dodgeChance = this.isRageMode ? 0.35 : 0.25;
-    else if (this.worldId === 6) dodgeChance = this.currentPhase >= 2 ? 0.35 : 0.25;
+    if (this.worldId === 3) dodgeChance = 0.20;
+    else if (this.worldId === 4) dodgeChance = 0.18;
+    else if (this.worldId === 5) dodgeChance = this.isRageMode ? 0.22 : 0.20;
+    else if (this.worldId === 6) dodgeChance = this.currentPhase >= 2 ? 0.24 : 0.22;
 
     if (Math.random() < dodgeChance) {
       this.isDodging = true;
@@ -655,11 +655,12 @@ export class BossMonster extends Entity {
     // Check Block / Defensive Stance Probability
     let blockChance = 0;
     if (this.state === 'DEFENSIVE_STANCE') blockChance = 1.0;
-    else if (this.worldId === 1) blockChance = 0.18;
-    else if (this.worldId === 2) blockChance = 0.38;
-    else if (this.worldId === 4) blockChance = 0.22;
-    else if (this.worldId === 5) blockChance = 0.28;
-    else if (this.worldId === 6) blockChance = 0.35;
+    else if (this.worldId === 1) blockChance = 0.30;
+    else if (this.worldId === 2) blockChance = 0.32;
+    else if (this.worldId === 3) blockChance = 0.14;
+    else if (this.worldId === 4) blockChance = 0.17;
+    else if (this.worldId === 5) blockChance = 0.18;
+    else if (this.worldId === 6) blockChance = 0.18;
 
     if (Math.random() < blockChance) {
       this.isBlocking = true;

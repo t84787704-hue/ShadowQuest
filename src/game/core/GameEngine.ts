@@ -291,9 +291,19 @@ export class GameEngine {
       const groundPos = this.findValidGroundAtX(rawX) || { x: Math.max(120, rawX), y: 320 };
 
       let enemyClass: import('../entities/Enemy').EnemyClass = 'MARTIAL_ARTIST';
-      if (i % 5 === 0) enemyClass = 'ELITE_FIGHTER';
-      else if (i % 3 === 0) enemyClass = 'HEAVY_FIGHTER';
-      else if (i % 2 === 0) enemyClass = 'FAST_FIGHTER';
+      if (i < 15) {
+        // Early waves: mostly normal enemies
+        enemyClass = i % 4 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+      } else if (i < 35) {
+        // Middle waves: normal + fast/heavy enemies
+        enemyClass = i % 4 === 0 ? 'HEAVY_FIGHTER' : i % 3 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+      } else if (i < 45) {
+        // Late waves: elite + heavy + fast enemies
+        enemyClass = i % 3 === 0 ? 'ELITE_FIGHTER' : i % 2 === 0 ? 'HEAVY_FIGHTER' : 'FAST_FIGHTER';
+      } else {
+        // Final wave: strong squad featuring elite fighters
+        enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
+      }
 
       this.levelSpawnRoster.push({
         x: groundPos.x,

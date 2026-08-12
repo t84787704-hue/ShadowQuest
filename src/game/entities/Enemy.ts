@@ -528,16 +528,16 @@ export class ForestGoblin extends Entity {
       const hpRatio = this.hp / this.maxHp;
 
       // Base Defense Probabilities according to prompt requirements
-      let blockProb = 0.12;
-      let dodgeProb = 0.08; // Normal fighter ~20% total defense
+      let blockProb = 0.10;
+      let dodgeProb = 0.07; // Normal fighter ~17% total defense (15-20% target)
 
-      if (this.enemyClass === 'HEAVY_FIGHTER') { blockProb = 0.20; dodgeProb = 0.05; } // ~25%
-      else if (this.enemyClass === 'FAST_FIGHTER') { blockProb = 0.07; dodgeProb = 0.18; } // ~25%
-      else if (this.enemyClass === 'ELITE_FIGHTER') { blockProb = 0.20; dodgeProb = 0.15; } // ~35%
+      if (this.enemyClass === 'HEAVY_FIGHTER') { blockProb = 0.14; dodgeProb = 0.04; } // ~18%
+      else if (this.enemyClass === 'FAST_FIGHTER') { blockProb = 0.06; dodgeProb = 0.16; } // ~22% (20-25% target)
+      else if (this.enemyClass === 'ELITE_FIGHTER') { blockProb = 0.16; dodgeProb = 0.12; } // ~28% (25-35% target)
 
-      // World level scaling
-      blockProb += (w - 1) * 0.02;
-      dodgeProb += (w - 1) * 0.02;
+      // World level scaling (gentle +1% per world)
+      blockProb += (w - 1) * 0.01;
+      dodgeProb += (w - 1) * 0.01;
 
       // Health-based behavior shift
       if (hpRatio <= 0.70 && hpRatio > 0.30) {
@@ -849,8 +849,16 @@ export class ForestGoblin extends Entity {
 
     this.hitStunTimer = hitStunDuration;
 
-    this.vx = this.facingRight ? -5.5 : 5.5;
-    this.vy = -2.2;
+    // Scaled knockback based on attack type
+    let pushX = 3.6;
+    let pushY = -1.2;
+    if (attackType === 'FINISHER') { pushX = 11.5; pushY = -4.5; }
+    else if (attackType === 'SPIN_KICK') { pushX = 8.8; pushY = -3.4; }
+    else if (attackType === 'KICK' || attackType === 'JUMP_KICK') { pushX = 7.0; pushY = -2.8; }
+    else if (attackType === 'CROSS') { pushX = 5.2; pushY = -1.8; }
+
+    this.vx = this.facingRight ? -pushX : pushX;
+    this.vy = pushY;
 
     audioEngine.playHitImpact('enemy', attackType);
     if (!attackType) {
