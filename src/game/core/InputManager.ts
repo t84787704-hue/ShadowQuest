@@ -6,12 +6,14 @@ export class InputManager {
     right: false,
     jump: false,
     attack: false,
+    kick: false,
     down: false,
     spinKick: false,
   };
 
   private prevJump: boolean = false;
   private prevAttack: boolean = false;
+  private prevKick: boolean = false;
 
   constructor() {
     this.bindKeyboardEvents();
@@ -31,12 +33,16 @@ export class InputManager {
       if (['c', 'C', 'z', 'Z'].includes(e.key)) {
         this.state.spinKick = true;
       }
-      if (['Space', ' ', 'ArrowUp', 'w', 'W', 'k', 'K'].includes(e.key)) {
+      if (['Space', ' ', 'ArrowUp', 'w', 'W'].includes(e.key)) {
         this.state.jump = true;
         e.preventDefault();
       }
       if (['j', 'J', 'f', 'F', 'x', 'X'].includes(e.key)) {
         this.state.attack = true;
+        e.preventDefault();
+      }
+      if (['k', 'K', 'v', 'V'].includes(e.key)) {
+        this.state.kick = true;
         e.preventDefault();
       }
     });
@@ -54,11 +60,14 @@ export class InputManager {
       if (['c', 'C', 'z', 'Z'].includes(e.key)) {
         this.state.spinKick = false;
       }
-      if (['Space', ' ', 'ArrowUp', 'w', 'W', 'k', 'K'].includes(e.key)) {
+      if (['Space', ' ', 'ArrowUp', 'w', 'W'].includes(e.key)) {
         this.state.jump = false;
       }
       if (['j', 'J', 'f', 'F', 'x', 'X'].includes(e.key)) {
         this.state.attack = false;
+      }
+      if (['k', 'K', 'v', 'V'].includes(e.key)) {
+        this.state.kick = false;
       }
     });
   }
@@ -86,6 +95,7 @@ export class InputManager {
   public updatePreviousState() {
     this.prevJump = this.state.jump;
     this.prevAttack = this.state.attack;
+    this.prevKick = this.state.kick;
   }
 
   public resetAll() {
@@ -93,9 +103,11 @@ export class InputManager {
     this.state.right = false;
     this.state.jump = false;
     this.state.attack = false;
+    this.state.kick = false;
     this.state.down = false;
     this.state.spinKick = false;
     this.prevJump = false;
     this.prevAttack = false;
+    this.prevKick = false;
   }
 }

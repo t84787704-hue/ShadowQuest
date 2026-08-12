@@ -160,6 +160,7 @@ export interface InputState {
   right: boolean;
   jump: boolean;
   attack: boolean;
+  kick: boolean;
   down: boolean;
   spinKick: boolean;
 }

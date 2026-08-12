@@ -128,12 +128,14 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     inputManager.setTouchState('left', false);
     inputManager.setTouchState('right', false);
     inputManager.setTouchState('jump', false);
+    inputManager.setTouchState('attack', false);
+    inputManager.setTouchState('kick', false);
     inputManager.setTouchState('down', false);
     inputManager.setTouchState('spinKick', false);
   };
 
-  // Action button touch handler (ATTACK, JUMP)
-  const handleActionTouch = (action: 'jump' | 'attack', active: boolean) => (
+  // Action button touch handler (ATTACK, KICK, JUMP)
+  const handleActionTouch = (action: 'jump' | 'attack' | 'kick', active: boolean) => (
     e: React.TouchEvent | React.MouseEvent
   ) => {
     e.preventDefault();
@@ -146,6 +148,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
       inputManager.setTouchState('left', false);
       inputManager.setTouchState('right', false);
       inputManager.setTouchState('jump', false);
+      inputManager.setTouchState('attack', false);
+      inputManager.setTouchState('kick', false);
       inputManager.setTouchState('down', false);
       inputManager.setTouchState('spinKick', false);
     };
@@ -193,9 +197,9 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         </div>
       </div>
 
-      {/* Right Side: Action Buttons (ATTACK, JUMP) */}
-      <div className="flex gap-3 pointer-events-auto items-center">
-        {/* ATTACK Button */}
+      {/* Right Side: Action Buttons (PUNCH, KICK, JUMP) */}
+      <div className="flex gap-2 sm:gap-3 pointer-events-auto items-center">
+        {/* PUNCH Button */}
         <button
           onTouchStart={handleActionTouch('attack', true)}
           onTouchEnd={handleActionTouch('attack', false)}
@@ -203,11 +207,27 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           onMouseDown={handleActionTouch('attack', true)}
           onMouseUp={handleActionTouch('attack', false)}
           onMouseLeave={handleActionTouch('attack', false)}
-          className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-600/80 active:bg-amber-500 text-amber-100 border-2 border-amber-400/60 active:border-amber-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none"
+          className="w-14 h-14 sm:w-18 sm:h-18 bg-amber-600/85 active:bg-amber-500 text-amber-100 border-2 border-amber-400/70 active:border-amber-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none cursor-pointer"
         >
-          <span className="text-2xl sm:text-3xl leading-none">👊</span>
-          <span className="text-[10px] font-black uppercase tracking-wider mt-0.5">
-            ATTACK
+          <span className="text-xl sm:text-2xl leading-none">👊</span>
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider mt-0.5">
+            PUNCH
+          </span>
+        </button>
+
+        {/* KICK Button */}
+        <button
+          onTouchStart={handleActionTouch('kick', true)}
+          onTouchEnd={handleActionTouch('kick', false)}
+          onTouchCancel={handleActionTouch('kick', false)}
+          onMouseDown={handleActionTouch('kick', true)}
+          onMouseUp={handleActionTouch('kick', false)}
+          onMouseLeave={handleActionTouch('kick', false)}
+          className="w-14 h-14 sm:w-18 sm:h-18 bg-rose-600/85 active:bg-rose-500 text-rose-100 border-2 border-rose-400/70 active:border-rose-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none cursor-pointer"
+        >
+          <span className="text-xl sm:text-2xl leading-none">🦶</span>
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider mt-0.5">
+            KICK
           </span>
         </button>
 
@@ -219,10 +239,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           onMouseDown={handleActionTouch('jump', true)}
           onMouseUp={handleActionTouch('jump', false)}
           onMouseLeave={handleActionTouch('jump', false)}
-          className="w-16 h-16 sm:w-20 sm:h-20 bg-sky-600/80 active:bg-sky-500 text-sky-100 border-2 border-sky-400/60 active:border-sky-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none"
+          className="w-14 h-14 sm:w-18 sm:h-18 bg-sky-600/85 active:bg-sky-500 text-sky-100 border-2 border-sky-400/70 active:border-sky-200 rounded-2xl flex flex-col items-center justify-center shadow-2xl active:scale-95 transition-all touch-none cursor-pointer"
         >
-          <ArrowUp className="w-8 h-8 stroke-[2.5]" />
-          <span className="text-[10px] font-black uppercase tracking-wider mt-0.5">
+          <ArrowUp className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider mt-0.5">
             JUMP
           </span>
         </button>

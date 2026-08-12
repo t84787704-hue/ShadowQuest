@@ -149,7 +149,7 @@ export class Player extends Entity {
     }
 
     // Handle Special Spinning Low Kick (Joystick Down or Spin Kick Input)
-    const triggerSpinKick = (input.spinKick || (input.down && input.attack)) && this.spinKickCooldownTimer <= 0;
+    const triggerSpinKick = (input.spinKick || (input.down && (input.kick || input.attack))) && this.spinKickCooldownTimer <= 0;
     if (triggerSpinKick && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
       this.state = 'ATTACK';
       this.currentAttackId++;
@@ -163,8 +163,43 @@ export class Player extends Entity {
       audioEngine.playSpinKick();
     }
 
-    // Handle Martial Arts Attack Input (Combos + Jump Kick)
-    if (input.attack && this.attackCooldownTimer <= 0 && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
+    // Handle Direct Kick Button Input
+    if (input.kick && !triggerSpinKick && this.attackCooldownTimer <= 0 && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
+      this.state = 'ATTACK';
+      this.currentAttackId++;
+
+      if (!this.isGrounded) {
+        // Jump Flying Side Kick
+        this.attackType = 'JUMP_KICK';
+        this.attackDuration = 0.32;
+        this.attackTimer = 0.32;
+        this.attackCooldownTimer = 160;
+        this.currentComboMultiplier = 1.4;
+        audioEngine.playJumpKick();
+      } else {
+        // Ground Kick (Alternates between Roundhouse Kick and Finisher Kick)
+        if (this.comboStep === 3) {
+          this.comboStep = 4;
+          this.attackType = 'FINISHER';
+          this.attackDuration = 0.38;
+          this.attackTimer = 0.38;
+          this.attackCooldownTimer = 220;
+          this.currentComboMultiplier = 2.2;
+          audioEngine.playFinisher();
+        } else {
+          this.comboStep = 3;
+          this.attackType = 'KICK';
+          this.attackDuration = 0.32;
+          this.attackTimer = 0.32;
+          this.attackCooldownTimer = 120;
+          this.currentComboMultiplier = 1.6;
+          audioEngine.playKick();
+        }
+      }
+    }
+
+    // Handle Punch / Attack Button Input
+    if (input.attack && !triggerSpinKick && !input.kick && this.attackCooldownTimer <= 0 && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
       this.state = 'ATTACK';
       this.currentAttackId++; // Increment unique attack ID for single-hit detection
 
@@ -177,8 +212,8 @@ export class Player extends Entity {
         this.currentComboMultiplier = 1.3;
         audioEngine.playJumpKick();
       } else {
-        // Ground Martial Arts Combo: Punch -> Punch -> Kick -> Finisher Kick
-        if (this.comboWindowTimer > 0 && this.comboStep >= 1 && this.comboStep < 4) {
+        // Ground Martial Arts Combo: Punch -> Punch -> Kick
+        if (this.comboWindowTimer > 0 && this.comboStep >= 1 && this.comboStep < 3) {
           this.comboStep++;
         } else {
           this.comboStep = 1;
@@ -202,7 +237,7 @@ export class Player extends Entity {
           this.attackCooldownTimer = 100;
           this.currentComboMultiplier = 1.25;
           audioEngine.playHeavyPunch();
-        } else if (this.comboStep === 3) {
+        } else {
           // Roundhouse Kick
           this.attackType = 'KICK';
           this.attackDuration = 0.32;
@@ -210,14 +245,6 @@ export class Player extends Entity {
           this.attackCooldownTimer = 120;
           this.currentComboMultiplier = 1.5;
           audioEngine.playKick();
-        } else {
-          // Strong Finishing Spinning Heel Kick
-          this.attackType = 'FINISHER';
-          this.attackDuration = 0.38;
-          this.attackTimer = 0.38;
-          this.attackCooldownTimer = 220;
-          this.currentComboMultiplier = 2.2;
-          audioEngine.playFinisher();
         }
       }
     }
