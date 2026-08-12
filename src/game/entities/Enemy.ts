@@ -394,6 +394,22 @@ export class ForestGoblin extends Entity {
     const [wStr] = this.levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
 
+    // Fast Performance Gate for far-away enemies (50-enemy level optimization)
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const distToPlayer = Math.sqrt(dx * dx + dy * dy);
+
+    if (distToPlayer > 720 && !this.isBoss && !this.isShadowClone) {
+      // Basic patrol / idle physics processing when player is far away
+      this.combatState = 'IDLE';
+      this.vx = this.moveSpeed * 0.4 * this.patrolDirection;
+      this.facingRight = this.patrolDirection > 0;
+      if (this.x <= this.patrolMinX) this.patrolDirection = 1;
+      else if (this.x >= this.patrolMaxX) this.patrolDirection = -1;
+      this.applyPhysics(tileMap);
+      return;
+    }
+
     // Handle HIT State Stagger & Recoil
     if (this.combatState === 'HIT') {
       this.facingRight = player.x > this.x; // Always face attacker
@@ -409,10 +425,7 @@ export class ForestGoblin extends Entity {
           this.guardTimer = 0.60;
           particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD BURST! ⚡', '#facc15', 14);
         } else {
-          const dx = player.x - this.x;
-          const dy = player.y - this.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          this.combatState = dist < 70 ? 'COMBAT' : 'ALERT';
+          this.combatState = distToPlayer < 70 ? 'COMBAT' : 'APPROACH';
         }
       }
 
@@ -427,7 +440,7 @@ export class ForestGoblin extends Entity {
       particles.createSlashSparks(this.x + this.width / 2, this.y, true, ['#facc15', '#ef4444']);
     }
 
-    const baseSpeed = this.isRageMode ? this.moveSpeed * 1.2 : this.moveSpeed;
+    const baseSpeed = this.isRageMode ? this.moveSpeed * 1.25 : this.moveSpeed;
     const currentSpeed = this.slowTimer > 0 ? baseSpeed * 0.5 : baseSpeed;
 
     this.animTime += dt;
@@ -435,10 +448,6 @@ export class ForestGoblin extends Entity {
       this.animTime = 0;
       this.animFrame = (this.animFrame + 1) % 4;
     }
-
-    const dx = player.x - this.x;
-    const dy = player.y - this.y;
-    const distToPlayer = Math.sqrt(dx * dx + dy * dy);
 
     // Record Debug Info
     const isPlayerAttacking = player.state === 'ATTACK';
@@ -460,10 +469,11 @@ export class ForestGoblin extends Entity {
     // Multi-enemy physical separation so enemies don't overlap into a single stack
     if (goblins && goblins.length > 1) {
       for (const other of goblins) {
-        if (other !== this && other.isAlive) {
+        if (other !== this && other.isAlive && other.combatState !== 'DEAD') {
           const sepDx = this.x - other.x;
-          if (Math.abs(sepDx) < 28 && Math.abs(this.y - other.y) < 30) {
-            this.vx += sepDx >= 0 ? 0.9 : -0.9;
+          if (Math.abs(sepDx) < 32 && Math.abs(this.y - other.y) < 36) {
+            const pushForce = sepDx >= 0 ? 1.2 : -1.2;
+            this.vx += pushForce;
           }
         }
       }
@@ -480,19 +490,19 @@ export class ForestGoblin extends Entity {
       }
     }
 
-    // Continuous Player Attack Perception
-    if (isPlayerAttacking && playerFacingUs && distToPlayer < 110) {
+    // Continuous Player Attack Perception (With Reaction Delay, NOT Instant Input Reading)
+    if (isPlayerAttacking && playerFacingUs && distToPlayer < 110 && Math.abs(dy) < 120) {
       if (this.perceivedPlayerAttack === null) {
         this.perceivedPlayerAttack = player.attackType || 'JAB';
         this.playerAttacksCount++;
         this.playerAttackWindowTimer = 1.4;
 
-        let baseDelay = 0.22 - (w - 1) * 0.025;
+        let baseDelay = 0.22 - (w - 1) * 0.02;
         if (this.enemyClass === 'FAST_FIGHTER') baseDelay -= 0.03;
         if (this.enemyClass === 'ELITE_FIGHTER') baseDelay -= 0.04;
         if (this.isBoss) baseDelay -= 0.05;
 
-        this.reactionDelay = Math.max(0.06, baseDelay);
+        this.reactionDelay = Math.max(0.10, baseDelay);
         this.reactionTimer = this.reactionDelay;
       }
     } else if (!isPlayerAttacking) {
@@ -503,7 +513,8 @@ export class ForestGoblin extends Entity {
     if (
       this.reactionTimer <= 0 &&
       isPlayerAttacking &&
-      distToPlayer < 90 &&
+      distToPlayer < 95 &&
+      Math.abs(dy) < 120 &&
       this.combatState !== 'TELEGRAPH' &&
       this.combatState !== 'ATTACK' &&
       this.combatState !== 'DODGE' &&
@@ -511,23 +522,43 @@ export class ForestGoblin extends Entity {
     ) {
       const isHeavyAtk = player.attackType === 'FINISHER' || player.attackType === 'SPIN_KICK' || player.attackType === 'JUMP_KICK';
       const isSpam = this.playerAttacksCount >= 3;
+      const hpRatio = this.hp / this.maxHp;
 
-      let blockProb = 0.20 + (w - 1) * 0.09;
-      let dodgeProb = 0.10 + (w - 1) * 0.08;
+      // Base Defense Probabilities according to prompt requirements
+      let blockProb = 0.12;
+      let dodgeProb = 0.08; // Normal fighter ~20% total defense
 
-      if (this.enemyClass === 'HEAVY_FIGHTER') { blockProb += 0.20; dodgeProb -= 0.05; }
-      if (this.enemyClass === 'FAST_FIGHTER') { dodgeProb += 0.25; blockProb -= 0.05; }
-      if (this.enemyClass === 'ELITE_FIGHTER') { blockProb += 0.15; dodgeProb += 0.15; }
+      if (this.enemyClass === 'HEAVY_FIGHTER') { blockProb = 0.20; dodgeProb = 0.05; } // ~25%
+      else if (this.enemyClass === 'FAST_FIGHTER') { blockProb = 0.07; dodgeProb = 0.18; } // ~25%
+      else if (this.enemyClass === 'ELITE_FIGHTER') { blockProb = 0.20; dodgeProb = 0.15; } // ~35%
 
-      if (isHeavyAtk) dodgeProb += 0.30;
-      if (isSpam) { dodgeProb += 0.20; blockProb += 0.15; }
+      // World level scaling
+      blockProb += (w - 1) * 0.02;
+      dodgeProb += (w - 1) * 0.02;
+
+      // Health-based behavior shift
+      if (hpRatio <= 0.70 && hpRatio > 0.30) {
+        // 30%-70% HP: More defensive
+        blockProb += 0.10;
+        dodgeProb += 0.08;
+      } else if (hpRatio <= 0.30) {
+        // <30% HP: Desperate defense / evasive maneuvers
+        if (this.enemyClass === 'FAST_FIGHTER' || this.enemyClass === 'ELITE_FIGHTER') {
+          dodgeProb += 0.18;
+        } else {
+          blockProb += 0.18;
+        }
+      }
+
+      if (isHeavyAtk) dodgeProb += 0.20;
+      if (isSpam) { dodgeProb += 0.15; blockProb += 0.12; }
 
       if (this.forceDodgeFlag || (this.dodgeCooldown <= 0 && Math.random() < dodgeProb)) {
         this.forceDodgeFlag = false;
         this.combatState = 'DODGE';
         this.dodgeTimer = 0.38;
-        this.dodgeCooldown = Math.max(0.8, 2.0 - w * 0.2);
-        this.vx = dx > 0 ? -7.5 : 7.5;
+        this.dodgeCooldown = Math.max(1.2, 2.2 - w * 0.15);
+        this.vx = dx > 0 ? -7.8 : 7.8;
         this.vy = -2.2;
         particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'DODGE! 💨', '#38bdf8', 13);
         audioEngine.playVocal('spin_kick');
@@ -536,14 +567,14 @@ export class ForestGoblin extends Entity {
         this.combatState = 'DEFEND';
         this.isGuarding = true;
         this.guardTimer = 0.55;
-        this.guardCooldown = Math.max(0.7, 1.6 - w * 0.15);
+        this.guardCooldown = Math.max(1.0, 1.8 - w * 0.12);
         particles.createFloatingText(this.x + this.width / 2, this.y - 18, 'GUARD! 🛡️', '#f59e0b', 13);
-      } else if (this.forceCounterattackFlag || (this.counterCooldown <= 0 && distToPlayer < 50 && Math.random() < (0.25 + w * 0.08))) {
+      } else if (this.forceCounterattackFlag || (this.counterCooldown <= 0 && distToPlayer < 52 && Math.random() < (0.20 + w * 0.06))) {
         this.forceCounterattackFlag = false;
         this.combatState = 'TELEGRAPH';
         this.activeAttack = 'ROUNDHOUSE_KICK';
         this.attackStateTimer = 0.14;
-        this.counterCooldown = Math.max(1.0, 2.5 - w * 0.2);
+        this.counterCooldown = Math.max(1.2, 2.5 - w * 0.2);
         particles.createFloatingText(this.x + this.width / 2, this.y - 20, 'COUNTERSTRIKE! ⚡', '#ef4444', 14);
         audioEngine.playVocal('heavy_punch');
       }
@@ -615,7 +646,7 @@ export class ForestGoblin extends Entity {
     }
 
     // Pursuit & Tactical Movement AI
-    if (distToPlayer <= this.detectionRadius && player.isAlive) {
+    if (distToPlayer <= this.detectionRadius && Math.abs(dy) < 140 && player.isAlive) {
       this.facingRight = dx > 0;
 
       // Special Ability Check
@@ -633,10 +664,12 @@ export class ForestGoblin extends Entity {
           const speedMult = this.isDashing ? 1.8 : 1.0;
           this.vx = (dx > 0 ? currentSpeed : -currentSpeed) * speedMult;
         } else {
-          // Circle or maintain distance (65px to 105px)
-          if (distToPlayer < 65) {
-            this.vx = dx > 0 ? -currentSpeed * 0.6 : currentSpeed * 0.6;
-          } else if (distToPlayer > 105) {
+          // Perimeter Spacing & Flanking (65px to 110px)
+          const targetStandDistance = 75;
+          if (distToPlayer < targetStandDistance - 15) {
+            // Step back if player approaches too close without attack token
+            this.vx = dx > 0 ? -currentSpeed * 0.65 : currentSpeed * 0.65;
+          } else if (distToPlayer > targetStandDistance + 35) {
             this.vx = (dx > 0 ? currentSpeed : -currentSpeed) * 0.7;
           } else {
             this.vx = 0;
@@ -664,6 +697,9 @@ export class ForestGoblin extends Entity {
 
           this.attackStateTimer = this.enemyClass === 'FAST_FIGHTER' ? 0.16 : 0.24;
           ForestGoblin.groupAttackCooldown = 0.35;
+        } else if (!this.hasAttackToken) {
+          // Step back slightly if inside attack range without token so player isn't crowded
+          this.vx = dx > 0 ? -currentSpeed * 0.5 : currentSpeed * 0.5;
         }
       }
     } else {
