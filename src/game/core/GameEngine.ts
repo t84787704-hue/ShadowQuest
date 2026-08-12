@@ -16,6 +16,7 @@ import { SaveSystem } from '../save/SaveSystem';
 import { DebugManager } from '../debug/DebugManager';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
 import { SecretRoomManager } from '../entities/SecretRoomManager';
+import { calculateLevelRating } from '../../components/VictoryModal';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -77,6 +78,8 @@ export class GameEngine {
 
   // Combat Combo Counter & Inactivity Timer
   public comboHits: number = 0;
+  public maxComboAchieved: number = 0;
+  public levelTime: number = 0;
   public comboTimer: number = 0;
   public readonly maxComboTimer: number = 1.5; // Resets when player does not hit an enemy for ~1.5s
 
@@ -186,6 +189,9 @@ export class GameEngine {
 
   public registerComboHit(x: number, y: number) {
     this.comboHits++;
+    if (this.comboHits > this.maxComboAchieved) {
+      this.maxComboAchieved = this.comboHits;
+    }
     this.comboTimer = this.maxComboTimer;
 
     if (this.comboHits >= 2) {
@@ -506,14 +512,32 @@ export class GameEngine {
     }
   }
 
+  public bossDefeatedTimer: number = 0;
+
   public triggerVictory() {
+    if (this.status === 'VICTORY') return;
     this.status = 'VICTORY';
+    audioEngine.playVictory();
+    this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+
+    const rating = calculateLevelRating(
+      this.player.totalDamageTaken,
+      this.levelTime,
+      this.totalEnemiesDefeated,
+      this.totalEnemiesInLevel,
+      this.maxComboAchieved,
+      this.player.stats.maxHp
+    );
+
+    SaveSystem.completeLevel(this.levelDef.config.id, rating.stars, this.collectedCoinsCount);
+
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
     }
   }
 
   private initLevelEntities(qs?: QuickSaveData | null) {
+    this.bossDefeatedTimer = 0;
     this.bossProjectiles = [];
     this.isBossLevel = this.levelDef.config.isBossLevel || false;
     this.goblins = [];
@@ -723,8 +747,11 @@ export class GameEngine {
     this.status = 'RUNNING';
     this.particles.clear();
     this.resetCombo();
+    this.maxComboAchieved = 0;
+    this.levelTime = 0;
     this.activeSpawn = { ...this.levelDef.playerSpawn };
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, this.player.equippedWeapon);
+    this.player.totalDamageTaken = 0;
     this.player.onDamage = () => this.resetCombo();
     this.collectedCoinsCount = 0;
     this.initLevelEntities();
@@ -768,6 +795,10 @@ export class GameEngine {
   };
 
   private update(dt: number) {
+    if (this.status === 'RUNNING') {
+      this.levelTime += dt;
+    }
+
     // 0. Process Impact Hit-Stop (Short freeze frame on punch/kick connection for strike clarity)
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= dt;
@@ -1197,6 +1228,11 @@ export class GameEngine {
 
     if (this.bossMonster && this.bossMonster.isAlive) {
       this.bossMonster.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles);
+    } else if (this.bossMonster && !this.bossMonster.isAlive && this.isBossLevel && this.status === 'RUNNING') {
+      this.bossDefeatedTimer += dt;
+      if (this.bossDefeatedTimer >= 2.5) {
+        this.triggerVictory();
+      }
     }
 
     for (let i = this.bossProjectiles.length - 1; i >= 0; i--) {
@@ -1336,20 +1372,7 @@ export class GameEngine {
           15
         );
       } else {
-        this.status = 'VICTORY';
-        audioEngine.playVictory();
-        this.particles.createVictoryConfetti(goal.x + 12, goal.y);
-
-        // Star calculation: 3 = excellent (>=80%), 2 = good (>=40%), 1 = completed
-        const totalPossible = Math.max(1, this.totalCoinsInLevel);
-        const coinRatio = this.collectedCoinsCount / totalPossible;
-        const stars = coinRatio >= 0.8 ? 3 : coinRatio >= 0.4 ? 2 : 1;
-
-        SaveSystem.completeLevel(this.levelDef.config.id, stars, this.collectedCoinsCount);
-
-        if (this.onStateChangeCallback) {
-          this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
-        }
+        this.triggerVictory();
       }
     }
 

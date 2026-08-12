@@ -9,6 +9,7 @@ import { MobileControls } from './MobileControls';
 import { PauseModal } from './PauseModal';
 import { GameOverModal } from './GameOverModal';
 import { VictoryModal } from './VictoryModal';
+import { LevelStartOverlay } from './LevelStartOverlay';
 import { DebugMenuModal } from './DebugMenuModal';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { DebugManager } from '../game/debug/DebugManager';
@@ -62,6 +63,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const [impactEffect, setImpactEffect] = useState<{ id: number; type: 'HEAVY' | 'BOSS' | 'LIGHT' } | null>(null);
   const [showDebugMenu, setShowDebugMenu] = useState<boolean>(false);
+  const [showLevelStartOverlay, setShowLevelStartOverlay] = useState<boolean>(true);
   const [isGodMode, setIsGodMode] = useState<boolean>(DebugManager.isGodMode());
   const impactTimeoutRef = useRef<number | null>(null);
 
@@ -95,6 +97,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    setShowLevelStartOverlay(true);
 
     // Set logical internal resolution
     canvas.width = 800;
@@ -210,6 +214,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (engineRef.current) {
       engineRef.current.restart();
       setGameStatus('RUNNING');
+      setShowLevelStartOverlay(true);
       setLevelCoins(0);
       setTotalCoins(engineRef.current.totalCoins);
       setPlayerHp({
@@ -361,6 +366,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         {/* Modals based on Game Engine Status */}
         <AnimatePresence>
+          {showLevelStartOverlay && (
+            <LevelStartOverlay
+              key={`start-overlay-${levelId}`}
+              levelId={levelId}
+              levelTitle={currentLevelTitle}
+              isBossLevel={Boolean(engineRef.current?.isBossLevel)}
+              onComplete={() => setShowLevelStartOverlay(false)}
+            />
+          )}
+
           {showDebugMenu && (
             <DebugMenuModal
               key="debug-modal"
@@ -429,14 +444,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           {gameStatus === 'VICTORY' && (
             <VictoryModal
               levelTitle={currentLevelTitle}
+              levelId={levelId}
               coinsCollected={levelCoins}
-              starsEarned={
-                (() => {
-                  const total = engineRef.current?.totalCoinsInLevel || 1;
-                  const ratio = levelCoins / total;
-                  return ratio >= 0.8 ? 3 : ratio >= 0.4 ? 2 : 1;
-                })()
-              }
+              totalCoinsInLevel={engineRef.current?.totalCoinsInLevel || 1}
+              enemiesDefeated={engineRef.current?.totalEnemiesDefeated || 0}
+              totalEnemies={engineRef.current?.totalEnemiesInLevel || 50}
+              timeSeconds={engineRef.current?.levelTime || 0}
+              damageTaken={engineRef.current?.player.totalDamageTaken || 0}
+              maxCombo={engineRef.current?.maxComboAchieved || 0}
+              playerMaxHp={engineRef.current?.player.stats.maxHp || 100}
               hasNextLevel={Boolean(nextLevelId)}
               onNextLevel={() => {
                 if (nextLevelId && onSelectNextLevel) {
@@ -445,6 +461,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                   onReturnToMainMenu();
                 }
               }}
+              onReplay={handleRestart}
               onMainMenu={onReturnToMainMenu}
             />
           )}

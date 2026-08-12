@@ -17,6 +17,7 @@ export class Player extends Entity {
   public animTime: number = 0;
   public equippedWeapon: WeaponDef = WEAPONS.basic_sword;
 
+  public totalDamageTaken: number = 0;
   public comboStep: number = 0; // 1: JAB, 2: CROSS, 3: KICK, 4: FINISHER
   public attackType: 'JAB' | 'CROSS' | 'KICK' | 'FINISHER' | 'JUMP_KICK' | 'SPIN_KICK' = 'JAB';
   public comboWindowTimer: number = 0;
@@ -411,6 +412,7 @@ export class Player extends Entity {
     }
 
     this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
+    this.totalDamageTaken += actualDamage;
     this.invulnerableTimer = 1.0; // 1.0 second damage invulnerability period
     this.state = 'HURT';
 
