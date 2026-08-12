@@ -234,6 +234,16 @@ export class SaveSystem {
     return { coinGain, maxHpGain, attackGain, data };
   }
 
+  public static isWorldCompleted(data: SaveData, worldNum: number): boolean {
+    const requiredLevels = [`${worldNum}-1`, `${worldNum}-2`, `${worldNum}-3`, `${worldNum}-4`, `${worldNum}-5` ];
+    const completed = data.completedLevels || [];
+    return requiredLevels.every((lvl) => completed.includes(lvl));
+  }
+
+  public static isAllWorldsCompleted(data: SaveData): boolean {
+    return [1, 2, 3, 4, 5, 6].every((w) => this.isWorldCompleted(data, w));
+  }
+
   public static completeLevel(levelId: string, stars: number, coinsEarned: number): SaveData {
     const data = this.load();
     data.coins += coinsEarned;
@@ -268,6 +278,19 @@ export class SaveSystem {
       }
     }
 
+    // Check TRUE GAME COMPLETION: All required worlds 1-6 completed
+    if (this.isAllWorldsCompleted(data)) {
+      if (!data.gameCompleted) {
+        data.gameCompleted = true;
+        data.legendaryTitleUnlocked = true;
+        data.legendaryAuraUnlocked = true;
+        data.legendaryAbilityUnlocked = true;
+        data.newGamePlusUnlocked = true;
+        data.coins += 1000; // Substantial completion bonus
+        data.stats.coinsCollectedLifetime += 1000;
+      }
+    }
+
     // Auto-equip newly unlocked weapon if applicable
     const highest = getHighestUnlockedWeapon(data, `${data.currentWorld}-${data.currentLevel}`);
     if (highest.baseDamage > (WEAPONS[data.equippedWeaponId || 'basic_sword']?.baseDamage || 0)) {
@@ -276,6 +299,55 @@ export class SaveSystem {
 
     this.save(data);
     return data;
+  }
+
+  public static startNewGamePlus(): SaveData {
+    const data = this.load();
+    data.newGamePlusLevel = (data.newGamePlusLevel || 0) + 1;
+    data.currentWorld = 1;
+    data.currentLevel = 1;
+    data.completedLevels = [];
+    data.unlockedWorlds = [1];
+    data.levelStars = {};
+    data.quickSave = null;
+    data.gameCompleted = true;
+    data.legendaryTitleUnlocked = true;
+    data.legendaryAuraUnlocked = true;
+    data.legendaryAbilityUnlocked = true;
+    data.newGamePlusUnlocked = true;
+
+    this.save(data);
+    return data;
+  }
+
+  public static getCampaignProgress(data: SaveData) {
+    const worldStatus: Record<number, boolean> = {};
+    let completedWorldsCount = 0;
+    for (let w = 1; w <= 6; w++) {
+      const isDone = this.isWorldCompleted(data, w);
+      worldStatus[w] = isDone;
+      if (isDone) completedWorldsCount++;
+    }
+
+    let totalSecretRoomsFound = 0;
+    if (data.discoveredSecretRooms) {
+      for (const rooms of Object.values(data.discoveredSecretRooms)) {
+        totalSecretRoomsFound += rooms.length;
+      }
+    }
+
+    return {
+      completedWorldsCount,
+      totalWorlds: 6,
+      completedLevelsCount: data.completedLevels?.length || 0,
+      totalLevels: 30,
+      worldStatus,
+      discoveredSecretRooms: totalSecretRoomsFound,
+      totalSecretRooms: 12,
+      isAllWorldsCompleted: completedWorldsCount === 6,
+      gameCompleted: Boolean(data.gameCompleted),
+      newGamePlusLevel: data.newGamePlusLevel || 0,
+    };
   }
 
   public static getLatestUnlockedLevel(): string {

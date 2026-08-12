@@ -78,7 +78,7 @@ export class SecretRoomManager {
 
           // Banner Notification
           this.discoveryBannerTimer = 3.8;
-          this.discoveryBannerText = '✦ SECRET AREA DISCOVERED! ✦';
+          this.discoveryBannerText = 'SECRET ROOM DISCOVERED!';
           this.discoveryBannerSubtext = room.def.title.toUpperCase();
 
           // Particle burst
@@ -86,9 +86,9 @@ export class SecretRoomManager {
           particles.createFloatingText(
             player.x,
             player.y - 40,
-            `🌟 SECRET ROOM (${this.discoveredCount}/${this.totalRooms})!`,
+            'SECRET ROOM DISCOVERED! 🌟',
             '#facc15',
-            20
+            22
           );
 
           // Performance-optimized spawn: Spawn elite room guardian only now!
@@ -115,10 +115,13 @@ export class SecretRoomManager {
 
           audioEngine.playVictory();
 
-          // Apply real-time player stat changes
+          // Apply real-time player stat changes & temporary 30s power boost
+          player.attackBuffTimer = 30.0;
+          player.defenseBuffTimer = 30.0;
+
           if (res.maxHpGain > 0) {
             player.stats.maxHp += res.maxHpGain;
-            player.stats.currentHp = Math.min(player.stats.maxHp, player.stats.currentHp + 40); // Heal player on HP upgrade
+            player.stats.currentHp = Math.min(player.stats.maxHp, player.stats.currentHp + 50); // Heal player on HP upgrade
           }
           if (res.attackGain > 0) {
             player.stats.attackDamage += res.attackGain;
@@ -127,13 +130,13 @@ export class SecretRoomManager {
           // Visual Feedback
           particles.createVictoryConfetti(room.def.rewardX, room.def.rewardY);
 
-          let rewardLabel = `+${res.coinGain} COINS!`;
-          if (res.maxHpGain > 0) rewardLabel = `PERMANENT +${res.maxHpGain} MAX HP & FULL HEAL!`;
-          if (res.attackGain > 0) rewardLabel = `PERMANENT +${res.attackGain} ATTACK DAMAGE!`;
-          if (room.def.rewardType === 'ANCIENT_RELIC') rewardLabel = `🏆 ANCIENT RELIC UNLOCKED! +100 COINS!`;
-          if (room.def.rewardType === 'RARE_WEAPON') rewardLabel = `⚔️ RARE MARTIAL BLADE UNLOCKED!`;
+          let rewardLabel = `TREASURE CLAIMED! +${res.coinGain} COINS & 30s POWER BOOST! ⚔️🛡️`;
+          if (res.maxHpGain > 0) rewardLabel = `TREASURE CLAIMED! PERMANENT +${res.maxHpGain} HP & 30s POWER BOOST! ⚔️🛡️`;
+          if (res.attackGain > 0) rewardLabel = `TREASURE CLAIMED! PERMANENT +${res.attackGain} ATK & 30s POWER BOOST! ⚔️🛡️`;
+          if (room.def.rewardType === 'ANCIENT_RELIC') rewardLabel = `🏆 ANCIENT RELIC CLAIMED! +100 COINS & 30s POWER BOOST! ⚔️🛡️`;
+          if (room.def.rewardType === 'RARE_WEAPON') rewardLabel = `⚔️ RARE WEAPON CLAIMED! +75 COINS & 30s POWER BOOST! ⚔️🛡️`;
 
-          particles.createFloatingText(room.def.rewardX, room.def.rewardY - 30, rewardLabel, '#38bdf8', 20);
+          particles.createFloatingText(room.def.rewardX, room.def.rewardY - 30, rewardLabel, '#38bdf8', 18);
         }
       }
     }

@@ -9,6 +9,8 @@ interface HUDProps {
   weaponName?: string;
   weaponIcon?: string;
   isGodMode?: boolean;
+  secretRoomsDiscovered?: number;
+  totalSecretRooms?: number;
   onGodModeToggle?: () => void;
   onPauseClick: () => void;
   onDebugClick?: () => void;
@@ -22,6 +24,8 @@ export const HUD: React.FC<HUDProps> = ({
   weaponName,
   weaponIcon,
   isGodMode,
+  secretRoomsDiscovered = 0,
+  totalSecretRooms = 0,
   onGodModeToggle,
   onPauseClick,
   onDebugClick,
@@ -30,7 +34,7 @@ export const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between pointer-events-none z-10 select-none">
-      {/* Top Left: HP Bar, Coins & Weapon */}
+      {/* Top Left: HP Bar, Coins, Secret Rooms & Weapon */}
       <div className="flex flex-col gap-1.5">
         {/* Health Bar */}
         <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-full px-3 py-1.5 shadow-lg">
@@ -49,8 +53,8 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         </div>
 
-        {/* Coins Counter & Weapon Indicator Row */}
-        <div className="flex items-center gap-2">
+        {/* Coins Counter, Weapon Indicator & Secret Rooms Row */}
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-amber-500/30 rounded-full px-3 py-1 w-fit shadow-lg">
             <Coins className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span className="text-amber-300 font-black text-xs sm:text-sm tracking-wide">
@@ -63,6 +67,30 @@ export const HUD: React.FC<HUDProps> = ({
               <span className="text-xs">{weaponIcon || '👊'}</span>
               <span className="text-sky-300 font-bold text-xs tracking-wide">
                 {weaponName}
+              </span>
+            </div>
+          )}
+
+          {typeof totalSecretRooms === 'number' && totalSecretRooms > 0 && (
+            <div
+              className={`flex items-center gap-1.5 backdrop-blur border rounded-full px-2.5 py-1 w-fit shadow-lg transition-all duration-300 ${
+                secretRoomsDiscovered > 0
+                  ? 'bg-amber-950/90 border-amber-400/80 text-amber-300 shadow-amber-500/20'
+                  : 'bg-slate-900/80 border-slate-700/80 text-slate-300'
+              }`}
+            >
+              <span className="text-xs">🔍</span>
+              <span className="font-extrabold text-xs tracking-wide">
+                SECRET ROOMS:{' '}
+                <span
+                  className={
+                    secretRoomsDiscovered > 0
+                      ? 'text-amber-300 font-black'
+                      : 'text-slate-300 font-bold'
+                  }
+                >
+                  {secretRoomsDiscovered}/{totalSecretRooms}
+                </span>
               </span>
             </div>
           )}

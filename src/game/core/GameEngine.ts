@@ -83,7 +83,11 @@ export class GameEngine {
   // Impact Hit-Stop (Freeze Frame on punch/kick connection)
   public hitStopTimer: number = 0;
 
+  public saveData: SaveData;
+  private lastDragonAbilityAttackId: number = -1;
+
   constructor(canvas: HTMLCanvasElement, saveData: SaveData, levelId: string = '1-1', isResume: boolean = false) {
+    this.saveData = saveData;
     this.canvas = canvas;
     const context = canvas.getContext('2d');
     if (!context) {
@@ -140,6 +144,8 @@ export class GameEngine {
     const equippedWeapon = SaveSystem.getEquippedWeapon(saveData, levelId);
     this.player = new Player(this.activeSpawn.x, this.activeSpawn.y, this.statsBonus, equippedWeapon);
     this.player.isGodMode = DebugManager.isGodMode();
+    this.player.legendaryAuraUnlocked = Boolean(saveData.legendaryAuraUnlocked);
+    this.player.legendaryAbilityUnlocked = Boolean(saveData.legendaryAbilityUnlocked);
     this.player.onDamage = () => this.resetCombo();
 
     // Quick save restoration check
@@ -553,6 +559,23 @@ export class GameEngine {
       this.isAreaCleared = true;
     }
 
+    // Apply New Game+ Scaling
+    const ngLevel = this.saveData?.newGamePlusLevel || 0;
+    if (ngLevel > 0) {
+      const hpMult = 1 + 0.35 * ngLevel;
+      const dmgMult = 1 + 0.25 * ngLevel;
+      const speedMult = 1 + 0.10 * ngLevel;
+
+      for (const enemy of this.goblins) {
+        enemy.maxHp = Math.round(enemy.maxHp * hpMult);
+        if (enemy.isAlive && enemy.combatState !== 'DEAD') {
+          enemy.hp = enemy.maxHp;
+        }
+        enemy.attackDamage = Math.round(enemy.attackDamage * dmgMult);
+        enemy.moveSpeed = enemy.moveSpeed * speedMult;
+      }
+    }
+
     // Initialize World Boss for Boss Levels (Level 5 of each world)
     if (this.isBossLevel) {
       const bossSpawn = this.levelDef.goblins.find((g) => g.isBoss);
@@ -560,6 +583,14 @@ export class GameEngine {
       const bossY = bossSpawn ? bossSpawn.y : 300;
 
       this.bossMonster = new BossMonster(bossX, bossY, this.levelDef.config.id);
+
+      if (ngLevel > 0) {
+        const bossHpMult = 1 + 0.40 * ngLevel;
+        const bossDmgMult = 1 + 0.25 * ngLevel;
+        this.bossMonster.maxHp = Math.round(this.bossMonster.maxHp * bossHpMult);
+        this.bossMonster.attackDamage = Math.round(this.bossMonster.attackDamage * bossDmgMult);
+      }
+
       if (qs?.bossHp !== undefined && qs.bossHp > 0) {
         this.bossMonster.hp = qs.bossHp;
         if (qs.bossPhase) {
@@ -571,6 +602,8 @@ export class GameEngine {
         this.bossMonster.hp = 0;
         this.bossMonster.isAlive = false;
         this.bossMonster.state = 'DEAD';
+      } else {
+        this.bossMonster.hp = this.bossMonster.maxHp;
       }
     } else {
       this.bossMonster = undefined;
@@ -578,6 +611,11 @@ export class GameEngine {
 
     // Populate Coins
     this.coins = this.levelDef.coins.map((c) => new Coin(c.x, c.y, c.value || 1));
+    if (ngLevel > 0) {
+      for (const c of this.coins) {
+        c.value = Math.round(c.value * (1 + 0.50 * ngLevel));
+      }
+    }
     this.totalCoinsInLevel = this.coins.reduce((sum, c) => sum + c.value, 0);
     if (qs?.collectedCoinIndices) {
       qs.collectedCoinIndices.forEach((idx) => {
@@ -790,6 +828,45 @@ export class GameEngine {
       this.hitEnemiesThisAttack.clear();
     }
 
+    // Trigger Legendary Combat Ability: Dragon Spirit Slash
+    if (
+      this.player.legendaryAbilityUnlocked &&
+      this.player.state === 'ATTACK' &&
+      this.player.currentAttackId !== this.lastDragonAbilityAttackId
+    ) {
+      this.lastDragonAbilityAttackId = this.player.currentAttackId;
+
+      const px = this.player.x + this.player.width / 2;
+      const py = this.player.y + 12;
+      const dir = this.player.facingRight ? 1 : -1;
+
+      this.particles.createFloatingText(px, py - 32, 'DRAGON SLASH! 🐉', '#facc15', 16);
+      this.particles.createCombatImpact(px + dir * 60, py, this.player.facingRight, ['#facc15', '#fef08a', '#f97316']);
+
+      const dragonReach = 200;
+      const dragonDmg = Math.max(15, Math.round(this.player.stats.attackDamage * 0.45));
+
+      // Hit Goblins in path
+      for (const goblin of this.goblins) {
+        if (goblin.isAlive && goblin.combatState !== 'DEAD') {
+          const dx = (goblin.x + goblin.width / 2) - px;
+          if (Math.sign(dx) === dir && Math.abs(dx) <= dragonReach && Math.abs(goblin.y - this.player.y) < 50) {
+            goblin.takeDamage(dragonDmg, this.particles, 'FINISHER');
+            this.particles.createFloatingText(goblin.x + goblin.width / 2, goblin.y - 18, `🐉 +${dragonDmg}`, '#fde047', 14);
+          }
+        }
+      }
+
+      // Hit Boss Monster in path
+      if (this.bossMonster && this.bossMonster.isAlive) {
+        const dx = (this.bossMonster.x + this.bossMonster.width / 2) - px;
+        if (Math.sign(dx) === dir && Math.abs(dx) <= dragonReach + 40 && Math.abs(this.bossMonster.y - this.player.y) < 60) {
+          this.bossMonster.takeDamage(dragonDmg, this.particles, 'FINISHER');
+          this.particles.createFloatingText(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y - 20, `🐉 +${dragonDmg}`, '#fde047', 16);
+        }
+      }
+    }
+
     const attackHitbox = this.player.getAttackHitbox();
     if (attackHitbox) {
       // Hit Boss Monster
@@ -855,7 +932,8 @@ export class GameEngine {
 
           const comboMult = this.player.currentComboMultiplier || 1.0;
           const comboBonus = this.getComboDamageBonus();
-          const damage = Math.round(this.player.stats.attackDamage * comboMult * comboBonus);
+          const buffMult = this.player.attackBuffTimer > 0 ? 1.5 : 1.0;
+          const damage = Math.round(this.player.stats.attackDamage * comboMult * comboBonus * buffMult);
 
           const isBlocked = goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);

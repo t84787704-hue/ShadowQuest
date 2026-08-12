@@ -40,6 +40,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   });
   const [levelCoins, setLevelCoins] = useState<number>(0);
   const [totalCoins, setTotalCoins] = useState<number>(saveData.coins || 0);
+  const [secretRoomsState, setSecretRoomsState] = useState<{ discovered: number; total: number }>({
+    discovered: 0,
+    total: 0,
+  });
   const [comboState, setComboState] = useState<{ hits: number; timer: number; maxTimer: number }>({
     hits: 0,
     timer: 0,
@@ -145,6 +149,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           timer: engineRef.current.comboTimer,
           maxTimer: engineRef.current.maxComboTimer,
         });
+
+        if (engineRef.current.secretRoomManager) {
+          setSecretRoomsState({
+            discovered: engineRef.current.secretRoomManager.discoveredCount,
+            total: engineRef.current.secretRoomManager.totalRooms,
+          });
+        }
 
         if (engineRef.current.bossMonster) {
           const b = engineRef.current.bossMonster;
@@ -312,6 +323,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           weaponName={engineRef.current?.player?.equippedWeapon?.name}
           weaponIcon={engineRef.current?.player?.equippedWeapon?.icon}
           isGodMode={isGodMode}
+          secretRoomsDiscovered={secretRoomsState.discovered}
+          totalSecretRooms={secretRoomsState.total}
           onGodModeToggle={handleToggleGodMode}
           onPauseClick={handlePause}
           onDebugClick={DebugManager.isUnlocked() ? () => setShowDebugMenu(true) : undefined}

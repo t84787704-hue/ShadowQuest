@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut, BookmarkCheck, Trash2, Trophy } from 'lucide-react';
+import { Play, Map, ShieldAlert, Settings, Volume2, VolumeX, Flame, BookOpen, FastForward, LogOut, BookmarkCheck, Trash2, Trophy, Crown, Sparkles, Award } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { getUnclaimedCount } from '../data/achievements';
-
+import { CampaignProgressModal } from './CampaignProgressModal';
+import { LegendaryRewardsModal } from './LegendaryRewardsModal';
 import { DebugManager } from '../game/debug/DebugManager';
 
 interface MainMenuProps {
@@ -27,6 +28,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const isSoundOn = audioEngine.isSoundEnabled();
   const latestUnlockedLevel = SaveSystem.getLatestUnlockedLevel();
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [showCampaignModal, setShowCampaignModal] = useState<boolean>(false);
+  const [showLegendaryModal, setShowLegendaryModal] = useState<boolean>(false);
+  const [showNgPlusConfirm, setShowNgPlusConfirm] = useState<boolean>(false);
   const [isDebugUnlocked, setIsDebugUnlocked] = useState<boolean>(DebugManager.isUnlocked());
 
   const handleVersionClick = () => {
@@ -54,19 +58,85 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     onNavigate('PLAYING');
   };
 
+  const handleStartNgPlus = () => {
+    audioEngine.playButtonClick();
+    SaveSystem.startNewGamePlus();
+    setShowNgPlusConfirm(false);
+    onSelectLevel('1-1');
+    onNavigate('PLAYING');
+  };
+
   const hasQuickSave = Boolean(saveData.quickSave);
   const unclaimedCount = getUnclaimedCount(saveData);
+  const isNgPlusUnlocked = Boolean(saveData.newGamePlusUnlocked || saveData.gameCompleted);
+  const isLegendaryUnlocked = Boolean(saveData.legendaryTitleUnlocked || saveData.gameCompleted);
 
   return (
     <div className="relative w-full h-full min-h-[450px] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 flex flex-col items-center justify-between p-4 sm:p-6 overflow-hidden select-none">
       {/* Background Heroic Sparks & Light Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-500/10 via-transparent to-transparent pointer-events-none" />
       
+      {/* Modals */}
+      {showCampaignModal && (
+        <CampaignProgressModal saveData={saveData} onClose={() => setShowCampaignModal(false)} />
+      )}
+
+      {showLegendaryModal && (
+        <LegendaryRewardsModal
+          saveData={saveData}
+          onClose={() => setShowLegendaryModal(false)}
+          onStartNewGamePlus={() => {
+            setShowLegendaryModal(false);
+            handleStartNgPlus();
+          }}
+        />
+      )}
+
+      {showNgPlusConfirm && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-rose-500 rounded-2xl p-5 max-w-sm w-full text-center shadow-[0_0_50px_rgba(244,63,94,0.4)]">
+            <div className="w-12 h-12 bg-rose-500/20 text-rose-400 border border-rose-500/50 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <Flame className="w-7 h-7 fill-rose-400" />
+            </div>
+
+            <h3 className="text-xl font-black text-rose-400 uppercase tracking-wider mb-1">
+              START NEW GAME+
+            </h3>
+            <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+              Resets level completion to World 1-1 while keeping all your permanent upgrades, coins, and legendary abilities! Enemies are stronger (+35% HP, +25% DMG) with +50% coin drops!
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowNgPlusConfirm(false)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase rounded-xl border border-slate-700"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleStartNgPlus}
+                className="flex-1 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs uppercase rounded-xl shadow-lg"
+              >
+                CONFIRM NG+
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Row */}
       <div className="w-full max-w-2xl flex justify-between items-center z-10">
-        <div className="flex items-center gap-2 bg-slate-900/80 border border-amber-500/40 rounded-full px-4 py-1.5 shadow-lg">
-          <span className="text-amber-400 font-bold text-sm">🪙 Coins:</span>
-          <span className="text-amber-300 font-black text-base">{saveData.coins}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-900/80 border border-amber-500/40 rounded-full px-4 py-1.5 shadow-lg">
+            <span className="text-amber-400 font-bold text-sm">🪙 Coins:</span>
+            <span className="text-amber-300 font-black text-base">{saveData.coins}</span>
+          </div>
+
+          {isLegendaryUnlocked && (
+            <div className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/50 px-3 py-1 rounded-full text-amber-300 text-xs font-black shadow-lg">
+              <Crown className="w-3.5 h-3.5" /> LEGENDARY WARRIOR
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -85,7 +155,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button
             onClick={onSoundToggle}
-            className="p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 rounded-full text-slate-200 transition shadow-lg"
+            className="p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 rounded-full text-slate-200 transition shadow-lg cursor-pointer"
             title="Toggle Sound FX"
           >
             {isSoundOn ? (
@@ -121,7 +191,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   audioEngine.playButtonClick();
                   onSelectLevel(saveData.quickSave!.levelId, true);
                 }}
-                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-sky-600 hover:from-emerald-400 hover:to-sky-500 active:scale-95 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase rounded-xl border border-emerald-300/60 shadow-lg flex items-center justify-between transition"
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-sky-600 hover:from-emerald-400 hover:to-sky-500 active:scale-95 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase rounded-xl border border-emerald-300/60 shadow-lg flex items-center justify-between transition cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <BookmarkCheck className="w-5 h-5 fill-slate-950" />
@@ -139,7 +209,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                     audioEngine.playButtonClick();
                     onClearQuickSave();
                   }}
-                  className="self-center flex items-center gap-1 text-[11px] font-semibold text-rose-400/80 hover:text-rose-300 transition mt-0.5"
+                  className="self-center flex items-center gap-1 text-[11px] font-semibold text-rose-400/80 hover:text-rose-300 transition mt-0.5 cursor-pointer"
                 >
                   <Trash2 className="w-3 h-3" />
                   Discard Mid-Level Quick Save
@@ -151,17 +221,44 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           {/* CONTINUE BUTTON */}
           <button
             onClick={handleContinue}
-            className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-500 via-amber-600 to-rose-600 hover:from-amber-400 hover:to-rose-500 active:scale-95 text-slate-950 font-black text-base tracking-wider uppercase rounded-xl border border-amber-300/60 shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition"
+            className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-500 via-amber-600 to-rose-600 hover:from-amber-400 hover:to-rose-500 active:scale-95 text-slate-950 font-black text-base tracking-wider uppercase rounded-xl border border-amber-300/60 shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition cursor-pointer"
           >
             <FastForward className="w-5 h-5 fill-slate-950" />
             CONTINUE ({latestUnlockedLevel})
           </button>
 
+          {/* NEW GAME+ / REWARDS ROW */}
+          {isNgPlusUnlocked && (
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={() => {
+                  audioEngine.playButtonClick();
+                  setShowNgPlusConfirm(true);
+                }}
+                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <Flame className="w-4 h-4 fill-slate-950" />
+                START NG+{saveData.newGamePlusLevel ? ` (${saveData.newGamePlusLevel + 1})` : ''}
+              </button>
+
+              <button
+                onClick={() => {
+                  audioEngine.playButtonClick();
+                  setShowLegendaryModal(true);
+                }}
+                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-400 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <Award className="w-4 h-4" />
+                LEGENDARY REWARDS
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-2.5 w-full">
             {/* NEW GAME / PLAY */}
             <button
               onClick={handleStartPlay}
-              className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-sm tracking-wider uppercase rounded-xl border border-slate-600 flex items-center justify-center gap-2 transition shadow-lg"
+              className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-sm tracking-wider uppercase rounded-xl border border-slate-600 flex items-center justify-center gap-2 transition shadow-lg cursor-pointer"
             >
               <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
               PLAY (1-1)
@@ -170,7 +267,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             {/* WORLD MAP / LEVEL SELECT */}
             <button
               onClick={() => handleBtnClick('WORLD_MAP')}
-              className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-sm tracking-wider uppercase rounded-xl border border-slate-600 flex items-center justify-center gap-2 transition shadow-lg"
+              className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-sm tracking-wider uppercase rounded-xl border border-slate-600 flex items-center justify-center gap-2 transition shadow-lg cursor-pointer"
             >
               <Map className="w-4 h-4 text-sky-400" />
               WORLD MAP
@@ -178,12 +275,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
 
           <div className="flex gap-2 w-full">
+            {/* CAMPAIGN PROGRESS */}
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
+                setShowCampaignModal(true);
+              }}
+              className="flex-1 py-2.5 px-2 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span>CAMPAIGN</span>
+            </button>
+
             {/* ACHIEVEMENTS */}
             <button
               onClick={() => handleBtnClick('ACHIEVEMENTS')}
-              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition relative"
+              className="flex-1 py-2.5 px-2 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition relative cursor-pointer"
             >
-              <Trophy className="w-4 h-4 text-amber-400" />
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
               <span>AWARDS</span>
               {unclaimedCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center animate-bounce border border-amber-300">
@@ -192,31 +301,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               )}
             </button>
 
-            {/* STORY INTRO */}
-            <button
-              onClick={() => handleBtnClick('STORY')}
-              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
-            >
-              <BookOpen className="w-4 h-4 text-amber-400" />
-              STORY
-            </button>
-
             {/* UPGRADES */}
             <button
               onClick={() => handleBtnClick('UPGRADES')}
-              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
+              className="flex-1 py-2.5 px-2 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition cursor-pointer"
             >
-              <ShieldAlert className="w-4 h-4 text-emerald-400" />
-              UPGRADES
+              <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
+              <span>UPGRADES</span>
             </button>
 
             {/* SETTINGS */}
             <button
               onClick={() => handleBtnClick('SETTINGS')}
-              className="flex-1 py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition"
+              className="flex-1 py-2.5 px-2 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-200 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition cursor-pointer"
             >
-              <Settings className="w-4 h-4 text-sky-400" />
-              SETTINGS
+              <Settings className="w-3.5 h-3.5 text-sky-400" />
+              <span>SETTINGS</span>
             </button>
 
             {/* EXIT */}
@@ -225,7 +325,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 audioEngine.playButtonClick();
                 setShowExitConfirm(true);
               }}
-              className="py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-400 hover:text-rose-400 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center transition"
+              className="py-2.5 px-2.5 bg-slate-900/90 hover:bg-slate-800 active:scale-95 text-slate-400 hover:text-rose-400 font-semibold text-xs tracking-wide rounded-xl border border-slate-700 flex items-center justify-center transition cursor-pointer"
               title="Exit Game"
             >
               <LogOut className="w-4 h-4" />

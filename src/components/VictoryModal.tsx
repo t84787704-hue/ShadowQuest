@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Trophy, Star, Home, ArrowRight, Crown, Sparkles, Award } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { SaveSystem } from '../game/save/SaveSystem';
+import { LegendaryRewardsModal } from './LegendaryRewardsModal';
 
 interface VictoryModalProps {
   levelTitle?: string;
@@ -27,10 +28,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   };
 
   const saveData = SaveSystem.load();
+  const isAllWorldsCompleted = SaveSystem.isAllWorldsCompleted(saveData);
   const totalStarsEarned = Object.values(saveData.levelStars || {}).reduce((a, b) => a + b, 0);
-  const totalCompletedCount = saveData.completedLevels?.length || 0;
 
-  const isGrandVictory = !hasNextLevel || levelTitle?.includes('6-5') || levelTitle?.includes('THRONE');
+  const isGrandVictory = isAllWorldsCompleted || (!hasNextLevel && (levelTitle?.includes('6-5') || levelTitle?.includes('THRONE')));
+  const [showRewardModal, setShowRewardModal] = React.useState(false);
 
   return (
     <motion.div
@@ -40,7 +42,18 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       transition={{ duration: 0.2 }}
       className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 flex items-center justify-center p-4 select-none"
     >
-      {isGrandVictory ? (
+      {showRewardModal ? (
+        <div className="w-full flex items-center justify-center">
+          <LegendaryRewardsModal
+            saveData={saveData}
+            onClose={() => setShowRewardModal(false)}
+            onStartNewGamePlus={() => {
+              SaveSystem.startNewGamePlus();
+              onMainMenu();
+            }}
+          />
+        </div>
+      ) : isGrandVictory ? (
         /* GRAND FINAL ADVENTURE COMPLETE MODAL */
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -57,14 +70,14 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </div>
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 border border-amber-500/40 rounded-full text-[10px] font-black tracking-widest text-amber-300 uppercase mb-2">
-            <Sparkles className="w-3.5 h-3.5" /> 30 / 30 LEVELS CONQUERED!
+            <Sparkles className="w-3.5 h-3.5" /> ALL 6 WORLDS CONQUERED!
           </div>
 
-          <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 tracking-wider mb-1">
-            GRAND ADVENTURE COMPLETE!
+          <h2 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 tracking-wider mb-1">
+            GRAND VICTORY!
           </h2>
           <p className="text-xs text-amber-100/90 font-medium mb-4 max-w-xs leading-relaxed">
-            The Goblin King has been defeated! You have restored peace and harmony across all 6 kingdoms of the realm!
+            You have defeated the Goblin King and restored peace across all 6 worlds of the realm!
           </p>
 
           {/* Grand Campaign Stats Box */}
@@ -87,11 +100,22 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             <button
               onClick={() => {
                 audioEngine.playButtonClick();
+                setShowRewardModal(true);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-400 active:scale-95 text-slate-950 font-black text-xs sm:text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-xl transition cursor-pointer"
+            >
+              <Award className="w-4 h-4 stroke-[3]" />
+              VIEW UNLOCKED LEGENDARY REWARDS
+            </button>
+
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
                 onMainMenu();
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-xl transition"
+              className="w-full py-3 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm uppercase rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              <Home className="w-4 h-4 stroke-[3]" />
+              <Home className="w-4 h-4" />
               RETURN TO MAIN MENU
             </button>
           </div>

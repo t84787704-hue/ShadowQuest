@@ -25,11 +25,15 @@ export class Player extends Entity {
   public spinKickCooldownTimer: number = 0;
   public onDamage?: () => void;
 
-  // Status effects from world enemies
+  // Status effects from world enemies & secret room buffs
   public slowTimer: number = 0;
   public stunTimer: number = 0;
   public sandBlindTimer: number = 0;
+  public attackBuffTimer: number = 0;
+  public defenseBuffTimer: number = 0;
   public isGodMode: boolean = false;
+  public legendaryAuraUnlocked: boolean = false;
+  public legendaryAbilityUnlocked: boolean = false;
 
   // Jump responsiveness helpers
   private coyoteTimer: number = 0;
@@ -84,6 +88,12 @@ export class Player extends Entity {
     }
     if (this.sandBlindTimer > 0) {
       this.sandBlindTimer -= dt;
+    }
+    if (this.attackBuffTimer > 0) {
+      this.attackBuffTimer -= dt;
+    }
+    if (this.defenseBuffTimer > 0) {
+      this.defenseBuffTimer -= dt;
     }
 
     // Cooldown & combo window timers
@@ -358,7 +368,13 @@ export class Player extends Entity {
     }
     if (this.invulnerableTimer > 0 || !this.isAlive) return false;
 
-    this.stats.currentHp = Math.max(0, this.stats.currentHp - damage);
+    let actualDamage = damage;
+    if (this.defenseBuffTimer > 0) {
+      actualDamage = Math.max(1, Math.floor(damage * 0.5));
+      particles.createFloatingText(this.x + this.width / 2, this.y - 12, 'SHIELDED (-50%) 🛡️', '#38bdf8', 12);
+    }
+
+    this.stats.currentHp = Math.max(0, this.stats.currentHp - actualDamage);
     this.invulnerableTimer = 1.0; // 1.0 second damage invulnerability period
     this.state = 'HURT';
 
@@ -926,6 +942,58 @@ export class Player extends Entity {
     ctx.beginPath();
     ctx.arc(headX, headY - 2.0, 7.5, Math.PI * 1.1, Math.PI * 1.6);
     ctx.stroke();
+
+    // Render Legendary Warrior Golden Radiant Aura
+    if (this.legendaryAuraUnlocked && this.isAlive) {
+      ctx.save();
+      const pulse = Math.sin(Date.now() * 0.006) * 3;
+      const now = Date.now() * 0.003;
+
+      // Outer Golden Radiant Shield Ring
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(0, -22, 23 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Orbiting Golden Energy Particles
+      for (let i = 0; i < 4; i++) {
+        const angle = now + (i * Math.PI) / 2;
+        const sparkX = Math.cos(angle) * (25 + pulse);
+        const sparkY = Math.sin(angle) * (14 + pulse) - 22;
+        ctx.fillStyle = i % 2 === 0 ? '#fef08a' : '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(sparkX, sparkY, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Ground Light Ring
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
+      ctx.beginPath();
+      ctx.ellipse(0, -2, 16 + pulse, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Render Secret Room Power Boost Aura
+    if ((this.attackBuffTimer > 0 || this.defenseBuffTimer > 0) && this.isAlive) {
+      ctx.save();
+      const auraPulse = Math.sin(Date.now() * 0.008) * 3;
+      ctx.strokeStyle = this.attackBuffTimer > 0 ? '#facc15' : '#38bdf8';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(0, -22, 22 + auraPulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = this.attackBuffTimer > 0 ? '#fde047' : '#7dd3fc';
+      ctx.font = 'bold 9px sans-serif';
+      const maxBuffSec = Math.ceil(Math.max(this.attackBuffTimer, this.defenseBuffTimer));
+      ctx.fillText(`⚡ BUFF ${maxBuffSec}s`, -18, -52);
+      ctx.restore();
+    }
 
     // Render Status Effects (God Mode / Stun / Slow / Sand)
     if (this.isGodMode && this.isAlive) {

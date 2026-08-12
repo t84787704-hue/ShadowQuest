@@ -131,6 +131,12 @@ export interface SaveData {
   stats: SaveDataStats;
   claimedAchievements: string[]; // list of achievement IDs whose coin rewards have been claimed
   discoveredSecretRooms?: Record<string, number[]>; // levelId -> secret room IDs discovered [0, 1]
+  gameCompleted?: boolean;
+  legendaryTitleUnlocked?: boolean;
+  legendaryAuraUnlocked?: boolean;
+  legendaryAbilityUnlocked?: boolean;
+  newGamePlusUnlocked?: boolean;
+  newGamePlusLevel?: number;
   statBonuses?: {
     maxHpBonus: number;
     attackBonus: number;
