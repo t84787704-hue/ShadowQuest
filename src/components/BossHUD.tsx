@@ -86,11 +86,29 @@ export const BossHUD: React.FC<BossHUDProps> = ({
           >
             <div className="flex items-center justify-center gap-2 text-red-400 font-black text-xs sm:text-sm tracking-widest uppercase">
               <Skull className="w-5 h-5 text-red-500 animate-bounce" />
-              <span>BOSS ENCOUNTER</span>
+              <span>⚠️ BOSS ENCOUNTER ⚠️</span>
               <Skull className="w-5 h-5 text-red-500 animate-bounce" />
             </div>
             <h2 className="text-xl sm:text-3xl font-black italic tracking-tight text-white drop-shadow-md mt-0.5">
               {bossName}
+            </h2>
+          </motion.div>
+        )}
+
+        {state === 'PHASE_CHANGE' && (
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0, y: -20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: -10 }}
+            className="mb-2 bg-gradient-to-r from-amber-950/90 via-slate-950/95 to-red-950/90 border-2 border-amber-500/80 px-6 py-2.5 rounded-2xl shadow-2xl shadow-amber-500/50 text-center backdrop-blur-md animate-pulse"
+          >
+            <div className="flex items-center justify-center gap-2 text-amber-400 font-black text-xs sm:text-sm tracking-widest uppercase">
+              <Flame className="w-5 h-5 text-amber-500 animate-bounce" />
+              <span>PHASE TRANSITION</span>
+              <Flame className="w-5 h-5 text-amber-500 animate-bounce" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight text-yellow-300 drop-shadow-md mt-0.5">
+              {phase === 3 ? '⚡ PHASE 3: FINAL STAND! ⚡' : '🔥 PHASE 2: AWAKENED! 🔥'}
             </h2>
           </motion.div>
         )}

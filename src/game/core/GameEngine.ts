@@ -1149,7 +1149,42 @@ export class GameEngine {
       }
     }
 
-    // 3. Update World Boss & Boss Projectiles
+    // 3. Update World Boss, Arena Boundaries & Boss Projectiles
+    if (this.isBossLevel && this.bossMonster) {
+      const arenaStartX = (this.tileMap.cols - 55) * 32;
+      const arenaEndX = this.tileMap.widthInPixels - 64;
+
+      // Trigger boss intro when player approaches arena
+      if (this.player.x >= arenaStartX - 60 && !this.bossMonster.isTriggered && this.player.isAlive) {
+        this.bossMonster.isTriggered = true;
+        this.bossMonster.state = 'INTRO';
+        this.bossMonster.introTimer = 1.6;
+        audioEngine.playCustomSFX('finisher');
+        this.particles.createVictoryConfetti(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
+      }
+
+      // Lock player and boss inside arena while boss fight is active
+      if (this.bossMonster.isTriggered && this.bossMonster.isAlive) {
+        if (this.player.x < arenaStartX + 16) {
+          this.player.x = arenaStartX + 16;
+          if (this.player.vx < 0) this.player.vx = 0;
+        }
+        if (this.player.x > arenaEndX - 48) {
+          this.player.x = arenaEndX - 48;
+          if (this.player.vx > 0) this.player.vx = 0;
+        }
+
+        if (this.bossMonster.x < arenaStartX + 32) {
+          this.bossMonster.x = arenaStartX + 32;
+          if (this.bossMonster.vx < 0) this.bossMonster.vx = 0;
+        }
+        if (this.bossMonster.x > arenaEndX - 80) {
+          this.bossMonster.x = arenaEndX - 80;
+          if (this.bossMonster.vx > 0) this.bossMonster.vx = 0;
+        }
+      }
+    }
+
     if (this.bossMonster && this.bossMonster.isAlive) {
       this.bossMonster.update(dt, this.player, this.tileMap, this.particles, this.bossProjectiles);
     }

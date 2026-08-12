@@ -703,13 +703,18 @@ export class BossMonster extends Entity {
       particles.createFloatingText(textX, textY, `-${actualDamage}`, '#ef4444', 16);
     }
 
+    // Boss Physical Recoil
+    const pushDir = this.facingRight ? -1 : 1;
+    const pushMag = attackType === 'FINISHER' ? 5.5 : attackType === 'SPIN_KICK' ? 4.0 : attackType === 'KICK' ? 3.0 : 1.8;
+    this.vx += pushDir * pushMag;
+
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
 
     // Phase Transitions
     if (this.worldId === 6) {
-      if (this.currentPhase === 1 && this.hp <= this.maxHp * 0.5) {
+      if (this.currentPhase === 1 && this.hp <= this.maxHp * 0.66) {
         this.triggerPhaseChange(2, particles);
-      } else if (this.currentPhase === 2 && this.hp <= this.maxHp * 0.2) {
+      } else if (this.currentPhase === 2 && this.hp <= this.maxHp * 0.33) {
         this.triggerPhaseChange(3, particles);
       }
     } else if (this.maxPhases === 2 && this.currentPhase === 1 && this.hp <= this.maxHp * 0.5) {
@@ -738,15 +743,23 @@ export class BossMonster extends Entity {
   private triggerPhaseChange(nextPhase: number, particles: ParticleSystem) {
     this.currentPhase = nextPhase;
     this.state = 'PHASE_CHANGE';
-    this.phaseTimer = 1.0;
+    this.phaseTimer = 1.2;
     audioEngine.playCustomSFX('finisher');
     particles.createVictoryConfetti(this.x + this.width / 2, this.y);
+
+    const phaseMsg =
+      nextPhase === 3
+        ? '⚡ PHASE 3: FINAL STAND!'
+        : this.worldId === 6
+        ? '🔥 PHASE 2: DRAGON STANCE!'
+        : '🔥 PHASE 2: ENRAGED!';
+
     particles.createFloatingText(
       this.x + this.width / 2,
       this.y - 25,
-      `PHASE ${nextPhase} — AWAKENED!`,
-      '#f97316',
-      22
+      phaseMsg,
+      nextPhase === 3 ? '#ef4444' : '#f97316',
+      24
     );
   }
 
