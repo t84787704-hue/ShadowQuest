@@ -240,6 +240,11 @@ export class SaveSystem {
     return requiredLevels.every((lvl) => completed.includes(lvl));
   }
 
+  public static isWorldUnlocked(data: SaveData, worldNum: number): boolean {
+    if (worldNum === 1) return true;
+    return Boolean(data.unlockedWorlds?.includes(worldNum));
+  }
+
   public static isAllWorldsCompleted(data: SaveData): boolean {
     return [1, 2, 3, 4, 5, 6].every((w) => this.isWorldCompleted(data, w));
   }
