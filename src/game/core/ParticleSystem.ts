@@ -174,6 +174,48 @@ export class ParticleSystem {
     }
   }
 
+  public createKickImpact(x: number, y: number, facingRight: boolean) {
+    const dir = facingRight ? 1 : -1;
+    const kickColors = ['#fde047', '#f97316', '#ffffff', '#38bdf8', '#fbbf24'];
+
+    // 1. Central Bright Impact Flash & Shockwave Ring
+    for (let i = 0; i < 10; i++) {
+      const angle = (Math.PI * 2 * i) / 10;
+      const speed = 4.0 + Math.random() * 2.0;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed + dir * 2.5,
+        vy: Math.sin(angle) * speed,
+        size: Math.random() * 4.5 + 3.0,
+        color: i % 2 === 0 ? '#ffffff' : '#fde047',
+        alpha: 1.0,
+        life: 0,
+        maxLife: 0.18 + Math.random() * 0.10,
+        shape: 'circle',
+      });
+    }
+
+    // 2. High-speed Martial Arts Kick Impact Sparks
+    for (let i = 0; i < 16; i++) {
+      const angle = (Math.random() - 0.5) * 1.4 + (facingRight ? 0 : Math.PI);
+      const speed = Math.random() * 7.5 + 3.5;
+      const color = kickColors[i % kickColors.length];
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.2,
+        size: Math.random() * 3.5 + 2.0,
+        color,
+        alpha: 1.0,
+        life: 0,
+        maxLife: 0.24 + Math.random() * 0.12,
+        shape: i % 2 === 0 ? 'spark' : 'star',
+      });
+    }
+  }
+
   public createCombatImpact(x: number, y: number, facingRight: boolean, sparkColors: string[] = ['#fde047', '#38bdf8', '#f97316']) {
     const dir = facingRight ? 1 : -1;
     // Impact ring/burst

@@ -344,8 +344,17 @@ export class Player extends Entity {
   public getAttackHitbox(): Rect | null {
     if (this.state === 'ATTACK' && this.attackTimer > 0.02) {
       const attackProgress = (this.attackDuration - this.attackTimer) / (this.attackDuration || 0.2);
-      // Active hit window: Only active during strike extension (22% to 75% of attack duration)
-      if (attackProgress < 0.22 || attackProgress > 0.75) {
+
+      let minProgress = 0.22;
+      let maxProgress = 0.75;
+
+      if (this.attackType === 'KICK') {
+        // KICK active hit window: Active during full leg extension (20% to 68%)
+        minProgress = 0.20;
+        maxProgress = 0.68;
+      }
+
+      if (attackProgress < minProgress || attackProgress > maxProgress) {
         return null;
       }
 
@@ -356,8 +365,8 @@ export class Player extends Entity {
         reach = 44;
         attackHeight = 40;
       } else if (this.attackType === 'KICK') {
-        reach = 52;
-        attackHeight = 44;
+        reach = 56;
+        attackHeight = 42;
       } else if (this.attackType === 'FINISHER') {
         reach = 62;
         attackHeight = 48;
@@ -639,34 +648,69 @@ export class Player extends Entity {
     // ----------------------------------------------------
     ctx.fillStyle = pantsColor;
     if (isAttacking && this.attackType === 'KICK') {
-      // Front leg is HIGH ROUNDHOUSE KICK
-      let kickAngle = -0.3;
-      let legLength = 16;
-      if (attackProgress >= 0.22 && attackProgress <= 0.75) {
-        const sweepFactor = (attackProgress - 0.22) / 0.53;
-        kickAngle = -Math.PI / 2.6 + sweepFactor * (Math.PI / 1.6);
-        legLength = 26;
-      } else if (attackProgress > 0.75) {
-        kickAngle = 0.15;
-        legLength = 18;
+      // POWERFUL HIGH ROUNDHOUSE KICK ANIMATION:
+      // Phase 1 (0.0 - 0.20): Chamber / Anticipation (knee raised & tucked back)
+      // Phase 2 (0.20 - 0.68): Rapid extension outward to full 36px strike & hit frame
+      // Phase 3 (0.68 - 1.0): Smooth retraction & recovery back to guard stance
+
+      let kickAngle = -0.55;
+      let legLength = 14;
+
+      if (attackProgress < 0.20) {
+        // Anticipation / Chamber Pose
+        const p = attackProgress / 0.20;
+        kickAngle = -0.28 - p * 0.27; // Chamber knee up and back
+        legLength = 14 + p * 3;
+      } else if (attackProgress <= 0.68) {
+        // Active Strike & Extended Hit Frame
+        const p = (attackProgress - 0.20) / 0.48; // 0 to 1
+        // Rapid snap outward to horizontal roundhouse strike angle (-0.08 to 0.04)
+        kickAngle = -0.38 + Math.sin(p * Math.PI) * 0.42;
+        // Noticeably long extended leg during peak hit frame
+        legLength = 17 + Math.sin(p * Math.PI) * 19; // Extends to 36px!
+      } else {
+        // Retraction & Recovery Pose
+        const p = (attackProgress - 0.68) / 0.32;
+        kickAngle = 0.04 + p * 0.22;
+        legLength = 36 - p * 20;
       }
 
       ctx.save();
-      ctx.translate(1, bodyY + 15);
+      ctx.translate(1, bodyY + 14);
       ctx.rotate(kickAngle);
 
+      // Thigh & Pants
       ctx.fillStyle = pantsColor;
-      ctx.fillRect(0, -4, legLength, 8);
-      ctx.fillStyle = shoeColor;
-      ctx.fillRect(legLength - 2, -5, 8, 9);
-      ctx.fillStyle = shoeSoleColor;
-      ctx.fillRect(legLength - 2, 3, 9, 2);
+      ctx.fillRect(0, -4.5, legLength, 9);
 
-      if (attackProgress >= 0.22 && attackProgress <= 0.75) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2.5;
+      // Knee Joint Line
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(Math.floor(legLength * 0.45), -4.5, 2, 9);
+
+      // Extended Striking Boot / Shoe
+      ctx.fillStyle = shoeColor;
+      ctx.fillRect(legLength - 2, -5.5, 10, 11);
+
+      // Shoe Sole
+      ctx.fillStyle = shoeSoleColor;
+      ctx.fillRect(legLength - 2, 4.5, 10, 2.5);
+
+      // Bright Foot Tip Highlight & Energy Arc during Active Hit Frame
+      if (attackProgress >= 0.20 && attackProgress <= 0.68) {
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(legLength + 6, -4, 3, 8);
+
+        // Kinetic Energy / Wind Arc Trail Ahead of Foot
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, 0, 30, -Math.PI / 3, Math.PI / 3);
+        ctx.arc(0, 0, legLength + 6, -Math.PI / 4, Math.PI / 4);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, legLength + 8, -Math.PI / 5, Math.PI / 5);
         ctx.stroke();
       }
 

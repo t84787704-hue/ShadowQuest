@@ -880,6 +880,14 @@ export class GameEngine {
         this.bossMonster.takeDamage(damage, this.particles, this.player.attackType);
         this.registerComboHit(this.bossMonster.x + this.bossMonster.width / 2, this.bossMonster.y);
 
+        if (this.player.attackType === 'KICK') {
+          const bossContactX = this.player.facingRight
+            ? Math.min(this.bossMonster.x + 12, this.player.x + this.player.width + 50)
+            : Math.max(this.bossMonster.x + this.bossMonster.width - 12, this.player.x - 50);
+          const bossContactY = this.bossMonster.y + this.bossMonster.height * 0.4;
+          this.particles.createKickImpact(bossContactX, bossContactY, this.player.facingRight);
+        }
+
         this.hitStopTimer = 0.06; // 60ms Boss hit stop
         this.camera.addShake(0.15, 6);
         this.onImpactCallback?.('BOSS');
@@ -938,8 +946,15 @@ export class GameEngine {
           const isBlocked = goblin.takeDamage(damage, this.particles, this.player.attackType);
           this.registerComboHit(goblin.x + goblin.width / 2, goblin.y);
 
-          const impactX = goblin.x + goblin.width / 2;
-          const impactY = goblin.y + goblin.height / 2 - 10;
+          let impactX = goblin.x + goblin.width / 2;
+          let impactY = goblin.y + goblin.height / 2 - 10;
+
+          if (this.player.attackType === 'KICK') {
+            impactX = this.player.facingRight
+              ? Math.min(goblin.x + 6, this.player.x + this.player.width + 48)
+              : Math.max(goblin.x + goblin.width - 6, this.player.x - 48);
+            impactY = goblin.y + goblin.height * 0.35;
+          }
 
           if (isBlocked) {
             // Blocked Attack Feedback
@@ -951,7 +966,11 @@ export class GameEngine {
             goblin.vx = this.player.facingRight ? 3.0 : -3.0;
           } else {
             // Successful Hit Feedback
-            this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, this.player.equippedWeapon.sparkColors);
+            if (this.player.attackType === 'KICK') {
+              this.particles.createKickImpact(impactX, impactY, this.player.facingRight);
+            } else {
+              this.particles.createCombatImpact(impactX, impactY, this.player.facingRight, this.player.equippedWeapon.sparkColors);
+            }
 
             let labelText = 'JAB!';
             let labelColor = '#fef08a';
@@ -969,7 +988,7 @@ export class GameEngine {
               labelColor = '#f97316';
               this.hitStopTimer = 0.08;
               this.camera.addShake(0.12, 6.5);
-              goblin.vx = this.player.facingRight ? 8.5 : -8.5;
+              goblin.vx = this.player.facingRight ? 9.0 : -9.0;
               goblin.vy = -4.5;
               this.onImpactCallback?.('HEAVY');
             } else if (this.player.attackType === 'FINISHER') {
