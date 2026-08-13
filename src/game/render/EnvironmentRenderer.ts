@@ -352,38 +352,133 @@ export class EnvironmentRenderer {
         ctx.fill();
       }
     } else if (levelNum === 2) {
-      // 1-2 Forest Ruins: Overcast sky, ancient ruin stone pillars & vines
+      // 1-2 Ancient Ruins: Overcast twilight sky, crumbling stone temples, grand ruin pillars, overgrown ivy, floating ancient spirit particles
+      // 1. Twilight / Moody Overcast Sky
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-      skyGrad.addColorStop(0, '#1e293b');
-      skyGrad.addColorStop(0.6, '#334155');
+      skyGrad.addColorStop(0, '#0f172a');
+      skyGrad.addColorStop(0.4, '#1e293b');
+      skyGrad.addColorStop(0.7, '#334155');
       skyGrad.addColorStop(1, '#475569');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Distant Ruined Pillars
-      const pillarSpacing = 180;
-      const startPillar = Math.floor((offsetX * 0.2 - 100) / pillarSpacing);
-      for (let i = startPillar; i < startPillar + 10; i++) {
-        const px = i * pillarSpacing - offsetX * 0.2;
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(px, height - 260, 28, 180);
-        // Broken top
-        ctx.fillRect(px - 6, height - 270, 40, 14);
-        // Vines
-        ctx.fillStyle = '#166534';
-        ctx.fillRect(px + 4, height - 250, 8, 80);
-        ctx.fillRect(px + 14, height - 220, 6, 60);
+      // Soft Sun Break Glow behind Clouds
+      const sunX = width * 0.72 - offsetX * 0.03;
+      const sunY = 90 - offsetY * 0.02;
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 140);
+      sunGlow.addColorStop(0, 'rgba(251, 191, 36, 0.35)');
+      sunGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.12)');
+      sunGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Soft God Rays through cloud breaks
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.04)';
+      for (let r = 0; r < 5; r++) {
+        const rayAngle = r * 0.28 + 0.3;
+        ctx.beginPath();
+        ctx.moveTo(sunX, sunY);
+        ctx.lineTo(sunX - Math.cos(rayAngle) * 700, sunY + Math.sin(rayAngle) * 700);
+        ctx.lineTo(sunX - Math.cos(rayAngle + 0.10) * 700, sunY + Math.sin(rayAngle + 0.10) * 700);
+        ctx.closePath();
+        ctx.fill();
       }
 
-      // Overcast Canopy
-      ctx.fillStyle = '#064e3b';
+      // 2. Layer 1: Distant Ancient Temple Silhouette & Ruined Mountains
+      ctx.fillStyle = '#0f172a';
       ctx.beginPath();
       ctx.moveTo(0, height);
-      for (let x = -50; x <= width + 50; x += 40) {
-        ctx.lineTo(x, height - 110 - Math.sin((x + offsetX * 0.35) * 0.01) * 30);
+      for (let x = -50; x <= width + 50; x += 50) {
+        const mY = height - 160 - Math.sin((x + offsetX * 0.06) * 0.006) * 50;
+        ctx.lineTo(x, mY);
       }
       ctx.lineTo(width, height);
       ctx.fill();
+
+      // Distant Collapsed Temple Arches on Horizon
+      const archSpacing = 320;
+      const startArch = Math.floor((offsetX * 0.08 - 100) / archSpacing);
+      ctx.fillStyle = '#1e293b';
+      for (let i = startArch; i < startArch + 6; i++) {
+        const ax = i * archSpacing - offsetX * 0.08;
+        const ay = height - 210;
+        ctx.fillRect(ax, ay, 20, 110);
+        ctx.fillRect(ax + 70, ay, 20, 110);
+        ctx.beginPath();
+        ctx.arc(ax + 45, ay, 45, Math.PI, 0);
+        ctx.fill();
+      }
+
+      // 3. Layer 2: Mid-ground Broken Columns & Fluted Ruined Pillars
+      const pillarSpacing = 160;
+      const startPillar = Math.floor((offsetX * 0.22 - 100) / pillarSpacing);
+      for (let i = startPillar; i < startPillar + 12; i++) {
+        const px = i * pillarSpacing - offsetX * 0.22;
+        const py = height - 240 + (i % 3) * 15;
+
+        // Main Column Body
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(px, py, 32, 160);
+
+        // Fluted Column lines
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px + 6, py, 4, 160);
+        ctx.fillRect(px + 22, py, 4, 160);
+
+        // Broken Capital Top
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px - 8, py - 12, 48, 16);
+
+        // Overgrown Ivy / Moss on Columns
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(px + 2, py + 20, 12, 50);
+        ctx.fillRect(px + 18, py + 60, 10, 45);
+        ctx.beginPath();
+        ctx.arc(px + 8, py + 72, 10, 0, Math.PI * 2);
+        ctx.arc(px + 24, py + 107, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4. Layer 3: Closer Ruined Stone Archways & Wall Sections
+      const wallSpacing = 280;
+      const startWall = Math.floor((offsetX * 0.45 - 120) / wallSpacing);
+      for (let i = startWall; i < startWall + 8; i++) {
+        const wx = i * wallSpacing - offsetX * 0.45;
+        const wy = height - 160;
+
+        // Ruined Wall Blocks
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(wx, wy, 80, 70);
+        ctx.fillRect(wx + 15, wy - 30, 50, 30);
+
+        // Mortar lines
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(wx, wy, 80, 70);
+        ctx.beginPath();
+        ctx.moveTo(wx, wy + 35);
+        ctx.lineTo(wx + 80, wy + 35);
+        ctx.stroke();
+
+        // Hanging Vines
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(wx + 10, wy + 10, 4, 40);
+        ctx.fillRect(wx + 40, wy - 20, 3, 55);
+        ctx.fillRect(wx + 65, wy + 20, 4, 35);
+      }
+
+      // 5. Foreground Ambient Floating Ancient Particles
+      const time = Date.now() * 0.0012;
+      for (let p = 0; p < 16; p++) {
+        const px = ((p * 95 + time * 28) % (width + 80)) - 40;
+        const py = 100 + Math.sin(time * 1.2 + p * 0.8) * 40 + (p * 22) % (height - 180);
+        ctx.fillStyle = p % 2 === 0 ? 'rgba(250, 204, 21, 0.65)' : 'rgba(56, 189, 248, 0.60)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.0 + (p % 3) * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (levelNum === 3) {
       // 1-3 River Valley: Flowing water at horizon, sunrise horizon, stone bridge arches
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
