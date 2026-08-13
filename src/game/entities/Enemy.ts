@@ -37,11 +37,18 @@ export class ForestGoblin extends Entity {
   public isBoss: boolean = false;
   public levelId: string = '1-1';
 
+  public get isLargeMonster(): boolean {
+    return !this.isBoss && this.enemyClass === 'HEAVY_FIGHTER';
+  }
+
   public get isImmortal(): boolean {
     if (this.isBoss) return false;
     const [wStr] = (this.levelId || '1-1').split('-');
     const w = parseInt(wStr, 10) || 1;
-    return w === 9 || w === 10;
+    if (w === 9 || w === 10) {
+      return this.isLargeMonster;
+    }
+    return false;
   }
 
   // Serious Martial Artist Identifier & Class
@@ -131,28 +138,31 @@ export class ForestGoblin extends Entity {
     isBoss: boolean = false,
     levelId: string = '1-1'
   ) {
+    // Determine Archetype Class for Normal Enemies
+    const seed = Math.abs(Math.floor(x * 3 + y * 7)) % 10;
+    let enemyClass: EnemyClass = 'MARTIAL_ARTIST';
+    if (seed < 2) {
+      enemyClass = 'FAST_FIGHTER';
+    } else if (seed < 5) {
+      enemyClass = 'HEAVY_FIGHTER';
+    } else if (seed < 8) {
+      enemyClass = 'MARTIAL_ARTIST';
+    } else {
+      enemyClass = 'ELITE_FIGHTER';
+    }
+
     const isFinalBoss = isBoss && (levelId === '10-10' || levelId === '6-5');
-    const width = isFinalBoss ? 68 : isBoss ? 54 : 34;
-    const height = isFinalBoss ? 72 : isBoss ? 60 : 44;
+    const isLargeMonster = !isBoss && enemyClass === 'HEAVY_FIGHTER';
+    const width = isFinalBoss ? 68 : isBoss ? 54 : isLargeMonster ? 48 : 34;
+    const height = isFinalBoss ? 72 : isBoss ? 60 : isLargeMonster ? 56 : 44;
     super(x, y, width, height);
 
+    this.enemyClass = enemyClass;
     this.isBoss = isBoss;
     this.levelId = levelId;
 
     const [wStr] = levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
-
-    // Determine Archetype Class for Normal Enemies
-    const seed = Math.abs(Math.floor(x * 3 + y * 7)) % 10;
-    if (seed < 2) {
-      this.enemyClass = 'FAST_FIGHTER';
-    } else if (seed < 5) {
-      this.enemyClass = 'HEAVY_FIGHTER';
-    } else if (seed < 8) {
-      this.enemyClass = 'MARTIAL_ARTIST';
-    } else {
-      this.enemyClass = 'ELITE_FIGHTER';
-    }
 
     // Set Serious World Names
     this.enemyName = this.getEnemyName(w, this.enemyClass, levelId);
@@ -1115,7 +1125,7 @@ export class ForestGoblin extends Entity {
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 9px sans-serif';
-      ctx.fillText('🛡️ IMMORTAL WARRIOR', rx + this.width / 2, ry - 18);
+      ctx.fillText('🛡️ IMMORTAL MONSTER', rx + this.width / 2, ry - 18);
       ctx.restore();
       return;
     }

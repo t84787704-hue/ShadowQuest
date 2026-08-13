@@ -1652,7 +1652,7 @@ export class GameEngine {
       if (worldNum === 9 || worldNum === 10) {
         ctx.fillStyle = '#f43f5e';
         ctx.font = 'bold 9px monospace';
-        ctx.fillText('🛡️ IMMORTAL ENEMIES (UNKILLABLE)', bx + boxW / 2, by + 48);
+        ctx.fillText('🛡️ LARGE MONSTER IS UNKILLABLE!', bx + boxW / 2, by + 48);
       }
     }
 
