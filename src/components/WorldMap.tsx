@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull, Trophy, Crown, Layers } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull, Trophy, Crown, Layers, Zap } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
 import { LevelRegistry, WorldDefinition } from '../game/world/LevelRegistry';
+import { DebugManager } from '../game/debug/DebugManager';
 
 interface WorldMapProps {
   saveData: SaveData;
@@ -29,7 +30,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
   onSelectLevel,
 }) => {
   const [selectedWorldId, setSelectedWorldId] = useState<number | 'ALL'>(1);
+  const [debugModeActive, setDebugModeActive] = useState<boolean>(DebugManager.isDebugMode());
   const unlockedWorlds = saveData.unlockedWorlds || [1];
+
+  const isDebugMode = DebugManager.isDebugMode();
 
   const allWorldDefs = LevelRegistry.getWorlds();
 
@@ -70,12 +74,29 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         </h2>
 
         <div className="flex items-center gap-2 text-xs font-mono font-bold">
+          {DebugManager.isUnlocked() && (
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
+                const next = DebugManager.toggleDebugMode();
+                setDebugModeActive(next);
+              }}
+              className={`px-2.5 py-1 text-[10px] font-mono font-black rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                isDebugMode
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 ring-2 ring-amber-400 shadow-md'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              }`}
+              title="Toggle Development Debug Mode (Unlocks all 10 Worlds & 100 Levels)"
+            >
+              <Zap className="w-3.5 h-3.5" /> DEV DEBUG: {isDebugMode ? 'ON' : 'OFF'}
+            </button>
+          )}
           <button
             onClick={() => {
               audioEngine.playButtonClick();
               onNavigate('ACHIEVEMENTS');
             }}
-            className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 rounded-lg text-amber-400 flex items-center gap-1 transition"
+            className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 rounded-lg text-amber-400 flex items-center gap-1 transition cursor-pointer"
             title="Achievements"
           >
             <Trophy className="w-4 h-4" />
@@ -110,7 +131,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
         <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
           {allWorldDefs.map((world) => {
-            const isUnlocked = unlockedWorlds.includes(world.id);
+            const isUnlocked = isDebugMode || unlockedWorlds.includes(world.id);
             const isSelected = selectedWorldId === world.id;
 
             const completedInWorld = world.levels.filter((l) =>
@@ -160,7 +181,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
       {/* World & Levels Display */}
       <div className="space-y-6">
         {worldsToDisplay.map((world: WorldDefinition) => {
-          const isWorldUnlocked = unlockedWorlds.includes(world.id);
+          const isWorldUnlocked = isDebugMode || unlockedWorlds.includes(world.id);
 
           return (
             <div key={world.id} className="space-y-3">
@@ -187,7 +208,9 @@ export const WorldMap: React.FC<WorldMapProps> = ({
 
                 <div className="text-right font-mono text-xs text-slate-400">
                   {isWorldUnlocked ? (
-                    <span className="text-emerald-400 font-bold">REALM UNLOCKED</span>
+                    <span className="text-emerald-400 font-bold">
+                      {isDebugMode ? '⚡ DEV DEBUG UNLOCKED' : 'REALM UNLOCKED'}
+                    </span>
                   ) : (
                     <span className="text-slate-500 flex items-center gap-1">
                       <Lock className="w-3.5 h-3.5" /> CLEAR W{world.id - 1} TO UNLOCK
@@ -205,10 +228,10 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                   const w = parseInt(wStr, 10);
                   const l = parseInt(lStr, 10);
 
-                  const isCurrentWorldUnlocked = unlockedWorlds.includes(w);
-                  let isUnlocked = false;
+                  const isCurrentWorldUnlocked = isDebugMode || unlockedWorlds.includes(w);
+                  let isUnlocked = isDebugMode;
 
-                  if (isCurrentWorldUnlocked) {
+                  if (!isUnlocked && isCurrentWorldUnlocked) {
                     if (l === 1) {
                       isUnlocked = true;
                     } else {

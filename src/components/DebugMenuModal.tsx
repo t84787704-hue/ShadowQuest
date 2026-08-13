@@ -113,11 +113,12 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'LEVELS' | 'PLAYER' | 'ENEMIES' | 'FLOW'>('LEVELS');
   const [isGodMode, setIsGodMode] = useState<boolean>(DebugManager.isGodMode());
+  const [isDebugMode, setIsDebugMode] = useState<boolean>(DebugManager.isDebugMode());
   const [message, setMessage] = useState<string | null>(null);
 
   const showToast = (txt: string) => {
     setMessage(txt);
-    setTimeout(() => setMessage(null), 2000);
+    setTimeout(() => setMessage(null), 2500);
   };
 
   const handleToggleGod = () => {
@@ -131,8 +132,27 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
     showToast(nextState ? '⚡ GOD MODE ACTIVATED!' : '🛡️ GOD MODE DISABLED');
   };
 
-  const worlds = [1, 2, 3, 4, 5, 6];
-  const levels = [1, 2, 3, 4, 5];
+  const handleToggleDebug = () => {
+    const nextState = DebugManager.toggleDebugMode();
+    setIsDebugMode(nextState);
+    showToast(nextState ? '⚡ DEBUG MODE ENABLED! (All 10 Worlds & 100 Levels Unlocked)' : '🛡️ DEBUG MODE DISABLED (Normal Progression)');
+  };
+
+  const worlds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const levels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  const WORLD_TITLES_MAP: Record<number, string> = {
+    1: 'Green Valley',
+    2: 'Desert Empire',
+    3: 'Frozen Kingdom',
+    4: 'Volcanic Lands',
+    5: 'Ancient Temple',
+    6: 'Dark Swamp',
+    7: 'Sky Fortress',
+    8: 'Cursed City',
+    9: 'Demon Realm',
+    10: 'Final Realm',
+  };
 
   return (
     <motion.div
@@ -174,7 +194,7 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
               activeTab === 'LEVELS' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
             }`}
           >
-            <Play className="w-3.5 h-3.5" /> SELECT LEVEL (1-1 to 6-5)
+            <Play className="w-3.5 h-3.5" /> SELECT LEVEL (1-1 to 10-10)
           </button>
           <button
             onClick={() => setActiveTab('PLAYER')}
@@ -203,8 +223,31 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
         </div>
 
         {/* Quick Actions Bar */}
-        <div className="bg-slate-950/90 border-b border-slate-800 p-2.5 px-4">
-          <span className="text-[10px] font-black tracking-wider text-amber-400 uppercase block mb-1.5">⚡ QUICK TEST ACTIONS</span>
+        <div className="bg-slate-950/90 border-b border-slate-800 p-2.5 px-4 space-y-2">
+          {/* DEBUG MODE TOGGLE BANNER */}
+          <div className="bg-slate-900 border border-amber-500/40 rounded-xl p-2.5 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-400" /> DEBUG MODE (DEVELOPMENT UNLOCK)
+              </span>
+              <p className="text-[10px] text-slate-400">
+                Unlocks all 10 Worlds & all 100 levels on World Map and Level Select
+              </p>
+            </div>
+
+            <button
+              onClick={handleToggleDebug}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                isDebugMode
+                  ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300 shadow-lg'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+              }`}
+            >
+              <span>{isDebugMode ? 'ACTIVE ⚡' : 'OFF'}</span>
+            </button>
+          </div>
+
+          <span className="text-[10px] font-black tracking-wider text-amber-400 uppercase block">⚡ QUICK TEST ACTIONS</span>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
             <button
               onClick={() => {
@@ -322,22 +365,21 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
               </p>
               {worlds.map((w) => (
                 <div key={w} className="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
-                  <div className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-2">
-                    <span>WORLD {w}</span>
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      {w === 1 && 'Forest Realm'}
-                      {w === 2 && 'Desert Citadel'}
-                      {w === 3 && 'Glacier Fortress'}
-                      {w === 4 && 'Volcano Warlords'}
-                      {w === 5 && 'Void Shadow Realm'}
-                      {w === 6 && 'Imperial Citadel'}
+                  <div className="text-xs font-bold text-amber-400 mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span>WORLD {w}</span>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        ({WORLD_TITLES_MAP[w] || `World ${w}`})
+                      </span>
                     </span>
+                    <span className="text-[10px] text-slate-500 font-mono">10 Levels</span>
                   </div>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                     {levels.map((l) => {
                       const lvlId = `${w}-${l}`;
                       const isCurrent = currentLevelId === lvlId;
-                      const isBoss = l === 5;
+                      const isBoss = l === 10;
+                      const isMidBoss = l === 5;
                       return (
                         <button
                           key={lvlId}
@@ -350,17 +392,19 @@ const DebugMenuModalContent: React.FC<DebugMenuModalProps> = ({
                               showToast(`⚠️ Error loading level ${lvlId}`);
                             }
                           }}
-                          className={`py-2.5 px-2 rounded-lg text-xs font-black transition cursor-pointer flex flex-col items-center justify-center border ${
+                          className={`py-2 px-1 rounded-lg text-xs font-black transition cursor-pointer flex flex-col items-center justify-center border ${
                             isCurrent
                               ? 'bg-amber-500 text-slate-950 border-amber-300 ring-2 ring-amber-400'
                               : isBoss
-                              ? 'bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-700/60'
+                              ? 'bg-red-950/80 hover:bg-red-900 text-red-300 border-red-600/80'
+                              : isMidBoss
+                              ? 'bg-orange-950/60 hover:bg-orange-900 text-orange-300 border-orange-700/60'
                               : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700'
                           }`}
                         >
-                          <span>{lvlId}</span>
-                          <span className="text-[9px] font-normal opacity-80">
-                            {isBoss ? 'BOSS' : `Lvl ${l}`}
+                          <span className="text-[11px] font-mono">{lvlId}</span>
+                          <span className="text-[8px] font-normal opacity-80">
+                            {isBoss ? 'BOSS' : isMidBoss ? 'MID' : `L${l}`}
                           </span>
                         </button>
                       );

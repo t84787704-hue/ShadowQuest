@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Volume2, VolumeX, RefreshCw, Smartphone, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, RefreshCw, Smartphone, ShieldCheck, Zap } from 'lucide-react';
 import { GameScreen, SaveData } from '../types/game';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { audioEngine } from '../game/audio/AudioEngine';
+import { DebugManager } from '../game/debug/DebugManager';
 
 interface SettingsMenuProps {
   saveData: SaveData;
@@ -18,6 +19,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onSoundToggle,
 }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [debugModeActive, setDebugModeActive] = useState<boolean>(DebugManager.isDebugMode());
   const isSoundOn = audioEngine.isSoundEnabled();
 
   const handleBack = () => {
@@ -152,6 +154,38 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
             This project contains the complete Android Studio Gradle configuration and GitHub Actions workflow (`.github/workflows/android-build.yml`). Pushing to GitHub builds a standalone Android APK automatically!
           </p>
         </div>
+
+        {/* Developer Debug Mode */}
+        {DebugManager.isUnlocked() && (
+          <div className="p-4 bg-slate-900/80 border border-amber-500/30 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl">
+                <Zap className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                  DEVELOPER DEBUG MODE
+                </h4>
+                <p className="text-xs text-slate-400">Unlock all 10 Worlds & 100 levels for instant testing</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                const next = DebugManager.toggleDebugMode();
+                audioEngine.playButtonClick();
+                setDebugModeActive(next);
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+                DebugManager.isDebugMode()
+                  ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300 shadow-md'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              {DebugManager.isDebugMode() ? 'ACTIVE ⚡' : 'OFF'}
+            </button>
+          </div>
+        )}
 
         {/* Save Data Management */}
         <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between">

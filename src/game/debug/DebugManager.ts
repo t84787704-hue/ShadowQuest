@@ -4,6 +4,7 @@ export class DebugManager {
   private static lastTapTime: number = 0;
 
   private static godMode: boolean = false;
+  private static debugMode: boolean = false;
   private static enemyHpOverride: number | null = null;
   private static enemyDamageOverride: number | null = null;
   private static showAiDebugInfo: boolean = false;
@@ -52,6 +53,19 @@ export class DebugManager {
 
   public static isGodMode(): boolean {
     return this.godMode;
+  }
+
+  public static toggleDebugMode(): boolean {
+    this.debugMode = !this.debugMode;
+    return this.debugMode;
+  }
+
+  public static setDebugMode(enabled: boolean) {
+    this.debugMode = enabled;
+  }
+
+  public static isDebugMode(): boolean {
+    return this.debugMode;
   }
 
   public static setEnemyHpOverride(hp: number | null) {

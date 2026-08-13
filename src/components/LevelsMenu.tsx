@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Star, Play, CheckCircle2, Crown } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Play, CheckCircle2, Crown, Zap } from 'lucide-react';
 import { ALL_LEVELS_METADATA, WORLD_NAMES } from '../game/world/LevelData';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
+import { DebugManager } from '../game/debug/DebugManager';
 
 interface LevelsMenuProps {
   saveData: SaveData;
@@ -16,6 +17,9 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
   onSelectLevel,
 }) => {
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
+  const [debugModeActive, setDebugModeActive] = useState<boolean>(DebugManager.isDebugMode());
+
+  const isDebugMode = DebugManager.isDebugMode();
 
   const handleBack = () => {
     audioEngine.playButtonClick();
@@ -46,8 +50,25 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
           SELECT LEVEL
         </h2>
 
-        <div className="text-xs text-amber-300 font-mono font-bold">
-          🪙 {saveData.coins}
+        <div className="flex items-center gap-2 text-xs text-amber-300 font-mono font-bold">
+          {DebugManager.isUnlocked() && (
+            <button
+              onClick={() => {
+                audioEngine.playButtonClick();
+                const next = DebugManager.toggleDebugMode();
+                setDebugModeActive(next);
+              }}
+              className={`px-2.5 py-1 text-[10px] font-mono font-black rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                isDebugMode
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 ring-2 ring-amber-400 shadow-md'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+              }`}
+              title="Toggle Development Debug Mode"
+            >
+              <Zap className="w-3.5 h-3.5" /> DEV DEBUG: {isDebugMode ? 'ON' : 'OFF'}
+            </button>
+          )}
+          <span>🪙 {saveData.coins}</span>
         </div>
       </div>
 
@@ -98,10 +119,10 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
             const w = parseInt(wStr, 10);
             const l = parseInt(lStr, 10);
 
-            const isWorldUnlocked = (saveData.unlockedWorlds || [1]).includes(w);
-            let isUnlocked = false;
+            const isWorldUnlocked = isDebugMode || (saveData.unlockedWorlds || [1]).includes(w);
+            let isUnlocked = isDebugMode;
 
-            if (isWorldUnlocked) {
+            if (!isUnlocked && isWorldUnlocked) {
               if (l === 1) {
                 isUnlocked = true;
               } else {
