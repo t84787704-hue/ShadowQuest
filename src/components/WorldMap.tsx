@@ -257,6 +257,12 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 <h4 className="font-bold text-xs text-slate-100 mb-1 leading-tight">
                   {lvl.title}
                 </h4>
+
+                {isBoss && isUnlocked && !isCompleted && (
+                  <div className="mt-1 text-[9px] font-black text-rose-300 bg-rose-500/20 border border-rose-500/50 px-1.5 py-0.5 rounded tracking-wide animate-pulse flex items-center gap-1 w-fit">
+                    <Crown className="w-3 h-3 text-amber-400 fill-amber-400" /> NEW BOSS UNLOCKED!
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-800/80">

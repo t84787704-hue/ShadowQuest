@@ -518,6 +518,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               <span className="bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded border border-yellow-500/30">
                 ⭐ Rating: +{ratingData.stars} Stars
               </span>
+              {levelNum === 4 && (
+                <span className="bg-rose-500/25 text-rose-300 px-2.5 py-0.5 rounded border border-rose-500/50 flex items-center gap-1 font-black animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.4)]">
+                  <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> NEW BOSS UNLOCKED!
+                </span>
+              )}
               {unlockedWeapon && (
                 <span className="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded border border-sky-500/30 flex items-center gap-1">
                   {unlockedWeapon.icon} Unlocked {unlockedWeapon.name}!
@@ -531,10 +536,14 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             {hasNextLevel && (
               <button
                 onClick={handleNextLevelClick}
-                className="w-full min-h-[44px] py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
+                className={`w-full min-h-[44px] py-3 active:scale-95 font-black text-xs sm:text-sm uppercase rounded-xl flex items-center justify-center gap-2 shadow-lg transition cursor-pointer ${
+                  levelNum === 4
+                    ? 'bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 hover:from-rose-500 hover:to-amber-400 text-slate-950 border border-amber-300 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse'
+                    : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950'
+                }`}
               >
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
-                NEXT LEVEL
+                {levelNum === 4 ? 'CHALLENGE WORLD BOSS 👑' : 'NEXT LEVEL'}
               </button>
             )}
 

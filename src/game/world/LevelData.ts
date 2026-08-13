@@ -32,7 +32,7 @@ export const WORLD_NAMES: Record<number, string> = {
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Misty Peaks', 'Mountain Fortress'],
+  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Boss Fight'],
   2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Desert Citadel'],
   3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frost Citadel'],
   4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Fortress', 'Volcanic Citadel'],

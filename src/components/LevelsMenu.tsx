@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Star, Play, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Play, CheckCircle2, Crown } from 'lucide-react';
 import { ALL_LEVELS_METADATA, WORLD_NAMES } from '../game/world/LevelData';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';
@@ -132,6 +132,12 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
                   <h4 className="font-black text-sm text-slate-100 mb-1">
                     {lvl.title}
                   </h4>
+
+                  {(lvl.isBossLevel || lvl.levelNum === 5) && isUnlocked && !isCompleted && (
+                    <div className="mt-1 text-[9px] font-black text-rose-300 bg-rose-500/20 border border-rose-500/50 px-1.5 py-0.5 rounded tracking-wide animate-pulse flex items-center gap-1 w-fit">
+                      <Crown className="w-3 h-3 text-amber-400 fill-amber-400" /> NEW BOSS UNLOCKED!
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-800">
