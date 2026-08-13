@@ -1,23 +1,15 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, Lock, Trophy, Sparkles, Flame, Key, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, Lock, Trophy, Sparkles, ShieldCheck, X } from 'lucide-react';
 import { SaveData } from '../types/game';
 import { SaveSystem } from '../game/save/SaveSystem';
 import { audioEngine } from '../game/audio/AudioEngine';
+import { WORLD_NAMES } from '../game/world/LevelData';
 
 interface CampaignProgressModalProps {
   saveData: SaveData;
   onClose: () => void;
 }
-
-const WORLD_NAMES: Record<number, string> = {
-  1: 'Verdant Forest',
-  2: 'Sunken Desert',
-  3: 'Glacier Peak',
-  4: 'Volcanic Caverns',
-  5: 'Shadow Citadel',
-  6: 'Royal Throne',
-};
 
 export const CampaignProgressModal: React.FC<CampaignProgressModalProps> = ({ saveData, onClose }) => {
   const progress = SaveSystem.getCampaignProgress(saveData);
@@ -87,7 +79,7 @@ export const CampaignProgressModal: React.FC<CampaignProgressModalProps> = ({ sa
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[1, 2, 3, 4, 5, 6].map((wNum) => {
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((wNum) => {
               const isDone = progress.worldStatus[wNum];
               return (
                 <div

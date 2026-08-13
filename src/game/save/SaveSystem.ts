@@ -50,11 +50,23 @@ export class SaveSystem {
         0
       );
 
+      const completedLevelsList: string[] = parsed.completedLevels || [];
+      const unlockedSet = new Set<number>(parsed.unlockedWorlds || [1]);
+      unlockedSet.add(1); // World 1 is always unlocked
+
+      for (let w = 1; w < 10; w++) {
+        if (completedLevelsList.includes(`${w}-10`) || completedLevelsList.includes(`${w}-5`)) {
+          unlockedSet.add(w + 1);
+        }
+      }
+
+      const unlockedWorldsList = Array.from(unlockedSet).sort((a: number, b: number) => a - b);
+
       const loadedData: SaveData = {
         ...DEFAULT_SAVE_DATA,
         ...parsed,
-        unlockedWorlds: parsed.unlockedWorlds || [1],
-        completedLevels: parsed.completedLevels || [],
+        unlockedWorlds: unlockedWorldsList,
+        completedLevels: completedLevelsList,
         equippedWeaponId: parsed.equippedWeaponId || 'basic_sword',
         claimedAchievements: parsed.claimedAchievements || [],
         stats: {

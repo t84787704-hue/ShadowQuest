@@ -122,14 +122,14 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 key={world.id}
                 onClick={() => {
                   audioEngine.playButtonClick();
-                  if (isUnlocked) setSelectedWorldId(world.id);
+                  setSelectedWorldId(world.id);
                 }}
-                className={`relative p-2.5 rounded-xl border text-left transition flex flex-col justify-between h-24 overflow-hidden ${
+                className={`relative p-2.5 rounded-xl border text-left transition flex flex-col justify-between h-24 overflow-hidden cursor-pointer ${
                   isSelected
                     ? 'bg-gradient-to-br ' + world.bgGradient + ' ' + world.borderColor + ' ring-2 ring-amber-400 shadow-xl'
                     : isUnlocked
                     ? 'bg-slate-900 hover:bg-slate-800 border-slate-800 opacity-90'
-                    : 'bg-slate-950 border-slate-900 opacity-50 cursor-not-allowed'
+                    : 'bg-slate-950 border-slate-900 opacity-60 hover:border-slate-800'
                 }`}
               >
                 <div>
@@ -201,14 +201,16 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 {world.levels.map((lvl) => {
                   const isCompleted = saveData.completedLevels.includes(lvl.id);
 
-                  // Unlocked if 1-1 or if previous level in sequence is completed
-                  let isUnlocked = lvl.id === '1-1';
-                  if (!isUnlocked) {
-                    const [wStr, lStr] = lvl.id.split('-');
-                    const w = parseInt(wStr, 10);
-                    const l = parseInt(lStr, 10);
+                  const [wStr, lStr] = lvl.id.split('-');
+                  const w = parseInt(wStr, 10);
+                  const l = parseInt(lStr, 10);
+
+                  const isCurrentWorldUnlocked = unlockedWorlds.includes(w);
+                  let isUnlocked = false;
+
+                  if (isCurrentWorldUnlocked) {
                     if (l === 1) {
-                      isUnlocked = unlockedWorlds.includes(w);
+                      isUnlocked = true;
                     } else {
                       const prevLvlId = `${w}-${l - 1}`;
                       isUnlocked = saveData.completedLevels.includes(prevLvlId);

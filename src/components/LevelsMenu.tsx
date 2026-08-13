@@ -94,13 +94,16 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
           {ALL_LEVELS_METADATA.filter((lvl) => lvl.worldId === selectedWorld).map((lvl) => {
             const isCompleted = saveData.completedLevels.includes(lvl.id);
             
-            let isUnlocked = lvl.id === '1-1';
-            if (!isUnlocked) {
-              const [wStr, lStr] = lvl.id.split('-');
-              const w = parseInt(wStr, 10);
-              const l = parseInt(lStr, 10);
+            const [wStr, lStr] = lvl.id.split('-');
+            const w = parseInt(wStr, 10);
+            const l = parseInt(lStr, 10);
+
+            const isWorldUnlocked = (saveData.unlockedWorlds || [1]).includes(w);
+            let isUnlocked = false;
+
+            if (isWorldUnlocked) {
               if (l === 1) {
-                isUnlocked = (saveData.unlockedWorlds || [1]).includes(w);
+                isUnlocked = true;
               } else {
                 const prevLvlId = `${w}-${l - 1}`;
                 isUnlocked = saveData.completedLevels.includes(prevLvlId);
