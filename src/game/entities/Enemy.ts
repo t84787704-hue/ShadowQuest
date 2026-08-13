@@ -226,6 +226,16 @@ export class ForestGoblin extends Entity {
       return canyonNames[enemyClass];
     }
 
+    if (worldId === 1 && levelId && levelId.endsWith('-4')) {
+      const fortressNames: Record<EnemyClass, string> = {
+        FAST_FIGHTER: 'Fortress Scout',
+        HEAVY_FIGHTER: 'Ironclad Brute',
+        MARTIAL_ARTIST: 'Fortress Guard Captain',
+        ELITE_FIGHTER: 'Citadel Enforcer',
+      };
+      return fortressNames[enemyClass];
+    }
+
     const names: Record<number, Record<EnemyClass, string>> = {
       1: {
         FAST_FIGHTER: 'Forest Shadow Rogue',

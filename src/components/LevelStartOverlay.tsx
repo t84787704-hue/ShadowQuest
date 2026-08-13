@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Swords, Skull, Zap } from 'lucide-react';
+import { Swords, Skull, Zap, Shield, Sparkles, Crosshair } from 'lucide-react';
 import { audioEngine } from '../game/audio/AudioEngine';
+import { getArenaConfig } from '../game/world/LevelData';
 
 interface LevelStartOverlayProps {
   levelId: string;
@@ -18,8 +19,9 @@ export const LevelStartOverlay: React.FC<LevelStartOverlayProps> = ({
 }) => {
   // Parse World and Level numbers from levelId (e.g., '2-3' -> World 2, Level 3)
   const [worldNum, levelNum] = levelId.split('-').map((val) => parseInt(val, 10) || 1);
+  const arenaConfig = getArenaConfig(worldNum, levelNum);
 
-  // Intro steps: 0 = WORLD/LEVEL TITLE, 1 = READY!, 2 = FIGHT! / BOSS LEVEL!
+  // Intro steps: 0 = WORLD/LEVEL TITLE & ARENA ADVANTAGE, 1 = READY!, 2 = FIGHT! / BOSS LEVEL!
   const [step, setStep] = useState<number>(0);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
 
@@ -31,16 +33,16 @@ export const LevelStartOverlay: React.FC<LevelStartOverlayProps> = ({
     const timer1 = setTimeout(() => {
       setStep(1); // READY!
       audioEngine.playCustomSFX('punch');
-    }, 800);
+    }, 1200);
 
     const timer2 = setTimeout(() => {
       setStep(2); // FIGHT! / BOSS LEVEL!
       audioEngine.playCustomSFX('finisher');
-    }, 1500);
+    }, 2000);
 
     const timer3 = setTimeout(() => {
       handleFinish();
-    }, 2300);
+    }, 2900);
 
     return () => {
       clearTimeout(timer1);
@@ -67,33 +69,64 @@ export const LevelStartOverlay: React.FC<LevelStartOverlayProps> = ({
         exit={{ opacity: 0, scale: 1.05 }}
         transition={{ duration: 0.2 }}
         onClick={handleFinish}
-        className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/70 backdrop-blur-[2px] cursor-pointer select-none overflow-hidden"
+        className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm cursor-pointer select-none overflow-hidden p-4"
       >
         {/* Dynamic Animated Background Rays */}
         <div className="absolute inset-0 bg-radial from-amber-500/10 via-transparent to-slate-950/80 pointer-events-none" />
 
-        {/* STEP 0: WORLD & LEVEL BANNER */}
+        {/* STEP 0: WORLD & LEVEL BANNER WITH TACTICAL ARENA ADVANTAGE */}
         {step === 0 && (
           <motion.div
             initial={{ scale: 0.8, opacity: 0, y: -20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 1.1, opacity: 0, y: 20 }}
+            exit={{ scale: 1.05, opacity: 0, y: 20 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="flex flex-col items-center text-center p-6"
+            className="flex flex-col items-center text-center max-w-xl w-full"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 border border-amber-400/40 rounded-full text-amber-300 text-xs sm:text-sm font-black tracking-widest uppercase mb-3 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 border border-amber-400/40 rounded-full text-amber-300 text-xs sm:text-sm font-black tracking-widest uppercase mb-2 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
               {isBossLevel ? <Skull className="w-4 h-4 text-red-400 animate-pulse" /> : <Swords className="w-4 h-4 text-amber-400" />}
               WORLD {worldNum}
             </div>
 
-            <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 tracking-wider uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">
+            <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 tracking-wider uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">
               LEVEL {levelNum}
             </h1>
 
             {levelTitle && (
-              <p className="text-sm sm:text-lg font-bold text-slate-300 tracking-widest uppercase mt-2 drop-shadow">
+              <p className="text-xs sm:text-base font-bold text-slate-300 tracking-widest uppercase mt-1 mb-3 drop-shadow">
                 {levelTitle}
               </p>
+            )}
+
+            {/* ARENA TACTICAL ADVANTAGE CARD */}
+            {arenaConfig && (
+              <div className="mt-2 w-full bg-slate-900/90 border border-amber-500/40 rounded-xl p-3.5 sm:p-4 text-left shadow-xl backdrop-blur">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                  <div className="flex items-center gap-2 text-amber-400 font-black text-xs sm:text-sm tracking-wide uppercase">
+                    <Sparkles className="w-4 h-4 text-yellow-400 animate-spin" />
+                    <span>ARENA ADVANTAGE</span>
+                  </div>
+                  <span className="text-[10px] font-mono uppercase bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                    {arenaConfig.arenaType.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                <div className="text-slate-200 text-xs sm:text-sm font-semibold mb-2 leading-relaxed flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-emerald-400 font-bold">TACTIC: </span>
+                    {arenaConfig.arenaAdvantage}
+                  </div>
+                </div>
+
+                <div className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed flex items-start gap-2 pt-1 border-t border-slate-800/80">
+                  <Crosshair className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-sky-400 font-bold">ENEMY SYNERGY: </span>
+                    {arenaConfig.enemyPowerSynergy}
+                  </div>
+                </div>
+              </div>
             )}
           </motion.div>
         )}

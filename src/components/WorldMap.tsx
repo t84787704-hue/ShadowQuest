@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull, Trophy } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Play, CheckCircle2, Shield, Compass, Mountain, Flame, Skull, Trophy, Crown } from 'lucide-react';
 import { WORLD_NAMES, getLevelsForWorld } from '../game/world/LevelData';
 import { GameScreen, SaveData } from '../types/game';
 import { audioEngine } from '../game/audio/AudioEngine';

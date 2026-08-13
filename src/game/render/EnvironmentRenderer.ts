@@ -34,6 +34,24 @@ export function getTilePalette(levelId: string): TilePalette {
     };
   }
 
+  if (levelId === '1-4' || levelId.startsWith('1-4')) {
+    return {
+      topBase: '#1f2937',
+      topCover: '#374151',
+      topBlades: '#f59e0b',
+      flowerColor: '#ef4444',
+      middleDirt: '#111827',
+      middlePebble1: '#030712',
+      middlePebble2: '#4b5563',
+      stoneMain: '#374151',
+      stoneStroke: '#111827',
+      stoneAccent: '#fbbf24',
+      woodMain: '#78350f',
+      woodGap: '#1c1917',
+      woodNails: '#f59e0b',
+    };
+  }
+
   const [wStr] = levelId.split('-');
   const w = parseInt(wStr, 10) || 1;
 
@@ -635,30 +653,105 @@ export class EnvironmentRenderer {
         }
       }
     } else if (levelNum === 4) {
-      // 1-4 Misty Peaks: Cool high mountain peaks with fog layers
+      // 1-4 Final Approach (Fortress Approach): Dark menacing night sky with fiery glow, distant fortress towers, stone ramparts, banners, torches & embers
+      // 1. Dark Fortress Night Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-      skyGrad.addColorStop(0, '#0f172a');
-      skyGrad.addColorStop(0.5, '#334155');
-      skyGrad.addColorStop(1, '#64748b');
+      skyGrad.addColorStop(0, '#020617');
+      skyGrad.addColorStop(0.35, '#0f172a');
+      skyGrad.addColorStop(0.65, '#451a03');
+      skyGrad.addColorStop(0.88, '#7c2d12');
+      skyGrad.addColorStop(1, '#9a3412');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Jagged High Peaks
-      ctx.fillStyle = '#1e293b';
+      // Distant Fiery Horizon Glow
+      const fireGlowX = width * 0.5 - offsetX * 0.03;
+      const fireGlowY = height - 120 - offsetY * 0.02;
+      const fireGlow = ctx.createRadialGradient(fireGlowX, fireGlowY, 20, fireGlowX, fireGlowY, 320);
+      fireGlow.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
+      fireGlow.addColorStop(0.5, 'rgba(185, 28, 28, 0.25)');
+      fireGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = fireGlow;
       ctx.beginPath();
-      ctx.moveTo(0, height);
-      for (let x = -50; x <= width + 50; x += 70) {
-        const peakY = height - 220 - Math.abs(Math.sin((x + offsetX * 0.12) * 0.009)) * 90;
-        ctx.lineTo(x, peakY);
-      }
-      ctx.lineTo(width, height);
+      ctx.arc(fireGlowX, fireGlowY, 320, 0, Math.PI * 2);
       ctx.fill();
 
-      // Drifting Fog/Mist Bands
-      const mistShift = (Date.now() / 50) % width;
-      ctx.fillStyle = 'rgba(241, 245, 249, 0.25)';
-      ctx.fillRect(0, height - 150, width, 45);
-      ctx.fillRect(-mistShift, height - 100, width * 2, 35);
+      // 2. Distant Fortress Silhouette & Watchtowers
+      const fortSpacing = 280;
+      const startFort = Math.floor((offsetX * 0.06 - 100) / fortSpacing);
+      ctx.fillStyle = '#0f172a';
+      for (let i = startFort; i < startFort + 7; i++) {
+        const fx = i * fortSpacing - offsetX * 0.06;
+        const fy = height - 240 - (i % 3) * 15;
+
+        // Watchtower Keep
+        ctx.fillRect(fx, fy, 80, 240);
+        // Battlements
+        for (let b = 0; b < 4; b++) {
+          ctx.fillRect(fx + b * 20, fy - 12, 12, 12);
+        }
+        // Spire Roof
+        ctx.beginPath();
+        ctx.moveTo(fx + 10, fy - 12);
+        ctx.lineTo(fx + 40, fy - 45);
+        ctx.lineTo(fx + 70, fy - 12);
+        ctx.fill();
+
+        // Glowing Torchlit Window slits
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(fx + 32, fy + 40, 16, 28);
+        ctx.fillRect(fx + 32, fy + 100, 16, 28);
+        ctx.fillStyle = '#0f172a';
+      }
+
+      // 3. Mid-ground Fortress Rampart Walls & Iron Gates
+      const wallSpacing = 320;
+      const startWall = Math.floor((offsetX * 0.20 - 100) / wallSpacing);
+      for (let i = startWall; i < startWall + 7; i++) {
+        const wx = i * wallSpacing - offsetX * 0.20;
+        const wy = height - 200;
+
+        // Dark Granite Blocks
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(wx, wy, 140, 200);
+
+        // Wall Crenellations
+        for (let c = 0; c < 5; c++) {
+          ctx.fillRect(wx + c * 28, wy - 15, 16, 15);
+        }
+
+        // Crimson Fortress Banner with Gold Trim
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(wx + 20, wy + 20, 24, 70);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(wx + 20, wy + 85, 24, 5);
+        ctx.fillRect(wx + 30, wy + 35, 4, 30);
+
+        // Torch Sconce
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(wx + 110, wy + 30, 8, 20);
+        // Torch Flame Glow
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(wx + 114, wy + 26, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(wx + 114, wy + 24, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4. Floating Fiery Ember & Ash Particles
+      const time = Date.now() * 0.001;
+      for (let p = 0; p < 22; p++) {
+        const px = ((p * 75 + time * 40) % (width + 60)) - 30;
+        const py = height - 40 - ((p * 35 + time * 25) % (height - 80));
+        const alpha = 0.4 + Math.sin(time * 3 + p) * 0.3;
+        ctx.fillStyle = p % 2 === 0 ? `rgba(249, 115, 22, ${alpha})` : `rgba(239, 68, 68, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5 + (p % 3) * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
       // 1-5 Mountain Fortress: Dramatic sunset sky, ancient fortress silhouette
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);

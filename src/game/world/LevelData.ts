@@ -1,4 +1,4 @@
-import { LevelConfig, SecretRoomDef } from '../../types/game';
+import { LevelConfig, SecretRoomDef, ArenaConfig, ArenaType, ArenaMechanic } from '../../types/game';
 import { TileType } from './TileMap';
 
 export interface TutorialSign {
@@ -29,16 +29,269 @@ export const WORLD_NAMES: Record<number, string> = {
   4: 'WORLD 4 — VOLCANIC CORE',
   5: 'WORLD 5 — SHADOW REALM',
   6: "WORLD 6 — GOBLIN KING'S CITADEL",
+  7: 'WORLD 7 — CRYSTAL CAVERNS',
+  8: 'WORLD 8 — STORMY SKY SANCTUARY',
+  9: 'WORLD 9 — SUNKEN TEMPLE',
+  10: 'WORLD 10 — CELESTIAL PEAK',
+  11: 'WORLD 11 — IRON FORGE',
+  12: 'WORLD 12 — WHISPERING ABYSS',
+  13: 'WORLD 13 — EMERALD FOREST KEEP',
+  14: 'WORLD 14 — SCORCHED WASTELAND',
+  15: 'WORLD 15 — GLACIAL STRONGHOLD',
+  16: 'WORLD 16 — PHANTOM CATACOMBS',
+  17: 'WORLD 17 — GOLDEN DRAGON PALACE',
+  18: 'WORLD 18 — VOID GATEWAY',
+  19: 'WORLD 19 — CHAOS BASTION',
+  20: 'WORLD 20 — ULTIMATE OVERLORD THRONE',
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Boss Fight'],
+  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Valley Boss'],
   2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Desert Citadel'],
   3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frost Citadel'],
   4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Fortress', 'Volcanic Citadel'],
   5: ['Haunted Woods', 'Shadow Ruins', 'Dark Pass', 'Obsidian Tower', 'Shadow Citadel'],
   6: ['Citadel Gates', 'Outer Ramparts', 'Inner Keep', 'Royal Chambers', 'Goblin King Throne'],
+  7: ['Crystal Entrance', 'Prismatic Halls', 'Glittering Chasm', 'Gemstone Terrace', 'Crystal Golem Sanctum'],
+  8: ['Sky Approach', 'Gale Ridge', 'Cloud Spire', 'Thunder Platform', 'Storm Lord Arena'],
+  9: ['Underwater Ruin', 'Submerged Sluice', 'Flooded Sanctuary', 'Coral Promenade', 'Kraken Basin'],
+  10: ['Starlight Path', 'Astral Terrace', 'Nebula Crest', 'Constellation Spire', 'Celestial Sovereign'],
+  11: ['Molten Foundry', 'Anvil Courtyard', 'Smelting Ramparts', 'Blast Furnace', 'Iron Colossus'],
+  12: ['Abyssal Trench', 'Echoing Depths', 'Void Fissure', 'Gloom Passage', 'Abyssal Monarch'],
+  13: ['Mossy Ramparts', 'Overgrown Courtyard', 'Elder Canopy', 'Vine Colonnade', 'Forest Overlord'],
+  14: ['Ashen Dunes', 'Searing Basin', 'Inferno Ridge', 'Magma Chasm', 'Pyre Warlord'],
+  15: ['Frostbite Spire', 'Icebound Courtyard', 'Rime Ramparts', 'Glacial Keep', 'Frost Titan'],
+  16: ['Crypt Passage', 'Skeletal Ramparts', 'Wraith Corridor', 'Tomb Coliseum', 'Lich King Chamber'],
+  17: ['Golden Ramparts', 'Dragon Terrace', 'Jade Colonnade', 'Wyrm Sanctum', 'Gold Dragon Emperor'],
+  18: ['Nether Rift', 'Void Bridge', 'Singularity Crest', 'Entropy Spire', 'Void Sovereign'],
+  19: ['Chaos Courtyard', 'Warped Ramparts', 'Cataclysm Pass', 'Bastion Arena', 'Chaos Overlord'],
+  20: ['Throne Approach', 'Overlord Ramparts', 'Sanctum Coliseum', 'Royal Pinnacle', 'Ultimate Overlord Finale'],
 };
+
+// 20 Distinct Arena Archetypes
+const ARENA_ARCHETYPES: {
+  arenaType: ArenaType;
+  arenaLayout: string;
+  arenaMechanic: ArenaMechanic;
+  arenaAdvantage: string;
+  enemyPowerSynergy: string;
+  hazards: string[];
+  platforms: string;
+  environmentEffects: string;
+}[] = [
+  {
+    arenaType: 'FLAT_COURTYARD',
+    arenaLayout: 'Open Terraced Courtyard with Raised Ledges',
+    arenaMechanic: 'ELEVATED_LEDGES',
+    arenaAdvantage: 'High ground advantage! Drop-kick enemies from elevated stone ledges for +50% critical damage.',
+    enemyPowerSynergy: 'Forest Rogues attempt to surround you from both sides on open ground.',
+    hazards: ['NONE'],
+    platforms: 'ELEVATED_LEDGES',
+    environmentEffects: 'LEAF_PETALS',
+  },
+  {
+    arenaType: 'SHIELDED_COVER_PILLARS',
+    arenaLayout: 'Ancient Ruin Colonnade with Granite Cover Pillars',
+    arenaMechanic: 'SHIELDING_PILLARS',
+    arenaAdvantage: 'Use heavy cover pillars to block enemy dash attacks and break line of sight.',
+    enemyPowerSynergy: 'Ancient Brawlers try to corner you against stone pillars.',
+    hazards: ['CRUMBLING_WALLS'],
+    platforms: 'STONE_COLUMNS',
+    environmentEffects: 'DUST_MOTES',
+  },
+  {
+    arenaType: 'NARROW_BRIDGE',
+    arenaLayout: 'Forbidden Canyon Rope & Timber Bridges over Chasm',
+    arenaMechanic: 'CHASM_PITS',
+    arenaAdvantage: 'Spin-kick enemies into deep canyon chasms for instant environmental defeats!',
+    enemyPowerSynergy: 'Canyon Strikers attempt heavy knockback kicks to force you off narrow bridges.',
+    hazards: ['SPIKES', 'CHASMS'],
+    platforms: 'NARROW_BRIDGES',
+    environmentEffects: 'GOLDEN_DUST',
+  },
+  {
+    arenaType: 'SPIKE_PIT_BRIDGES',
+    arenaLayout: 'Fortress Ramparts and Portcullis Drawbridges',
+    arenaMechanic: 'HAZARD_SPIKES',
+    arenaAdvantage: 'Knock ironclad guards into spike moats while maintaining mobility across drawbridges.',
+    enemyPowerSynergy: 'Ironclad Brutes shield themselves to push you backward into spike pits.',
+    hazards: ['SPIKES'],
+    platforms: 'WOOD_BRIDGES',
+    environmentEffects: 'EMBERS',
+  },
+  {
+    arenaType: 'BOSS_CIRCULAR_ARENA',
+    arenaLayout: 'Grand Citadel Throne Coliseum with Spring Corners',
+    arenaMechanic: 'BOUNCE_PADS',
+    arenaAdvantage: 'Use corner spring bounce pads to leap over Boss ground shockwaves and strike from above.',
+    enemyPowerSynergy: 'Goblin Chief summons shadow clones and unleashes arena-wide ground slams.',
+    hazards: ['SHOCKWAVES'],
+    platforms: 'ELEVATED_LIPPED',
+    environmentEffects: 'FIERY_EMBERS',
+  },
+  {
+    arenaType: 'SLIPPERY_SLOPE',
+    arenaLayout: 'Sand Dune Slopes & Glacial Sluices',
+    arenaMechanic: 'SLIPPERY_ICE',
+    arenaAdvantage: 'Slide momentum allows fast dash attacks through enemy squads.',
+    enemyPowerSynergy: 'Desert Assassins slide rapidly across dunes to execute sudden lunges.',
+    hazards: ['SAND_SLIDES'],
+    platforms: 'SLIPPERY_SLIDES',
+    environmentEffects: 'SANDSTORM',
+  },
+  {
+    arenaType: 'CONVEYOR_FACTORY',
+    arenaLayout: 'Industrial Aqueduct Conveyors & Moving Platforms',
+    arenaMechanic: 'CONVEYOR_BELTS',
+    arenaAdvantage: 'Lure heavy enemies onto reverse conveyors to keep them out of attack range.',
+    enemyPowerSynergy: 'Aqueduct Guardians charge with the conveyor flow to double their speed.',
+    hazards: ['CONVEYORS'],
+    platforms: 'MOVING_CONVEYORS',
+    environmentEffects: 'MIST',
+  },
+  {
+    arenaType: 'BOUNCE_CANVAS',
+    arenaLayout: 'Oasis Canopy Trampoline Platforms',
+    arenaMechanic: 'BOUNCE_PADS',
+    arenaAdvantage: 'Launch high aerial spin-kicks off spring pads to crush flying acrobats.',
+    enemyPowerSynergy: 'Acrobatic Nomads perform high spring attacks between platforms.',
+    hazards: ['HEIGHT_FALLS'],
+    platforms: 'TRAMPOLINE_CANVAS',
+    environmentEffects: 'HEAT_WAVES',
+  },
+  {
+    arenaType: 'WINDY_SUMMIT',
+    arenaLayout: 'Blizzard Summit Ridge & Watchtowers',
+    arenaMechanic: 'WIND_GUSTS',
+    arenaAdvantage: 'Time your jump attacks with wind gusts for extended airtime and double jump distance.',
+    enemyPowerSynergy: 'Snipers shoot wind-guided projectiles that curve toward you.',
+    hazards: ['WIND_GUSTS', 'FREEZE'],
+    platforms: 'HIGH_RIDGE',
+    environmentEffects: 'SNOW_GUSTS',
+  },
+  {
+    arenaType: 'GRAVITY_WELL',
+    arenaLayout: 'Celestial Floating Temple Arenas',
+    arenaMechanic: 'LOW_GRAVITY',
+    arenaAdvantage: 'Low gravity enables floating air combos and multi-kick juggle strikes.',
+    enemyPowerSynergy: 'Floating Mages teleport across floating islands to strike from distance.',
+    hazards: ['VOID_FALLS'],
+    platforms: 'FLOATING_ISLANDS',
+    environmentEffects: 'STARLIGHT',
+  },
+  {
+    arenaType: 'LAVA_ISLANDS',
+    arenaLayout: 'Volcanic Magma Basalt Stepping Stones',
+    arenaMechanic: 'LAVA_PITS',
+    arenaAdvantage: 'Force lava guardians into molten magma pits for massive damage.',
+    enemyPowerSynergy: 'Magma Brawlers slam the ground to ignite basalt platforms.',
+    hazards: ['LAVA_PITS', 'FIRE_JETS'],
+    platforms: 'BASALT_ISLANDS',
+    environmentEffects: 'VOLCANIC_EMBERS',
+  },
+  {
+    arenaType: 'VERTICAL_TOWER',
+    arenaLayout: 'Obsidian Spire Multi-Level Vertical Chambers',
+    arenaMechanic: 'ELEVATED_LEDGES',
+    arenaAdvantage: 'Vertical multi-tier layout lets you drop onto enemies from higher levels.',
+    enemyPowerSynergy: 'Shadow Archers rain arrows from top tower balconies.',
+    hazards: ['HEIGHT_FALLS'],
+    platforms: 'VERTICAL_TIERS',
+    environmentEffects: 'SHADOW_AURA',
+  },
+  {
+    arenaType: 'DESTRUCTIBLE_RING',
+    arenaLayout: 'Royal Chambers Crumbling Arena Ring',
+    arenaMechanic: 'DESTRUCTIBLE_BRICKS',
+    arenaAdvantage: 'Break fragile brick platforms underneath heavy enemies to drop them.',
+    enemyPowerSynergy: 'Heavy Enforcers smash floor sections with ground pounds.',
+    hazards: ['CRUMBLING_FLOOR'],
+    platforms: 'CRACKED_TILES',
+    environmentEffects: 'SPARKS',
+  },
+  {
+    arenaType: 'ELEMENTAL_HAZARD',
+    arenaLayout: 'Thunder Forge Electrified Terraces',
+    arenaMechanic: 'TRAP_TILES',
+    arenaAdvantage: 'Trigger trap tiles to electrify or incinerate charging enemy waves.',
+    enemyPowerSynergy: 'Iron Golems drive you onto active trap tiles.',
+    hazards: ['TRAP_TILES', 'SPIKES'],
+    platforms: 'FORGE_TILES',
+    environmentEffects: 'LIGHTNING_SPARKS',
+  },
+  {
+    arenaType: 'BOULDER_RUN',
+    arenaLayout: 'Ascending Canyon Rampart Run',
+    arenaMechanic: 'MOVING_PLATFORMS',
+    arenaAdvantage: 'Use moving platform lifts to bypass choke points and strike from behind.',
+    enemyPowerSynergy: 'Canyon Guards shoot boulders down narrow stairs.',
+    hazards: ['BOULDERS', 'HEIGHT_FALLS'],
+    platforms: 'ASCENDING_LIFTS',
+    environmentEffects: 'FALLING_ROCKS',
+  },
+  {
+    arenaType: 'ELEVATED_MESA',
+    arenaLayout: 'Sunken Temple Plateau Mesa Arena',
+    arenaMechanic: 'ELEVATED_LEDGES',
+    arenaAdvantage: 'Control the central elevated mesa to bottleneck enemy approach paths.',
+    enemyPowerSynergy: 'Temple Defenders attempt to swarm the central high ground.',
+    hazards: ['NONE'],
+    platforms: 'CENTRAL_MESA',
+    environmentEffects: 'WATER_DRIPS',
+  },
+  {
+    arenaType: 'FLOATING_ISLANDS',
+    arenaLayout: 'Sky Sanctum Floating Crystal Islands',
+    arenaMechanic: 'MOVING_PLATFORMS',
+    arenaAdvantage: 'Jump between moving crystal platforms to isolate single targets.',
+    enemyPowerSynergy: 'Sky Strikers leap between islands with aerial kicks.',
+    hazards: ['VOID_GAPS'],
+    platforms: 'FLOATING_CRYSTALS',
+    environmentEffects: 'CRYSTAL_SHIMMER',
+  },
+  {
+    arenaType: 'CHASM_COLISEUM',
+    arenaLayout: 'Royal Pit Chasm Arena',
+    arenaMechanic: 'CHASM_PITS',
+    arenaAdvantage: 'Spacious circular platform surrounded by deep chasms for ring-out finishes.',
+    enemyPowerSynergy: 'Gladiators use shield charges to push you toward chasm edges.',
+    hazards: ['CHASM_PITS'],
+    platforms: 'RING_PLATFORM',
+    environmentEffects: 'TORCH_LIGHT',
+  },
+  {
+    arenaType: 'TRAMPOLINE_ARENA',
+    arenaLayout: 'Phantom Citadel Spring Terrace',
+    arenaMechanic: 'BOUNCE_PADS',
+    arenaAdvantage: 'Bounce pad grid allows continuous aerial mobility and overhead slams.',
+    enemyPowerSynergy: 'Phantom Assassins ambush from air bounce arcs.',
+    hazards: ['SPIKE_WALLS'],
+    platforms: 'BOUNCE_GRID',
+    environmentEffects: 'PHANTOM_MIST',
+  },
+  {
+    arenaType: 'BOSS_CIRCULAR_ARENA',
+    arenaLayout: 'Ultimate Overlord Throne Sanctum',
+    arenaMechanic: 'BOUNCE_PADS',
+    arenaAdvantage: 'Master bounce pads, cover pillars, and high platforms to survive the Overlord.',
+    enemyPowerSynergy: 'Overlord unleashes multi-phase cataclysmic energy storms.',
+    hazards: ['ENERGY_BEAMS', 'LAVA_PITS'],
+    platforms: 'GRAND_SANCTUM',
+    environmentEffects: 'CHAOS_AURA',
+  },
+];
+
+export function getArenaConfig(worldId: number, levelNum: number): ArenaConfig {
+  const levelIndex = (worldId - 1) * 5 + (levelNum - 1);
+  const archetypeIndex = (levelIndex + (levelNum === 5 ? 4 : 0)) % ARENA_ARCHETYPES.length;
+  const base = ARENA_ARCHETYPES[archetypeIndex];
+
+  const worldName = WORLD_NAMES[worldId] || `WORLD ${worldId}`;
+  return {
+    ...base,
+    arenaLayout: `${worldName} Level ${levelNum}: ${base.arenaLayout}`,
+  };
+}
 
 // Seedable pseudo-random generator
 function makeRandom(seed: number) {
@@ -70,6 +323,7 @@ export function getLevelsForWorld(worldId: number): LevelConfig[] {
     const isBoss = lvlNum === 5;
     const title = `${worldId}-${lvlNum} ${titles[lvlNum - 1].toUpperCase()}`;
     const width = getLevelWidth(worldId, lvlNum);
+    const arenaConfig = getArenaConfig(worldId, lvlNum);
     return {
       id: `${worldId}-${lvlNum}`,
       worldId,
@@ -83,11 +337,12 @@ export function getLevelsForWorld(worldId: number): LevelConfig[] {
       stars: 0,
       highScoreCoins: 0,
       isBossLevel: isBoss,
+      arenaConfig,
     };
   });
 }
 
-export const ALL_LEVELS_METADATA: LevelConfig[] = [1, 2, 3, 4, 5, 6].flatMap((w) =>
+export const ALL_LEVELS_METADATA: LevelConfig[] = Array.from({ length: 20 }, (_, i) => i + 1).flatMap((w) =>
   getLevelsForWorld(w)
 );
 
@@ -129,6 +384,9 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
   } else if (w === 1 && l === 3) {
     // Dedicated Layout for World 1-3 Forbidden Canyon
     buildWorld1_3Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+  } else if (w === 1 && l === 4) {
+    // Dedicated Layout for World 1-4 Final Approach (Fortress Approach)
+    buildWorld1_4Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
   } else {
     // Tutorial Signs for Level 1-1
     if (w === 1 && l === 1) {
@@ -381,6 +639,8 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
   // Generate EXACTLY 50 enemies distributed across waves for the level (excluding secret room areas)
   const levelGoblins = generate50EnemiesForLevel(cols, rows, grid, rng, secretRooms, w, l);
 
+  const arenaConfig = getArenaConfig(w, l);
+
   return {
     config: {
       id: levelId,
@@ -395,6 +655,7 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
       stars: 0,
       highScoreCoins: 0,
       isBossLevel: isBoss,
+      arenaConfig,
     },
     grid,
     playerSpawn: { x: 80, y: 320 },
@@ -665,6 +926,139 @@ function buildWorld1_3Layout(
   coins.push({ x: 205 * 32, y: 8 * 32, value: 5 });
 }
 
+function buildWorld1_4Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-4: Final Approach (Fortress Approach)
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: 'WORLD 1-4: FINAL APPROACH', subtitle: 'The ironclad goblin fortress looms ahead. Defeat all 50 defenders to breach the inner sanctum!' },
+    { x: 1500, y: 310, title: 'FORTRESS RAMPARTS', subtitle: 'Watch for fortified choke points and ironclad brawlers defending the courtyard bridges!' }
+  );
+
+  const placeFortressPillar = (c: number, topRow: number, heightRows: number) => {
+    for (let r = topRow; r < topRow + heightRows; r++) {
+      if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        grid[r][c] = TileType.STONE_PLATFORM;
+      }
+    }
+  };
+
+  const placeFortressWall = (startC: number, endC: number, row: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols && row >= 0 && row < rows) {
+        grid[row][c] = TileType.STONE_PLATFORM;
+      }
+    }
+  };
+
+  const placeDrawBridge = (startC: number, endC: number, row: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols && row >= 0 && row < rows) {
+        grid[row][c] = TileType.WOOD_BRIDGE;
+      }
+    }
+  };
+
+  const placeMoatChasm = (startC: number, endC: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols) {
+        grid[12][c] = TileType.EMPTY;
+        grid[13][c] = TileType.HAZARD_SPIKES;
+        grid[14][c] = TileType.DIRT_MIDDLE;
+      }
+    }
+  };
+
+  // 1. Entrance Gate Towers & Portcullis Rampart
+  placeFortressPillar(4, 6, 6);
+  placeFortressPillar(14, 6, 6);
+  placeFortressWall(4, 14, 6);
+  for (let c = 5; c <= 13; c += 2) coins.push({ x: c * 32, y: 5 * 32 });
+
+  // 2. Open Combat Courtyard #1 (cols 17..55)
+  placeFortressPillar(22, 8, 4);
+  placeFortressWall(22, 28, 8);
+  for (let c = 23; c <= 27; c += 2) coins.push({ x: c * 32, y: 7 * 32 });
+
+  placeMoatChasm(29, 31);
+  placeFortressWall(30, 31, 10);
+
+  placeFortressPillar(36, 7, 5);
+  placeFortressWall(36, 44, 7);
+  for (let c = 37; c <= 43; c += 2) coins.push({ x: c * 32, y: 6 * 32 });
+
+  placeMoatChasm(45, 47);
+  placeFortressWall(46, 47, 10);
+
+  // 3. Elevated Platforms & Wall Ramparts (cols 56..90)
+  for (let c = 52; c <= 58; c += 2) coins.push({ x: c * 32, y: 320 });
+  healthPickups.push({ x: 55 * 32, y: 310, healAmount: 30 });
+  placeFortressPillar(50, 7, 5);
+  placeFortressPillar(62, 7, 5);
+
+  checkpoints.push({ x: 82 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 84 * 32, y: 310, healAmount: 30 });
+
+  placeFortressPillar(80, 6, 6);
+  placeFortressWall(80, 88, 6);
+  for (let c = 81; c <= 87; c += 2) coins.push({ x: c * 32, y: 5 * 32, value: 3 });
+
+  // 4. Narrow Fortress Passage & Watchtowers (cols 91..125)
+  placeMoatChasm(95, 97);
+  placeFortressWall(96, 97, 10);
+
+  placeFortressPillar(102, 7, 5);
+  placeFortressWall(102, 110, 7);
+  for (let c = 103; c <= 109; c += 2) coins.push({ x: c * 32, y: 6 * 32 });
+
+  placeMoatChasm(115, 117);
+  placeFortressWall(116, 117, 10);
+
+  // 5. Large Fortress Drawbridge & Moat Section (cols 126..165)
+  placeDrawBridge(128, 142, 9);
+  for (let c = 129; c <= 141; c += 2) coins.push({ x: c * 32, y: 8 * 32 });
+
+  checkpoints.push({ x: 155 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 157 * 32, y: 310, healAmount: 30 });
+
+  placeFortressPillar(148, 6, 6);
+  placeFortressWall(148, 156, 6);
+  for (let c = 149; c <= 155; c += 2) coins.push({ x: c * 32, y: 5 * 32 });
+
+  // 6. Second Inner Combat Courtyard (cols 166..195)
+  placeMoatChasm(168, 170);
+  placeFortressWall(169, 170, 10);
+
+  placeFortressWall(174, 184, 8);
+  for (let c = 175; c <= 183; c += 2) coins.push({ x: c * 32, y: 7 * 32 });
+
+  // 7. Final Grand Fortress Arena Before Boss Entrance (cols 196..224)
+  placeFortressPillar(192, 5, 7);
+  placeFortressPillar(210, 5, 7);
+
+  grid[11][211] = TileType.STONE_PLATFORM;
+  grid[10][212] = TileType.STONE_PLATFORM;
+  grid[9][213] = TileType.STONE_PLATFORM;
+
+  for (let c = 194; c <= 208; c += 3) coins.push({ x: c * 32, y: 320 });
+  coins.push({ x: 213 * 32, y: 8 * 32, value: 5 });
+  healthPickups.push({ x: 202 * 32, y: 310, healAmount: 30 });
+}
+
 function generate50EnemiesForLevel(
   cols: number,
   rows: number,
@@ -685,9 +1079,9 @@ function generate50EnemiesForLevel(
     return false;
   };
 
-  // Wave counts: World 1-2 & 1-3 use [5, 6, 7, 8, 9, 10, 5] = 50 enemies across 7 waves
+  // Wave counts: World 1-2, 1-3 & 1-4 use [5, 6, 7, 8, 9, 10, 5] = 50 enemies across 7 waves
   // Other levels use [8, 8, 8, 8, 8, 10] = 50 enemies across 6 waves
-  const waveCounts = (w === 1 && (l === 2 || l === 3)) ? [5, 6, 7, 8, 9, 10, 5] : [8, 8, 8, 8, 8, 10];
+  const waveCounts = (w === 1 && (l === 2 || l === 3 || l === 4)) ? [5, 6, 7, 8, 9, 10, 5] : [8, 8, 8, 8, 8, 10];
   const numWaves = waveCounts.length;
   const startCol = 18;
   const endCol = cols - 16;

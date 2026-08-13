@@ -41,6 +41,56 @@ export interface AchievementDef {
   getCurrentValue: (saveData: SaveData) => number;
 }
 
+export type ArenaType =
+  | 'FLAT_COURTYARD'
+  | 'MULTI_PLATFORM'
+  | 'NARROW_BRIDGE'
+  | 'VERTICAL_TOWER'
+  | 'FLOATING_ISLANDS'
+  | 'BOUNCE_CANVAS'
+  | 'CHASM_COLISEUM'
+  | 'CONVEYOR_FACTORY'
+  | 'SLIPPERY_SLOPE'
+  | 'ELEMENTAL_HAZARD'
+  | 'DESTRUCTIBLE_RING'
+  | 'ELEVATED_MESA'
+  | 'TRAMPOLINE_ARENA'
+  | 'WINDY_SUMMIT'
+  | 'GRAVITY_WELL'
+  | 'SPIKE_PIT_BRIDGES'
+  | 'SHIELDED_COVER_PILLARS'
+  | 'LAVA_ISLANDS'
+  | 'BOULDER_RUN'
+  | 'BOSS_CIRCULAR_ARENA';
+
+export type ArenaMechanic =
+  | 'ELEVATED_LEDGES'
+  | 'NARROW_BRIDGES'
+  | 'BOUNCE_PADS'
+  | 'SLIPPERY_ICE'
+  | 'CONVEYOR_BELTS'
+  | 'SHIELDING_PILLARS'
+  | 'HAZARD_SPIKES'
+  | 'DESTRUCTIBLE_BRICKS'
+  | 'WIND_GUSTS'
+  | 'LOW_GRAVITY'
+  | 'LAVA_PITS'
+  | 'FIRE_JETS'
+  | 'TRAP_TILES'
+  | 'MOVING_PLATFORMS'
+  | 'CHASM_PITS';
+
+export interface ArenaConfig {
+  arenaType: ArenaType;
+  arenaLayout: string;
+  arenaMechanic: ArenaMechanic;
+  arenaAdvantage: string;
+  enemyPowerSynergy: string;
+  hazards: string[];
+  platforms: string;
+  environmentEffects: string;
+}
+
 export interface LevelConfig {
   id: string;
   worldId: number;
@@ -54,6 +104,7 @@ export interface LevelConfig {
   stars: number;
   highScoreCoins: number;
   isBossLevel?: boolean;
+  arenaConfig?: ArenaConfig;
 }
 
 export interface LevelState {

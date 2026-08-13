@@ -1,6 +1,7 @@
 import { Rect } from '../../types/game';
 import { Entity } from '../entities/Entity';
 import { getTilePalette } from '../render/EnvironmentRenderer';
+import { audioEngine } from '../audio/AudioEngine';
 
 export enum TileType {
   EMPTY = 0,
@@ -11,6 +12,13 @@ export enum TileType {
   HAZARD_SPIKES = 5,
   BREAKABLE_WALL = 6,
   FAKE_WALL = 7,
+  BOUNCE_PAD = 8,
+  CONVEYOR_LEFT = 9,
+  CONVEYOR_RIGHT = 10,
+  ICE_PLATFORM = 11,
+  LAVA_HAZARD = 12,
+  TRAP_TILE = 13,
+  COVER_PILLAR = 14,
 }
 
 export class TileMap {
@@ -53,7 +61,13 @@ export class TileMap {
       tile === TileType.DIRT_MIDDLE ||
       tile === TileType.STONE_PLATFORM ||
       tile === TileType.WOOD_BRIDGE ||
-      tile === TileType.BREAKABLE_WALL
+      tile === TileType.BREAKABLE_WALL ||
+      tile === TileType.BOUNCE_PAD ||
+      tile === TileType.CONVEYOR_LEFT ||
+      tile === TileType.CONVEYOR_RIGHT ||
+      tile === TileType.ICE_PLATFORM ||
+      tile === TileType.COVER_PILLAR ||
+      tile === TileType.TRAP_TILE
     );
   }
 
@@ -120,6 +134,21 @@ export class TileMap {
                 entity.y = tileRect.y - entity.height;
                 entity.vy = 0;
                 entity.isGrounded = true;
+
+                // Interactive Arena Mechanics on landing/standing:
+                if (tile === TileType.BOUNCE_PAD) {
+                  entity.vy = -13.5; // High springboard bounce!
+                  entity.isGrounded = false;
+                  try {
+                    audioEngine.playCustomSFX('punch');
+                  } catch {}
+                } else if (tile === TileType.CONVEYOR_LEFT) {
+                  entity.x -= 1.8;
+                } else if (tile === TileType.CONVEYOR_RIGHT) {
+                  entity.x += 1.8;
+                } else if (tile === TileType.ICE_PLATFORM) {
+                  entity.vx *= 0.98; // Low friction slide
+                }
               } else if (entity.vy < 0) {
                 entity.y = tileRect.y + tileRect.height;
                 entity.vy = 0;
@@ -299,6 +328,78 @@ export class TileMap {
             ctx.moveTo(px + 16, py);
             ctx.lineTo(px + 16, py + this.tileSize);
             ctx.stroke();
+            break;
+
+          case TileType.BOUNCE_PAD:
+            // Springboard Bounce Pad
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(px, py + 12, this.tileSize, 20);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(px + 2, py + 8, this.tileSize - 4, 8);
+            // Pulsing yellow spring symbol
+            const bouncePulse = Math.sin(Date.now() * 0.008) * 2;
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(px + 8, py + 4 - bouncePulse, 16, 4);
+            break;
+
+          case TileType.CONVEYOR_LEFT:
+          case TileType.CONVEYOR_RIGHT:
+            // Metallic Conveyor Belt Platform
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(px, py + 6, this.tileSize, 20);
+            ctx.fillStyle = '#e2e8f0';
+            const offsetConveyor = (Date.now() / 30) % 12;
+            const dir = tile === TileType.CONVEYOR_LEFT ? -1 : 1;
+            for (let i = -12; i < this.tileSize + 12; i += 12) {
+              const arrowX = px + i + (offsetConveyor * dir);
+              if (arrowX >= px && arrowX <= px + this.tileSize - 6) {
+                ctx.fillRect(arrowX, py + 12, 4, 8);
+              }
+            }
+            break;
+
+          case TileType.ICE_PLATFORM:
+            // Glacial Slippery Ice Platform
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(px, py, this.tileSize, this.tileSize);
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fillRect(px, py, this.tileSize, 6);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + 6, py + 12, 10, 3);
+            ctx.fillRect(px + 20, py + 22, 6, 3);
+            break;
+
+          case TileType.LAVA_HAZARD:
+            // Molten Lava / Fire Hazard Pit
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(px, py + 8, this.tileSize, 24);
+            ctx.fillStyle = '#f59e0b';
+            const lavaTime = Math.sin(Date.now() * 0.006 + c) * 3;
+            ctx.fillRect(px, py + 8 + lavaTime, this.tileSize, 8);
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(px + 4, py + 12, 6, 4);
+            ctx.fillRect(px + 18, py + 16, 8, 4);
+            break;
+
+          case TileType.TRAP_TILE:
+            // Pressure Trap Tile with Flame / Spike slots
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(px, py, this.tileSize, this.tileSize);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(px + 4, py + 4, 6, 6);
+            ctx.fillRect(px + 22, py + 4, 6, 6);
+            ctx.fillRect(px + 13, py + 18, 6, 6);
+            break;
+
+          case TileType.COVER_PILLAR:
+            // Granite Shield Cover Pillar
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(px + 4, py, this.tileSize - 8, this.tileSize);
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(px + 2, py, this.tileSize - 4, 4);
+            ctx.fillRect(px + 2, py + this.tileSize - 4, this.tileSize - 4, 4);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(px + 14, py + 8, 4, 16);
             break;
         }
       }
