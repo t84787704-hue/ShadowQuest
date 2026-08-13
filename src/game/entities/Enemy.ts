@@ -37,6 +37,13 @@ export class ForestGoblin extends Entity {
   public isBoss: boolean = false;
   public levelId: string = '1-1';
 
+  public get isImmortal(): boolean {
+    if (this.isBoss) return false;
+    const [wStr] = (this.levelId || '1-1').split('-');
+    const w = parseInt(wStr, 10) || 1;
+    return w === 9 || w === 10;
+  }
+
   // Serious Martial Artist Identifier & Class
   public enemyClass: EnemyClass = 'MARTIAL_ARTIST';
   public enemyName: string = 'Forest Martial Artist';
@@ -851,11 +858,15 @@ export class ForestGoblin extends Entity {
     // 2. Guarding reduces incoming damage by 80%
     if (this.isGuarding || this.combatState === 'DEFEND') {
       const finalDamage = Math.max(1, Math.round(damage * 0.2));
-      this.hp -= finalDamage;
+      if (this.isImmortal) {
+        this.hp = Math.max(1, this.hp - finalDamage);
+      } else {
+        this.hp -= finalDamage;
+      }
       this.hitFlashTimer = 0.18;
 
       audioEngine.playEnemyBlock();
-      particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
+      particles.createFloatingText(hitX, hitY, this.isImmortal ? `BLOCKED! (IMMORTAL! ∞)` : `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
 
       if (this.counterCooldown <= 0 && Math.random() < 0.5) {
         this.counterCooldown = 1.8;
@@ -866,7 +877,7 @@ export class ForestGoblin extends Entity {
         particles.createFloatingText(hitX, hitY - 15, 'GUARD COUNTER! ⚡', '#ef4444', 14);
       }
 
-      if (this.hp <= 0) {
+      if (!this.isImmortal && this.hp <= 0) {
         this.hp = 0;
         this.combatState = 'DEAD';
         this.deathTimer = 0.5;
@@ -882,7 +893,11 @@ export class ForestGoblin extends Entity {
 
     // 3. Direct Hit -> Enter HIT Stagger state
     const finalDamage = damage;
-    this.hp -= finalDamage;
+    if (this.isImmortal) {
+      this.hp = Math.max(1, this.hp - finalDamage);
+    } else {
+      this.hp -= finalDamage;
+    }
     this.hitFlashTimer = 0.10; // Crisp brief 100ms white hit flash
     this.combatState = 'HIT';
 
@@ -907,13 +922,15 @@ export class ForestGoblin extends Entity {
 
     audioEngine.playHitImpact('enemy', attackType);
     if (!attackType) {
-      particles.createFloatingText(hitX, hitY, `-${finalDamage}`, '#ef4444', 15);
+      particles.createFloatingText(hitX, hitY, this.isImmortal ? `-${finalDamage} (IMMORTAL! ∞)` : `-${finalDamage}`, '#ef4444', 15);
+    } else if (this.isImmortal) {
+      particles.createFloatingText(hitX, hitY, `IMMORTAL! ∞`, '#f43f5e', 14);
     }
     this.consecutiveHitsTaken++;
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
 
-    if (this.hp <= 0) {
+    if (!this.isImmortal && this.hp <= 0) {
       this.hp = 0;
       this.combatState = 'DEAD';
       this.deathTimer = 0.5;
@@ -983,6 +1000,24 @@ export class ForestGoblin extends Entity {
     const [wStr] = this.levelId.split('-');
     const w = parseInt(wStr, 10) || 1;
 
+    // Ground Pulse Aura for Immortal Enemies
+    if (this.isImmortal && this.combatState !== 'DEAD') {
+      ctx.save();
+      ctx.strokeStyle = w === 9 ? 'rgba(244, 63, 94, 0.9)' : 'rgba(168, 85, 247, 0.9)';
+      ctx.shadowColor = w === 9 ? '#f43f5e' : '#c084fc';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('∞', 0, -36 + bob);
+      ctx.restore();
+    }
+
     // Render World Specific Serious Martial Artist
     switch (w) {
       case 1:
@@ -999,6 +1034,12 @@ export class ForestGoblin extends Entity {
         break;
       case 5:
         this.renderShadowAssassin(ctx, bob, walk, isHitFlash);
+        break;
+      case 9:
+        this.renderDemonRealmFighter(ctx, bob, walk, isHitFlash);
+        break;
+      case 10:
+        this.renderCelestialGuardian(ctx, bob, walk, isHitFlash);
         break;
       case 6:
       default:
@@ -1049,7 +1090,37 @@ export class ForestGoblin extends Entity {
   }
 
   private renderHealthBar(ctx: CanvasRenderingContext2D, rx: number, ry: number) {
-    if (this.hp < this.maxHp && this.isAlive) {
+    if (!this.isAlive) return;
+
+    if (this.isImmortal) {
+      const barW = 46;
+      const barH = 6;
+      const bx = rx + (this.width - barW) / 2;
+      const by = ry - 14;
+
+      ctx.save();
+      ctx.fillStyle = '#1e1b4b';
+      ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx - 1, by - 1, barW + 2, barH + 2);
+
+      ctx.fillStyle = '#9333ea';
+      ctx.fillRect(bx, by, barW, barH);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('∞ HP', bx + barW / 2, by + 5);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText('🛡️ IMMORTAL WARRIOR', rx + this.width / 2, ry - 18);
+      ctx.restore();
+      return;
+    }
+
+    if (this.hp < this.maxHp) {
       const barW = 38;
       const barH = 5;
       const bx = rx + (this.width - barW) / 2;
@@ -1068,6 +1139,68 @@ export class ForestGoblin extends Entity {
       ctx.textAlign = 'center';
       ctx.fillText(this.enemyName, rx + this.width / 2, ry - 18);
     }
+  }
+
+  private renderDemonRealmFighter(
+    ctx: CanvasRenderingContext2D,
+    bob: number,
+    walk: number,
+    isHitFlash: boolean
+  ) {
+    const skinColor = isHitFlash ? '#ffffff' : '#881337';
+    const clothColor = '#0f172a';
+    const wrapColor = '#f43f5e';
+    const gloveColor = '#fbbf24';
+
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(-8, -28 + bob, 16, 14);
+
+    ctx.fillStyle = clothColor;
+    ctx.fillRect(-7, -14 + bob, 14, 12);
+
+    ctx.fillRect(-7, -2 + bob, 6, 12);
+    ctx.fillRect(1, -2 + bob, 6, 12);
+
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.moveTo(-4, -30 + bob);
+    ctx.lineTo(-7, -36 + bob);
+    ctx.lineTo(-2, -31 + bob);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(4, -30 + bob);
+    ctx.lineTo(7, -36 + bob);
+    ctx.lineTo(2, -31 + bob);
+    ctx.fill();
+
+    this.renderMartialArtsLimbs(ctx, bob, skinColor, wrapColor, gloveColor);
+  }
+
+  private renderCelestialGuardian(
+    ctx: CanvasRenderingContext2D,
+    bob: number,
+    walk: number,
+    isHitFlash: boolean
+  ) {
+    const skinColor = isHitFlash ? '#ffffff' : '#312e81';
+    const clothColor = '#f8fafc';
+    const wrapColor = '#fbbf24';
+    const gloveColor = '#38bdf8';
+
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(-8, -28 + bob, 16, 14);
+
+    ctx.fillStyle = clothColor;
+    ctx.fillRect(-8, -15 + bob, 16, 13);
+
+    ctx.fillStyle = wrapColor;
+    ctx.fillRect(-8, -15 + bob, 16, 3);
+
+    ctx.fillRect(-7, -2 + bob, 6, 12);
+    ctx.fillRect(1, -2 + bob, 6, 12);
+
+    this.renderMartialArtsLimbs(ctx, bob, skinColor, wrapColor, gloveColor);
   }
 
   // Common Martial Arts Arms, Legs & Strikes Rendering

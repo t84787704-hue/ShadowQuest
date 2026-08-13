@@ -17,6 +17,8 @@ import { DebugManager } from '../debug/DebugManager';
 import { EnvironmentRenderer } from '../render/EnvironmentRenderer';
 import { SecretRoomManager } from '../entities/SecretRoomManager';
 import { calculateLevelRating } from '../../components/VictoryModal';
+import { ObjectiveItem } from '../entities/ObjectiveItem';
+import { getLevelObjective, LevelObjectiveDef } from '../world/ObjectiveManager';
 
 export class GameEngine {
   public canvas: HTMLCanvasElement;
@@ -34,6 +36,18 @@ export class GameEngine {
   public totalEnemiesSpawned: number = 0;
   public totalEnemiesDefeated: number = 0;
   public isAreaCleared: boolean = false;
+
+  // Level Objective System
+  public levelObjective: LevelObjectiveDef = {
+    type: 'DEFEAT_50_ENEMIES',
+    title: 'DEFEAT 50 ENEMIES',
+    description: 'Defeat 50 martial arts enemies to unlock the exit portal!',
+    targetValue: 50,
+    currentValue: 0,
+    isCompleted: false,
+  };
+  public objectiveItems: ObjectiveItem[] = [];
+  public survivalTimer: number = 0;
   public areaClearedBannerTimer: number = 0;
 
   public levelSpawnRoster: {
@@ -545,6 +559,30 @@ export class GameEngine {
     this.totalEnemiesSpawned = 50;
     this.totalEnemiesDefeated = 0;
     this.isAreaCleared = false;
+
+    // Load Objective for this level
+    this.levelObjective = getLevelObjective(this.levelDef.config.id);
+    this.survivalTimer = 0;
+    this.objectiveItems = [];
+
+    if (this.levelObjective.type === 'COLLECT_RUNES' || this.levelObjective.type === 'ACTIVATE_SWITCHES') {
+      const count = this.levelObjective.targetValue;
+      const cols = Math.floor(this.levelDef.config.width / 32);
+      const itemType = this.levelObjective.type === 'COLLECT_RUNES' ? 'RUNE' : 'ALTAR';
+      for (let i = 0; i < count; i++) {
+        const colRatio = (i + 1) / (count + 1);
+        const targetCol = Math.floor(cols * colRatio);
+        const targetX = targetCol * 32;
+        const ground = this.findValidGroundAtX(targetX) || { x: targetX, y: 320 };
+        const itemTitle = itemType === 'RUNE' ? `RUNE #${i + 1}` : `ALTAR #${i + 1}`;
+        this.objectiveItems.push(
+          new ObjectiveItem(ground.x, ground.y - (itemType === 'ALTAR' ? 16 : 10), itemType, i, itemTitle)
+        );
+      }
+    } else if (this.levelObjective.type === 'REACH_EXIT') {
+      this.levelObjective.isCompleted = true;
+      this.isAreaCleared = true;
+    }
 
     // Instantiate all 50 actual combat enemies from levelDef.goblins across 6 level waves
     const rawGoblins = this.levelDef.goblins || [];
@@ -1317,19 +1355,69 @@ export class GameEngine {
     }
 
     // 50-Enemy Level Clear Check
-    if (!this.isAreaCleared && this.totalEnemiesDefeated >= 50) {
-      this.isAreaCleared = true;
-      this.areaClearedBannerTimer = 5.0;
+    if (this.levelObjective.type === 'DEFEAT_50_ENEMIES') {
+      this.levelObjective.currentValue = this.totalEnemiesDefeated;
+      if (!this.isAreaCleared && this.totalEnemiesDefeated >= 50) {
+        this.isAreaCleared = true;
+        this.levelObjective.isCompleted = true;
+        this.areaClearedBannerTimer = 5.0;
 
-      this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-      this.particles.createFloatingText(
-        this.player.x,
-        this.player.y - 50,
-        'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
-        '#22c55e',
-        22
+        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+        this.particles.createFloatingText(
+          this.player.x,
+          this.player.y - 50,
+          'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
+          '#22c55e',
+          22
+        );
+        audioEngine.playVictory();
+      }
+    }
+
+    // Objective Items Update (Runes / Altars)
+    for (const item of this.objectiveItems) {
+      if (item.update(dt, this.player, this.particles)) {
+        this.levelObjective.currentValue++;
+        if (this.levelObjective.currentValue >= this.levelObjective.targetValue) {
+          this.levelObjective.isCompleted = true;
+          this.isAreaCleared = true;
+          audioEngine.playVictory();
+          this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+          this.particles.createFloatingText(
+            this.player.x,
+            this.player.y - 40,
+            '✨ OBJECTIVE COMPLETE! EXIT PORTAL UNLOCKED! 🚪',
+            '#facc15',
+            18
+          );
+        }
+      }
+    }
+
+    // Survival Objectives Update
+    if (
+      (this.levelObjective.type === 'SURVIVE_TIME' || this.levelObjective.type === 'SURVIVE_AND_EXIT') &&
+      !this.levelObjective.isCompleted &&
+      this.status === 'RUNNING'
+    ) {
+      this.survivalTimer += dt;
+      this.levelObjective.currentValue = Math.min(
+        this.levelObjective.targetValue,
+        Math.floor(this.survivalTimer)
       );
-      audioEngine.playVictory();
+      if (this.survivalTimer >= this.levelObjective.targetValue) {
+        this.levelObjective.isCompleted = true;
+        this.isAreaCleared = true;
+        audioEngine.playVictory();
+        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
+        this.particles.createFloatingText(
+          this.player.x,
+          this.player.y - 40,
+          '⏱️ SURVIVAL COMPLETE! EXIT PORTAL UNLOCKED! 🚪',
+          '#facc15',
+          18
+        );
+      }
     }
 
     // 6. Update Collectibles
@@ -1362,13 +1450,17 @@ export class GameEngine {
         // Prevent completing level until Boss is defeated!
         this.player.vx = this.player.facingRight ? -7 : 7;
         this.particles.createFloatingText(goal.x, goal.y - 18, '🔒 PORTAL LOCKED — DEFEAT THE BOSS FIRST!', '#ef4444', 16);
-      } else if (!this.isBossLevel && !this.isAreaCleared) {
-        // Prevent completing level until all 50 enemies are defeated!
+      } else if (!this.levelObjective.isCompleted) {
+        // Prevent completing level until objective is fulfilled!
         this.player.vx = this.player.facingRight ? -7 : 7;
+        const remainingText =
+          this.levelObjective.type === 'SURVIVE_TIME' || this.levelObjective.type === 'SURVIVE_AND_EXIT'
+            ? `SURVIVE ${this.levelObjective.targetValue - this.levelObjective.currentValue} MORE SECONDS!`
+            : `${this.levelObjective.title} INCOMPLETE (${this.levelObjective.currentValue}/${this.levelObjective.targetValue})`;
         this.particles.createFloatingText(
           goal.x,
           goal.y - 18,
-          `🔒 PORTAL LOCKED — DEFEAT ALL 50 ENEMIES FIRST! (${this.totalEnemiesDefeated}/50)`,
+          `🔒 PORTAL LOCKED — ${remainingText}`,
           '#ef4444',
           15
         );
@@ -1430,6 +1522,11 @@ export class GameEngine {
     // Health Pickups
     for (const hpPickup of this.healthPickups) {
       hpPickup.render(this.ctx, offsetX, offsetY);
+    }
+
+    // Objective Items (Runes / Altars)
+    for (const item of this.objectiveItems) {
+      item.render(this.ctx, offsetX, offsetY);
     }
 
     // 7. Enemies (Goblins)
@@ -1495,32 +1592,68 @@ export class GameEngine {
     const secretsFound = this.secretRoomManager?.discoveredCount || 0;
     const secretsTotal = this.secretRoomManager?.totalRooms || 0;
 
-    if (this.isAreaCleared || this.totalEnemiesDefeated >= 50) {
-      ctx.fillStyle = '#22c55e';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('ALL 50 ENEMIES DEFEATED!', bx + boxW / 2, by + 18);
+    if (this.levelObjective.type === 'DEFEAT_50_ENEMIES') {
+      if (this.isAreaCleared || this.totalEnemiesDefeated >= 50) {
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ALL 50 ENEMIES DEFEATED!', bx + boxW / 2, by + 18);
 
-      ctx.fillStyle = '#fef08a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText(`🔓 EXIT PORTAL UNLOCKED | 50/50`, bx + boxW / 2, by + 34);
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`🔓 EXIT PORTAL UNLOCKED | 50/50`, bx + boxW / 2, by + 34);
 
-      ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
+        ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
+      } else {
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`ENEMIES: ${this.totalEnemiesDefeated} / 50`, bx + boxW / 2, by + 18);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '10px monospace';
+        ctx.fillText(`ACTIVE: ${this.activeEnemyCount} | REMAINING: ${Math.max(0, 50 - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
+
+        ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
+      }
     } else {
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 12px sans-serif';
+      // World 9 and World 10 Objective HUD
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`ENEMIES: ${this.totalEnemiesDefeated} / 50`, bx + boxW / 2, by + 18);
+      ctx.fillText(this.levelObjective.title, bx + boxW / 2, by + 16);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = '10px monospace';
-      ctx.fillText(`ACTIVE: ${this.activeEnemyCount} | REMAINING: ${Math.max(0, 50 - this.totalEnemiesDefeated)}`, bx + boxW / 2, by + 34);
+      let statusText = '';
+      if (this.levelObjective.type === 'SURVIVE_TIME' || this.levelObjective.type === 'SURVIVE_AND_EXIT') {
+        const remaining = Math.max(0, this.levelObjective.targetValue - this.levelObjective.currentValue);
+        statusText = this.levelObjective.isCompleted
+          ? '⏱️ SURVIVAL COMPLETE — PORTAL OPEN'
+          : `⏱️ SURVIVE: ${remaining}s REMAINING`;
+      } else if (this.levelObjective.type === 'COLLECT_RUNES') {
+        statusText = `🔮 RUNES: ${this.levelObjective.currentValue} / ${this.levelObjective.targetValue}`;
+      } else if (this.levelObjective.type === 'ACTIVATE_SWITCHES') {
+        statusText = `⚡ ALTARS: ${this.levelObjective.currentValue} / ${this.levelObjective.targetValue}`;
+      } else if (this.levelObjective.type === 'REACH_EXIT') {
+        statusText = '🏃 ESCAPE TO EXIT PORTAL — UNLOCKED';
+      } else if (this.levelObjective.type === 'DEFEAT_BOSS') {
+        statusText = '👑 DEFEAT THE BOSS TO ESCAPE';
+      }
 
-      ctx.fillStyle = secretsFound > 0 ? '#fde047' : '#94a3b8';
+      ctx.fillStyle = this.levelObjective.isCompleted ? '#4ade80' : '#38bdf8';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(`🔍 SECRET ROOMS: ${secretsFound}/${secretsTotal}`, bx + boxW / 2, by + 48);
+      ctx.fillText(statusText, bx + boxW / 2, by + 32);
+
+      const [wStr] = (this.levelDef.config.id || '1-1').split('-');
+      const worldNum = parseInt(wStr, 10) || 1;
+      if (worldNum === 9 || worldNum === 10) {
+        ctx.fillStyle = '#f43f5e';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText('🛡️ IMMORTAL ENEMIES (UNKILLABLE)', bx + boxW / 2, by + 48);
+      }
     }
 
     ctx.restore();
@@ -1583,7 +1716,8 @@ export class GameEngine {
     const py = Math.round(goal.y - offsetY);
 
     const ctx = this.ctx;
-    const isLocked = this.isBossLevel && this.bossMonster && this.bossMonster.isAlive;
+    const isBossLocked = this.isBossLevel && this.bossMonster && this.bossMonster.isAlive;
+    const isLocked = isBossLocked || !this.levelObjective.isCompleted;
 
     // Wooden Flag Pole
     ctx.fillStyle = '#78350f';
