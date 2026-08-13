@@ -37,8 +37,12 @@ export class ForestGoblin extends Entity {
   public isBoss: boolean = false;
   public levelId: string = '1-1';
 
+  public isLargeMonsterOverride: boolean = false;
   public get isLargeMonster(): boolean {
-    return !this.isBoss && this.enemyClass === 'HEAVY_FIGHTER';
+    return this.isLargeMonsterOverride || (!this.isBoss && this.enemyClass === 'HEAVY_FIGHTER' && (this.maxHp >= 200 || this.enemyName.includes('MONSTER')));
+  }
+  public set isLargeMonster(val: boolean) {
+    this.isLargeMonsterOverride = val;
   }
 
   public get isImmortal(): boolean {

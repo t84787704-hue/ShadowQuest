@@ -534,6 +534,18 @@ export class GameEngine {
     audioEngine.playVictory();
     this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
 
+    const [wStr, lStr] = (this.levelDef.config.id || '1-1').split('-');
+    const w = parseInt(wStr, 10) || 1;
+    const l = parseInt(lStr, 10) || 1;
+
+    let completionBonusCoins = 0;
+    if (w === 1) {
+      if (l === 1) completionBonusCoins = 100;
+      else if (l === 5) completionBonusCoins = 150;
+      else if (l === 10) completionBonusCoins = 500;
+      else completionBonusCoins = 50;
+    }
+
     const rating = calculateLevelRating(
       this.player.totalDamageTaken,
       this.levelTime,
@@ -543,10 +555,10 @@ export class GameEngine {
       this.player.stats.maxHp
     );
 
-    SaveSystem.completeLevel(this.levelDef.config.id, rating.stars, this.collectedCoinsCount);
+    SaveSystem.completeLevel(this.levelDef.config.id, rating.stars, this.collectedCoinsCount + completionBonusCoins);
 
     if (this.onStateChangeCallback) {
-      this.onStateChangeCallback('VICTORY', this.collectedCoinsCount, this.totalCoins);
+      this.onStateChangeCallback('VICTORY', this.collectedCoinsCount + completionBonusCoins, this.totalCoins + completionBonusCoins);
     }
   }
 
@@ -555,15 +567,17 @@ export class GameEngine {
     this.bossProjectiles = [];
     this.isBossLevel = this.levelDef.config.isBossLevel || false;
     this.goblins = [];
-    this.totalEnemiesInLevel = 50;
-    this.totalEnemiesSpawned = 50;
-    this.totalEnemiesDefeated = 0;
-    this.isAreaCleared = false;
 
     // Load Objective for this level
     this.levelObjective = getLevelObjective(this.levelDef.config.id);
     this.survivalTimer = 0;
     this.objectiveItems = [];
+
+    const rawGoblins = this.levelDef.goblins || [];
+    this.totalEnemiesInLevel = rawGoblins.filter((g) => !g.isBoss).length || this.levelObjective.targetValue || 50;
+    this.totalEnemiesSpawned = this.totalEnemiesInLevel;
+    this.totalEnemiesDefeated = 0;
+    this.isAreaCleared = false;
 
     if (this.levelObjective.type === 'COLLECT_RUNES' || this.levelObjective.type === 'ACTIVATE_SWITCHES') {
       const count = this.levelObjective.targetValue;
@@ -584,30 +598,99 @@ export class GameEngine {
       this.isAreaCleared = true;
     }
 
-    // Instantiate all 50 actual combat enemies from levelDef.goblins across 6 level waves
-    const rawGoblins = this.levelDef.goblins || [];
+    const [wStr, lStr] = (this.levelDef.config.id || '1-1').split('-');
+    const worldId = parseInt(wStr, 10) || 1;
+    const levelNum = parseInt(lStr, 10) || 1;
+
     for (let i = 0; i < rawGoblins.length; i++) {
       const spawn = rawGoblins[i];
       if (spawn.isBoss) continue;
 
       const enemy = new ForestGoblin(spawn.x, spawn.y, 100, false, this.levelDef.config.id);
 
-      // Assign Enemy Class & stats based on wave progression (0..49)
-      if (i >= 32) {
-        enemy.enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
-        enemy.maxHp = 180;
-        enemy.hp = 180;
-        enemy.attackDamage = 12;
-      } else if (i >= 16) {
-        enemy.enemyClass = i % 2 === 0 ? 'HEAVY_FIGHTER' : 'MARTIAL_ARTIST';
-        enemy.maxHp = 130;
-        enemy.hp = 130;
-        enemy.attackDamage = 9;
+      if (worldId === 1) {
+        if (levelNum === 1) {
+          // 1-1 Tutorial Valley
+          enemy.enemyClass = 'MARTIAL_ARTIST';
+          enemy.maxHp = 35;
+          enemy.hp = 35;
+          enemy.attackDamage = 3;
+        } else if (levelNum === 2) {
+          // 1-2 Broken Bridge
+          enemy.enemyClass = i % 3 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+          enemy.maxHp = 50;
+          enemy.hp = 50;
+          enemy.attackDamage = 4;
+        } else if (levelNum === 3) {
+          // 1-3 Forest Ambush
+          enemy.enemyClass = i % 3 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+          enemy.maxHp = 60;
+          enemy.hp = 60;
+          enemy.attackDamage = 5;
+        } else if (levelNum === 4) {
+          // 1-4 High Ground
+          enemy.enemyClass = i % 2 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+          enemy.maxHp = 70;
+          enemy.hp = 70;
+          enemy.attackDamage = 6;
+        } else if (levelNum === 5) {
+          // 1-5 Monster's Den
+          if (spawn.isLargeMonster || i === Math.floor(rawGoblins.length / 2)) {
+            enemy.isLargeMonster = true;
+            enemy.enemyClass = 'HEAVY_FIGHTER';
+            enemy.enemyName = 'GORTOK THE DEN MONSTER';
+            enemy.maxHp = 220;
+            enemy.hp = 220;
+            enemy.attackDamage = 12;
+          } else {
+            enemy.enemyClass = i % 2 === 0 ? 'FAST_FIGHTER' : 'MARTIAL_ARTIST';
+            enemy.maxHp = 75;
+            enemy.hp = 75;
+            enemy.attackDamage = 6;
+          }
+        } else if (levelNum === 6) {
+          // 1-6 Moving Forest
+          enemy.enemyClass = i % 3 === 0 ? 'HEAVY_FIGHTER' : 'MARTIAL_ARTIST';
+          enemy.maxHp = 80;
+          enemy.hp = 80;
+          enemy.attackDamage = 7;
+        } else if (levelNum === 7) {
+          // 1-7 Trap Valley
+          enemy.enemyClass = i % 2 === 0 ? 'HEAVY_FIGHTER' : 'FAST_FIGHTER';
+          enemy.maxHp = 85;
+          enemy.hp = 85;
+          enemy.attackDamage = 7;
+        } else if (levelNum === 8) {
+          // 1-8 Dark Grove
+          enemy.enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
+          enemy.maxHp = 100;
+          enemy.hp = 100;
+          enemy.attackDamage = 8;
+        } else if (levelNum === 9) {
+          // 1-9 Final Approach
+          enemy.enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
+          enemy.maxHp = 110;
+          enemy.hp = 110;
+          enemy.attackDamage = 9;
+        }
       } else {
-        enemy.enemyClass = i % 2 === 0 ? 'MARTIAL_ARTIST' : 'FAST_FIGHTER';
-        enemy.maxHp = 90;
-        enemy.hp = 90;
-        enemy.attackDamage = 7;
+        // Worlds 2-10
+        if (i >= 32) {
+          enemy.enemyClass = i % 2 === 0 ? 'ELITE_FIGHTER' : 'HEAVY_FIGHTER';
+          enemy.maxHp = 180;
+          enemy.hp = 180;
+          enemy.attackDamage = 12;
+        } else if (i >= 16) {
+          enemy.enemyClass = i % 2 === 0 ? 'HEAVY_FIGHTER' : 'MARTIAL_ARTIST';
+          enemy.maxHp = 130;
+          enemy.hp = 130;
+          enemy.attackDamage = 9;
+        } else {
+          enemy.enemyClass = i % 2 === 0 ? 'MARTIAL_ARTIST' : 'FAST_FIGHTER';
+          enemy.maxHp = 90;
+          enemy.hp = 90;
+          enemy.attackDamage = 7;
+        }
       }
 
       this.goblins.push(enemy);
@@ -1300,26 +1383,29 @@ export class GameEngine {
 
           if (!goblin.isShadowClone) {
             this.totalEnemiesDefeated++;
-            this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
+            const coinVal = goblin.isBoss ? 50 : goblin.isLargeMonster ? 25 : 2;
+            this.coins.push(new Coin(goblin.x, goblin.y, coinVal));
             this.particles.createEnemyDefeatBurst(goblin.x + goblin.width / 2, goblin.y + goblin.height / 2);
 
+            const targetVal = this.levelObjective.targetValue || 50;
             this.particles.createFloatingText(
               goblin.x + goblin.width / 2,
               goblin.y - 18,
-              `ENEMIES: ${this.totalEnemiesDefeated}/50 ⚔️`,
+              `ENEMIES: ${this.totalEnemiesDefeated}/${targetVal} ⚔️`,
               '#ef4444',
               14
             );
 
-            if (this.totalEnemiesDefeated >= 50 && !this.isAreaCleared) {
+            if (this.totalEnemiesDefeated >= targetVal && !this.isAreaCleared) {
               this.isAreaCleared = true;
+              this.levelObjective.isCompleted = true;
               this.areaClearedBannerTimer = 5.0;
 
               this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
               this.particles.createFloatingText(
                 this.player.x,
                 this.player.y - 50,
-                'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
+                `ALL ${targetVal} ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!`,
                 '#22c55e',
                 22
               );
@@ -1354,10 +1440,11 @@ export class GameEngine {
       }
     }
 
-    // 50-Enemy Level Clear Check
+    // Enemy Objective Level Clear Check
     if (this.levelObjective.type === 'DEFEAT_50_ENEMIES') {
+      const targetVal = this.levelObjective.targetValue || 50;
       this.levelObjective.currentValue = this.totalEnemiesDefeated;
-      if (!this.isAreaCleared && this.totalEnemiesDefeated >= 50) {
+      if (!this.isAreaCleared && this.totalEnemiesDefeated >= targetVal) {
         this.isAreaCleared = true;
         this.levelObjective.isCompleted = true;
         this.areaClearedBannerTimer = 5.0;
@@ -1366,7 +1453,7 @@ export class GameEngine {
         this.particles.createFloatingText(
           this.player.x,
           this.player.y - 50,
-          'ALL 50 ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!',
+          `ALL ${targetVal} ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!`,
           '#22c55e',
           22
         );

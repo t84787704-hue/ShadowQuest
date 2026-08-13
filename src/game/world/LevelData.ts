@@ -18,7 +18,7 @@ export interface LevelDefinition {
   signs?: TutorialSign[];
   coins: { x: number; y: number; value?: number }[];
   healthPickups?: { x: number; y: number; healAmount?: number }[];
-  goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[];
+  goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean; isLargeMonster?: boolean }[];
   secretRooms?: SecretRoomDef[];
 }
 
@@ -36,7 +36,7 @@ export const WORLD_NAMES: Record<number, string> = {
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Timberland Outpost', 'Overgrown Aqueduct', 'Cliffside Outlook', 'Old Watchtower', 'Valley Ramparts', 'Valley Chieftain Arena'],
+  1: ['Tutorial Valley', 'Broken Bridge', 'Forest Ambush', 'High Ground', "Monster's Den", 'Moving Forest', 'Trap Valley', 'Dark Grove', 'Final Approach', 'Chieftain Arena'],
   2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Sun Temple Courtyard', 'Scorched Sluice', 'Nomadic Encampment', 'Pyramidal Corridor', 'Desert Ramparts', 'Sandstorm Titan Citadel'],
   3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frostbite Terrace', 'Rime Ice Sluice', 'Avalanche Spire', 'Snowbound Watchtower', 'Glacier Ramparts', 'Frost Colossus Fortress'],
   4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Foundry', 'Obsidian Sluice', 'Smelting Terrace', 'Firestorm Pass', 'Sulphur Watchtower', 'Volcanic Ramparts', 'Magma Overlord Sanctum'],
@@ -382,20 +382,33 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
   }
 
   const coins: { x: number; y: number; value?: number }[] = [];
-  const goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] = [];
+  const goblins: { x: number; y: number; patrolRange?: number; isBoss?: boolean; isLargeMonster?: boolean }[] = [];
   const healthPickups: { x: number; y: number; healAmount?: number }[] = [];
   const checkpoints: { x: number; y: number }[] = [];
   const signs: TutorialSign[] = [];
 
-  if (w === 1 && l === 2) {
-    // Dedicated Layout for World 1-2 Ancient Ruins
-    buildWorld1_2Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
-  } else if (w === 1 && l === 3) {
-    // Dedicated Layout for World 1-3 Forbidden Canyon
-    buildWorld1_3Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
-  } else if (w === 1 && l === 4) {
-    // Dedicated Layout for World 1-4 Final Approach (Fortress Approach)
-    buildWorld1_4Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+  if (w === 1) {
+    if (l === 1) {
+      buildWorld1_1Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 2) {
+      buildWorld1_2Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 3) {
+      buildWorld1_3Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 4) {
+      buildWorld1_4Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 5) {
+      buildWorld1_5Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 6) {
+      buildWorld1_6Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 7) {
+      buildWorld1_7Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 8) {
+      buildWorld1_8Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 9) {
+      buildWorld1_9Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    } else if (l === 10) {
+      buildWorld1_10Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+    }
   } else {
     // Tutorial Signs for Level 1-1
     if (w === 1 && l === 1) {
@@ -677,6 +690,49 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
     goblins: levelGoblins,
     secretRooms,
   };
+}
+
+function buildWorld1_1Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-1: Tutorial Valley layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.GRASS_TOP;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-1 TUTORIAL VALLEY', subtitle: 'Welcome! Use A/D or Arrow keys to move, Space/W to Jump.' },
+    { x: 450, y: 310, title: 'TEACH PUNCH 👊', subtitle: 'Press J or tap PUNCH button to hit enemies with rapid punch combos!' },
+    { x: 850, y: 310, title: 'TEACH KICK 🦶', subtitle: 'Press K or tap KICK button to deliver heavy kick attacks!' },
+    { x: 1300, y: 310, title: 'COMPLETION REWARDS 🪙', subtitle: 'Defeat all 12 easy small enemies to unlock the Exit Portal and earn 100 Bonus Coins!' }
+  );
+
+  // Gentle stepping platforms
+  for (let c = 20; c <= 25; c++) grid[10][c] = TileType.STONE_PLATFORM;
+  for (let c = 35; c <= 42; c++) grid[8][c] = TileType.STONE_PLATFORM;
+  for (let c = 55; c <= 62; c++) grid[10][c] = TileType.STONE_PLATFORM;
+
+  // Coins along the path
+  for (let c = 10; c <= 70; c += 4) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+  for (let c = 36; c <= 41; c += 2) {
+    coins.push({ x: c * 32, y: 7 * 32, value: 5 });
+  }
+
+  healthPickups.push({ x: 30 * 32, y: 310, healAmount: 40 });
+  healthPickups.push({ x: 60 * 32, y: 310, healAmount: 40 });
+  checkpoints.push({ x: 40 * 32, y: 11 * 32 - 16 });
 }
 
 function buildWorld1_2Layout(
@@ -1068,6 +1124,241 @@ function buildWorld1_4Layout(
   healthPickups.push({ x: 202 * 32, y: 310, healAmount: 30 });
 }
 
+function buildWorld1_5Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-5: Monster's Den layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: "1-5 MONSTER'S DEN", subtitle: 'Infiltrate the den! Defeat 30 enemies including Gortok the Large Monster!' },
+    { x: 1200, y: 310, title: 'HEAVY MONSTER AHEAD 🛡️', subtitle: 'Gortok has massive HP and heavy defense! Execute punch & kick combos to defeat him!' }
+  );
+
+  // Den Pillars & Elevated Platforms
+  for (let r = 7; r <= 12; r++) {
+    grid[r][25] = TileType.COVER_PILLAR;
+    grid[r][50] = TileType.COVER_PILLAR;
+    grid[r][75] = TileType.COVER_PILLAR;
+  }
+
+  for (let c = 30; c <= 45; c++) grid[8][c] = TileType.STONE_PLATFORM;
+  for (let c = 55; c <= 70; c++) grid[8][c] = TileType.STONE_PLATFORM;
+
+  for (let c = 10; c <= 85; c += 3) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  healthPickups.push({ x: 35 * 32, y: 7 * 32, healAmount: 40 });
+  healthPickups.push({ x: 65 * 32, y: 7 * 32, healAmount: 40 });
+  checkpoints.push({ x: 40 * 32, y: 11 * 32 - 16 });
+}
+
+function buildWorld1_6Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-6: Moving Forest layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.GRASS_TOP;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-6 MOVING FOREST', subtitle: 'Ride moving conveyor platforms across deep forest chasms and defeat 35 enemies!' }
+  );
+
+  // Chasms with Conveyor Bridges
+  for (let c = 20; c <= 28; c++) {
+    grid[12][c] = TileType.EMPTY;
+    grid[13][c] = TileType.HAZARD_SPIKES;
+    grid[10][c] = c % 2 === 0 ? TileType.CONVEYOR_RIGHT : TileType.CONVEYOR_LEFT;
+  }
+
+  for (let c = 45; c <= 53; c++) {
+    grid[12][c] = TileType.EMPTY;
+    grid[13][c] = TileType.HAZARD_SPIKES;
+    grid[10][c] = c % 2 === 0 ? TileType.CONVEYOR_LEFT : TileType.CONVEYOR_RIGHT;
+  }
+
+  for (let c = 10; c <= 80; c += 4) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  checkpoints.push({ x: 35 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 40 * 32, y: 310, healAmount: 40 });
+}
+
+function buildWorld1_7Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-7: Trap Valley layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.GRASS_TOP;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-7 TRAP VALLEY', subtitle: 'Watch your step! Spike pits and trap tiles guard the valley. Defeat 40 enemies!' }
+  );
+
+  // Trap Tiles & Spike Pits
+  for (let c = 18; c <= 22; c++) grid[12][c] = TileType.TRAP_TILE;
+  for (let c = 35; c <= 40; c++) {
+    grid[12][c] = TileType.EMPTY;
+    grid[13][c] = TileType.HAZARD_SPIKES;
+    grid[9][c] = TileType.WOOD_BRIDGE;
+  }
+  for (let c = 60; c <= 65; c++) grid[12][c] = TileType.TRAP_TILE;
+
+  for (let c = 10; c <= 80; c += 3) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  checkpoints.push({ x: 30 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 50 * 32, y: 310, healAmount: 40 });
+}
+
+function buildWorld1_8Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-8: Dark Grove layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-8 DARK GROVE', subtitle: 'The forest canopy darkens. Defeat 40 elite brawlers in tight close-quarters combat!' }
+  );
+
+  for (let c = 20; c <= 35; c++) grid[9][c] = TileType.STONE_PLATFORM;
+  for (let c = 50; c <= 65; c++) grid[9][c] = TileType.STONE_PLATFORM;
+
+  for (let c = 10; c <= 80; c += 3) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  checkpoints.push({ x: 45 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 28 * 32, y: 8 * 32, healAmount: 40 });
+}
+
+function buildWorld1_9Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-9: Final Approach layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-9 FINAL APPROACH', subtitle: "Prepare for the World Boss! Defeat 45 fortified guards to breach the Chieftain's fortress." }
+  );
+
+  for (let c = 25; c <= 35; c++) grid[8][c] = TileType.STONE_PLATFORM;
+  for (let c = 45; c <= 55; c++) grid[8][c] = TileType.STONE_PLATFORM;
+  for (let c = 65; c <= 75; c++) grid[8][c] = TileType.STONE_PLATFORM;
+
+  for (let c = 10; c <= 85; c += 3) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  checkpoints.push({ x: 40 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 30 * 32, y: 7 * 32, healAmount: 50 });
+  healthPickups.push({ x: 70 * 32, y: 7 * 32, healAmount: 50 });
+}
+
+function buildWorld1_10Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-10: Chieftain Arena layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: '1-10 CHIEFTAIN ARENA', subtitle: 'DEFEAT THE GOBLIN CHIEFTAIN! Use bounce pads to avoid ground slams and unlock World 2!' }
+  );
+
+  // Coliseum bounce pads & side pillars
+  grid[12][15] = TileType.BOUNCE_PAD;
+  grid[12][45] = TileType.BOUNCE_PAD;
+
+  for (let r = 7; r <= 12; r++) {
+    grid[r][10] = TileType.COVER_PILLAR;
+    grid[r][50] = TileType.COVER_PILLAR;
+  }
+
+  for (let c = 18; c <= 25; c++) grid[8][c] = TileType.STONE_PLATFORM;
+  for (let c = 35; c <= 42; c++) grid[8][c] = TileType.STONE_PLATFORM;
+
+  for (let c = 15; c <= 45; c += 3) {
+    coins.push({ x: c * 32, y: 320 });
+  }
+
+  healthPickups.push({ x: 21 * 32, y: 7 * 32, healAmount: 50 });
+  healthPickups.push({ x: 38 * 32, y: 7 * 32, healAmount: 50 });
+  checkpoints.push({ x: 12 * 32, y: 11 * 32 - 16 });
+}
+
 function generate50EnemiesForLevel(
   cols: number,
   rows: number,
@@ -1076,8 +1367,14 @@ function generate50EnemiesForLevel(
   secretRooms: SecretRoomDef[] = [],
   w: number = 1,
   l: number = 1
-): { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] {
-  const result: { x: number; y: number; patrolRange?: number; isBoss?: boolean }[] = [];
+): { x: number; y: number; patrolRange?: number; isBoss?: boolean; isLargeMonster?: boolean }[] {
+  const result: { x: number; y: number; patrolRange?: number; isBoss?: boolean; isLargeMonster?: boolean }[] = [];
+
+  const targetEnemyCount = (w === 1 && l <= 9)
+    ? [12, 20, 25, 30, 30, 35, 40, 40, 45][l - 1]
+    : 50;
+
+  if (l === 10) return result; // Boss level generates boss via boss logic
 
   const isInsideSecretRoomArea = (c: number): boolean => {
     for (const sr of secretRooms) {
@@ -1088,14 +1385,9 @@ function generate50EnemiesForLevel(
     return false;
   };
 
-  // Wave counts: World 1-2, 1-3 & 1-4 use [5, 6, 7, 8, 9, 10, 5] = 50 enemies across 7 waves
-  // Other levels use [8, 8, 8, 8, 8, 10] = 50 enemies across 6 waves
-  const waveCounts = (w === 1 && (l === 2 || l === 3 || l === 4)) ? [5, 6, 7, 8, 9, 10, 5] : [8, 8, 8, 8, 8, 10];
-  const numWaves = waveCounts.length;
   const startCol = 18;
   const endCol = cols - 16;
-  const totalUsableCols = Math.max(60, endCol - startCol);
-
+  const totalUsableCols = Math.max(40, endCol - startCol);
   const enemyHeight = 44;
 
   const findValidGroundYAtCol = (c: number): number | null => {
@@ -1110,12 +1402,12 @@ function generate50EnemiesForLevel(
         tile === TileType.GRASS_TOP ||
         tile === TileType.DIRT_MIDDLE ||
         tile === TileType.STONE_PLATFORM ||
-        tile === TileType.WOOD_BRIDGE;
+        tile === TileType.WOOD_BRIDGE ||
+        tile === TileType.CONVEYOR_LEFT ||
+        tile === TileType.CONVEYOR_RIGHT;
 
-      const isAbove1Empty =
-        tileAbove1 === TileType.EMPTY || tileAbove1 === TileType.FAKE_WALL;
-      const isAbove2Empty =
-        tileAbove2 === TileType.EMPTY || tileAbove2 === TileType.FAKE_WALL;
+      const isAbove1Empty = tileAbove1 === TileType.EMPTY || tileAbove1 === TileType.FAKE_WALL;
+      const isAbove2Empty = tileAbove2 === TileType.EMPTY || tileAbove2 === TileType.FAKE_WALL;
 
       if (isSolid && isAbove1Empty && isAbove2Empty) {
         return r * 32 - enemyHeight;
@@ -1126,55 +1418,51 @@ function generate50EnemiesForLevel(
 
   const occupiedPositions: { x: number; y: number }[] = [];
 
-  for (let waveIdx = 0; waveIdx < numWaves; waveIdx++) {
-    const waveEnemyCount = waveCounts[waveIdx];
-    const waveStartCol = startCol + Math.floor((totalUsableCols / numWaves) * waveIdx);
-    const waveEndCol = startCol + Math.floor((totalUsableCols / numWaves) * (waveIdx + 1)) - 1;
-    const waveSpan = Math.max(1, waveEndCol - waveStartCol);
+  for (let i = 0; i < targetEnemyCount; i++) {
+    const progress = i / Math.max(1, targetEnemyCount - 1);
+    const targetCol = Math.floor(startCol + progress * totalUsableCols);
+    let chosenX: number | null = null;
+    let chosenY: number | null = null;
 
-    for (let i = 0; i < waveEnemyCount; i++) {
-      const targetCol = Math.floor(waveStartCol + (waveSpan / waveEnemyCount) * i + (rng() * 2 - 1));
-      let chosenX: number | null = null;
-      let chosenY: number | null = null;
+    for (let offset = 0; offset <= 12; offset++) {
+      const testCols = offset === 0 ? [targetCol] : [targetCol + offset, targetCol - offset];
+      let found = false;
 
-      for (let offset = 0; offset <= 10; offset++) {
-        const testCols = offset === 0 ? [targetCol] : [targetCol + offset, targetCol - offset];
-        let found = false;
+      for (const testCol of testCols) {
+        if (testCol < startCol || testCol > endCol) continue;
+        const groundY = findValidGroundYAtCol(testCol);
+        if (groundY !== null) {
+          const posX = testCol * 32;
+          const tooClose = occupiedPositions.some((p) => Math.hypot(p.x - posX, p.y - groundY) < 36);
 
-        for (const testCol of testCols) {
-          if (testCol < waveStartCol || testCol > waveEndCol) continue;
-          const groundY = findValidGroundYAtCol(testCol);
-          if (groundY !== null) {
-            const posX = testCol * 32;
-            const tooClose = occupiedPositions.some(
-              (p) => Math.hypot(p.x - posX, p.y - groundY) < 48
-            );
-
-            if (!tooClose) {
-              chosenX = posX;
-              chosenY = groundY;
-              found = true;
-              break;
-            }
+          if (!tooClose) {
+            chosenX = posX;
+            chosenY = groundY;
+            found = true;
+            break;
           }
         }
-        if (found) break;
       }
-
-      if (chosenX === null || chosenY === null) {
-        const fallbackCol = Math.max(startCol, Math.min(endCol, targetCol));
-        const fallbackY = findValidGroundYAtCol(fallbackCol) || 320;
-        chosenX = fallbackCol * 32;
-        chosenY = fallbackY;
-      }
-
-      occupiedPositions.push({ x: chosenX, y: chosenY });
-      result.push({
-        x: chosenX,
-        y: chosenY,
-        patrolRange: 50 + Math.floor(rng() * 40),
-      });
+      if (found) break;
     }
+
+    if (chosenX === null || chosenY === null) {
+      const fallbackCol = Math.max(startCol, Math.min(endCol, targetCol));
+      const fallbackY = findValidGroundYAtCol(fallbackCol) || 320;
+      chosenX = fallbackCol * 32;
+      chosenY = fallbackY;
+    }
+
+    occupiedPositions.push({ x: chosenX, y: chosenY });
+
+    const isLarge = w === 1 && l === 5 && i === Math.floor(targetEnemyCount / 2);
+
+    result.push({
+      x: chosenX,
+      y: chosenY,
+      patrolRange: isLarge ? 120 : 50 + Math.floor(rng() * 40),
+      isLargeMonster: isLarge,
+    });
   }
 
   return result;
@@ -1266,10 +1554,16 @@ function buildSecretRooms(w: number, l: number, cols: number, grid: number[][]):
 
   // World-Specific Secret Room Setups (all guaranteed accessible on ground plane)
   if (w === 1) {
-    secretRooms.push(
-      carveRoom(0, 'Tree Canopy Secret Vault', 54, 62, 53, 'BREAKABLE_WALL', 'COIN_CACHE'),
-      carveRoom(1, 'Ancient Forest Cave Shrine', 138, 146, 137, 'BREAKABLE_WALL', 'HP_PERMANENT')
-    );
+    if (l === 2 || l === 1 || l === 3 || l === 4 || l === 5) {
+      secretRooms.push(
+        carveRoom(0, 'Broken Bridge Secret Vault', 54, 62, 53, 'BREAKABLE_WALL', 'COIN_CACHE')
+      );
+    }
+    if (l === 7 || l === 6 || l === 8 || l === 9) {
+      secretRooms.push(
+        carveRoom(1, 'Trap Valley Ancient Shrine', 138, 146, 137, 'BREAKABLE_WALL', 'ANCIENT_RELIC')
+      );
+    }
   } else if (w === 2) {
     secretRooms.push(
       carveRoom(0, 'Hidden Sand Tomb Chamber', 48, 56, 47, 'FAKE_WALL', 'ANCIENT_RELIC'),
