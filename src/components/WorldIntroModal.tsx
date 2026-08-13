@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Play, Compass, Mountain, Shield, Flame, Skull, X } from 'lucide-react';
+import { Play, Compass, Mountain, Shield, Flame, Skull, X, Crown } from 'lucide-react';
 import { WORLD_NAMES } from '../game/world/LevelData';
 import { audioEngine } from '../game/audio/AudioEngine';
 
@@ -19,47 +19,47 @@ const WORLD_DESCRIPTIONS: Record<number, { desc: string; icon: React.ReactNode; 
     color: 'from-emerald-950 via-slate-900 to-slate-950 border-emerald-500/40',
   },
   2: {
-    desc: 'Scorching desert sands, crumbling temple bridges, and venomous desert beasts await in the Ancient Ruins.',
+    desc: 'Scorching desert sands, sandstorm passes, and ancient golden pyramids in the Desert Empire.',
     icon: <Mountain className="w-10 h-10 text-amber-400" />,
     color: 'from-amber-950 via-slate-900 to-slate-950 border-amber-500/40',
   },
   3: {
-    desc: 'Icy cliffs and slippery glaciers! Navigating these frozen peaks requires precise jumping and swift blade slashes.',
+    desc: 'Icy cliffs, glacier ramparts, and blizzard peaks in the Frozen Kingdom! Requires precise blade slashes.',
     icon: <Shield className="w-10 h-10 text-sky-400" />,
     color: 'from-sky-950 via-slate-900 to-slate-950 border-sky-500/40',
   },
   4: {
-    desc: 'Pitch-black caverns with razor-sharp stalactite spikes and shadow beasts lurking in the dark depths.',
-    icon: <Skull className="w-10 h-10 text-purple-400" />,
-    color: 'from-purple-950 via-slate-900 to-slate-950 border-purple-500/40',
+    desc: 'Ash wastelands, magma lakes, and molten foundries across the Volcanic Lands.',
+    icon: <Flame className="w-10 h-10 text-orange-500" />,
+    color: 'from-orange-950 via-slate-900 to-slate-950 border-orange-500/40',
   },
   5: {
-    desc: 'Floating cloud islands high above Aetheria! One wrong step means falling into the abyss.',
-    icon: <Compass className="w-10 h-10 text-cyan-300" />,
-    color: 'from-cyan-950 via-slate-900 to-slate-950 border-cyan-500/40',
+    desc: 'Sacred halls, ancient traps, and mysterious runic altars inside the Ancient Temple.',
+    icon: <Crown className="w-10 h-10 text-yellow-400" />,
+    color: 'from-yellow-950 via-slate-900 to-slate-950 border-yellow-500/40',
   },
   6: {
-    desc: 'The royal stronghold of the Goblin King! Iron gates, heavy catapults, and elite citadel guards.',
-    icon: <Flame className="w-10 h-10 text-rose-500 animate-pulse" />,
-    color: 'from-rose-950 via-slate-900 to-slate-950 border-rose-500/40',
+    desc: 'Murky bogs, poison fog, and venomous creatures lurking in the Dark Swamp.',
+    icon: <Flame className="w-10 h-10 text-emerald-600 animate-pulse" />,
+    color: 'from-emerald-950 via-slate-900 to-slate-950 border-emerald-600/40',
   },
   7: {
-    desc: 'Glittering crystal chasms and prismatic reflection platforms! Defeat the Prismatic Crystal Golem.',
+    desc: 'Floating citadels and soaring wind platforms in the Sky Fortress! Defeat the Sky Citadel Titan.',
     icon: <Shield className="w-10 h-10 text-cyan-400" />,
     color: 'from-cyan-950 via-slate-900 to-slate-950 border-cyan-500/40',
   },
   8: {
-    desc: 'Sky sanctuary floating above thunderous clouds! Dodge gale winds and strike the Storm Lord.',
-    icon: <Compass className="w-10 h-10 text-sky-300" />,
-    color: 'from-sky-950 via-slate-900 to-slate-950 border-sky-500/40',
+    desc: 'Blighted streets, spectral spires, and haunting spirits filling the Cursed City.',
+    icon: <Compass className="w-10 h-10 text-purple-400" />,
+    color: 'from-purple-950 via-slate-900 to-slate-950 border-purple-500/40',
   },
   9: {
-    desc: 'Sunken temple submerged in ancient aquatic ruins! Beware the Kraken Basin Monarch.',
-    icon: <Flame className="w-10 h-10 text-teal-400" />,
-    color: 'from-teal-950 via-slate-900 to-slate-950 border-teal-500/40',
+    desc: 'Infernal rifts, hellfire pits, and demon warlords in the chaotic Demon Realm.',
+    icon: <Flame className="w-10 h-10 text-rose-500" />,
+    color: 'from-rose-950 via-slate-900 to-slate-950 border-rose-500/40',
   },
   10: {
-    desc: 'The Ultimate Celestial Peak! Face the Ultimate Overlord Sovereign in the ultimate finale of Aetheria!',
+    desc: 'The Ultimate Celestial Peak! Face the Ultimate Overlord Sovereign in the Final Realm!',
     icon: <Skull className="w-10 h-10 text-amber-400 animate-bounce" />,
     color: 'from-indigo-950 via-slate-900 to-slate-950 border-amber-500/60',
   },
