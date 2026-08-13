@@ -42,63 +42,63 @@ export interface BossInfo {
 
 export const BOSS_SPECS: Record<number, BossInfo> = {
   1: {
-    name: 'MASTER KENJI',
-    title: 'FOREST WARLORD MARTIAL MASTER',
+    name: 'FOREST WARRIOR',
+    title: 'WORLD 1 FOREST GUARDIAN',
     worldId: 1,
     maxHp: 450,
     attackDamage: 8,
     baseSpeed: 2.2,
-    maxPhases: 1,
+    maxPhases: 3,
     primaryColor: '#15803d',
     glowColor: '#4ade80',
   },
   2: {
-    name: 'MASTER BROK',
-    title: 'DESERT TITAN HEAVY WARRIOR',
+    name: 'SAND WARLORD',
+    title: 'WORLD 2 DESERT COMMANDER',
     worldId: 2,
     maxHp: 600,
     attackDamage: 9,
     baseSpeed: 2.0,
-    maxPhases: 2,
+    maxPhases: 3,
     primaryColor: '#b45309',
     glowColor: '#facc15',
   },
   3: {
-    name: 'VIPER KAEL',
-    title: 'DESERT SPEEDSTER FIGHTER',
+    name: 'ICE TITAN',
+    title: 'WORLD 3 FROZEN COLOSSUS',
     worldId: 3,
     maxHp: 750,
     attackDamage: 10,
     baseSpeed: 3.0,
-    maxPhases: 2,
+    maxPhases: 3,
     primaryColor: '#0284c7',
     glowColor: '#38bdf8',
   },
   4: {
-    name: 'MASTER SHEN',
-    title: 'MISTY MOUNTAIN MARTIAL MASTER',
+    name: 'MAGMA LORD',
+    title: 'WORLD 4 VOLCANIC OVERLORD',
     worldId: 4,
     maxHp: 900,
     attackDamage: 10,
     baseSpeed: 2.7,
-    maxPhases: 2,
+    maxPhases: 3,
     primaryColor: '#b91c1c',
     glowColor: '#f97316',
   },
   5: {
-    name: 'SHADOW MALAKOR',
-    title: 'ELITE VOID DARK MARTIAL ARTIST',
+    name: 'SHADOW OVERLORD',
+    title: 'WORLD 5 VOID MASTER',
     worldId: 5,
     maxHp: 1100,
     attackDamage: 11,
     baseSpeed: 2.9,
-    maxPhases: 2,
+    maxPhases: 3,
     primaryColor: '#6b21a8',
     glowColor: '#c084fc',
   },
   6: {
-    name: 'GRANDMASTER MARCUS',
-    title: 'SUPREME GRANDMASTER OF MARTIAL ARTS',
+    name: 'ROYAL GATE DESTROYER',
+    title: 'WORLD 6 CITADEL FINAL BOSS',
     worldId: 6,
     maxHp: 1400,
     attackDamage: 12,
@@ -711,15 +711,11 @@ export class BossMonster extends Entity {
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
 
-    // Phase Transitions
-    if (this.worldId === 6) {
-      if (this.currentPhase === 1 && this.hp <= this.maxHp * 0.66) {
-        this.triggerPhaseChange(2, particles);
-      } else if (this.currentPhase === 2 && this.hp <= this.maxHp * 0.33) {
-        this.triggerPhaseChange(3, particles);
-      }
-    } else if (this.maxPhases === 2 && this.currentPhase === 1 && this.hp <= this.maxHp * 0.5) {
+    // Phase Transitions (70% HP -> Phase 2, 35% HP -> Phase 3)
+    if (this.currentPhase === 1 && this.hp <= this.maxHp * 0.70) {
       this.triggerPhaseChange(2, particles);
+    } else if (this.currentPhase === 2 && this.hp <= this.maxHp * 0.35) {
+      this.triggerPhaseChange(3, particles);
     }
 
     // Death Check
