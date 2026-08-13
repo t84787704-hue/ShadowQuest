@@ -203,6 +203,7 @@ export class Player extends Entity {
     if (input.attack && !triggerSpinKick && !input.kick && this.attackCooldownTimer <= 0 && (this.state !== 'ATTACK' || this.attackTimer < 0.05)) {
       this.state = 'ATTACK';
       this.currentAttackId++; // Increment unique attack ID for single-hit detection
+      particles.createAttackWind(this.x + (this.facingRight ? this.width + 12 : -12), this.y + 20, this.facingRight);
 
       if (!this.isGrounded) {
         // Jump Attack / Flying Side Kick
@@ -259,12 +260,14 @@ export class Player extends Entity {
       this.facingRight = false;
       if (this.isGrounded && this.state !== 'ATTACK') {
         this.state = input.down ? 'CROUCH' : 'RUN';
+        particles.createRunDust(this.x + this.width / 2, this.y + this.height, false);
       }
     } else if (input.right) {
       this.vx = this.stats.moveSpeed * moveSpeedMult;
       this.facingRight = true;
       if (this.isGrounded && this.state !== 'ATTACK') {
         this.state = input.down ? 'CROUCH' : 'RUN';
+        particles.createRunDust(this.x + this.width / 2, this.y + this.height, true);
       }
     } else {
       this.vx *= 0.65; // Smooth friction

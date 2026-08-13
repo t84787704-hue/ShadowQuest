@@ -173,62 +173,182 @@ export class EnvironmentRenderer {
     height: number
   ) {
     if (levelNum === 1) {
-      // 1-1 Green Forest: Lush daylight forest
+      // 1-1 Green Forest: Beautiful, rich, vibrant daylight woodland
+      // 1. Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
       skyGrad.addColorStop(0, '#0284c7');
-      skyGrad.addColorStop(0.5, '#38bdf8');
+      skyGrad.addColorStop(0.4, '#38bdf8');
+      skyGrad.addColorStop(0.7, '#7dd3fc');
       skyGrad.addColorStop(1, '#e0f2fe');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Sun
-      const sunX = width * 0.8 - offsetX * 0.02;
-      ctx.fillStyle = 'rgba(254, 240, 138, 0.4)';
+      // 2. Glowing Sun & Atmospheric Sun Rays
+      const sunX = width * 0.78 - offsetX * 0.02;
+      const sunY = 70 - offsetY * 0.02;
+
+      // Sun Outer Glow
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 120);
+      sunGlow.addColorStop(0, 'rgba(254, 240, 138, 0.6)');
+      sunGlow.addColorStop(0.5, 'rgba(253, 224, 71, 0.25)');
+      sunGlow.addColorStop(1, 'rgba(253, 224, 71, 0)');
+      ctx.fillStyle = sunGlow;
       ctx.beginPath();
-      ctx.arc(sunX, 70, 60, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(sunX, 70, 26, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 120, 0, Math.PI * 2);
       ctx.fill();
 
-      // Distant Hills
-      ctx.fillStyle = '#38bdf8';
+      // Core Sun Disc
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gentle Sun Rays Filtering Down
+      ctx.fillStyle = 'rgba(255, 255, 220, 0.06)';
+      for (let r = 0; r < 4; r++) {
+        const rayAngle = r * 0.3 + 0.4;
+        ctx.beginPath();
+        ctx.moveTo(sunX, sunY);
+        ctx.lineTo(sunX - Math.cos(rayAngle) * 600, sunY + Math.sin(rayAngle) * 600);
+        ctx.lineTo(sunX - Math.cos(rayAngle + 0.12) * 600, sunY + Math.sin(rayAngle + 0.12) * 600);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 3. Layer 1: Distant Majestic Mountain Peaks
+      ctx.fillStyle = '#0284c7';
       ctx.beginPath();
       ctx.moveTo(0, height);
-      for (let x = -50; x <= width + 50; x += 50) {
-        ctx.lineTo(x, height - 140 - Math.sin((x + offsetX * 0.12) * 0.008) * 45);
+      for (let x = -50; x <= width + 50; x += 60) {
+        const mountainY = height - 170 - Math.sin((x + offsetX * 0.08) * 0.005) * 65 - Math.cos(x * 0.01) * 20;
+        ctx.lineTo(x, mountainY);
       }
       ctx.lineTo(width, height);
       ctx.fill();
 
-      // Mid Forest Canopy
+      // Distant Mountain Snow / Highlight Peaks
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let x = -50; x <= width + 50; x += 60) {
+        const peakY = height - 170 - Math.sin((x + offsetX * 0.08) * 0.005) * 65 - Math.cos(x * 0.01) * 20;
+        ctx.lineTo(x, peakY + 12);
+      }
+      ctx.lineTo(width, height);
+      ctx.fill();
+
+      // 4. Layer 2: Mid-distance Forest Hills & Pine Canopy
       ctx.fillStyle = '#0d9488';
       ctx.beginPath();
       ctx.moveTo(0, height);
       for (let x = -50; x <= width + 50; x += 40) {
-        ctx.lineTo(x, height - 90 - Math.sin((x + offsetX * 0.3) * 0.012) * 35);
+        ctx.lineTo(x, height - 110 - Math.sin((x + offsetX * 0.22) * 0.01) * 40);
       }
       ctx.lineTo(width, height);
       ctx.fill();
 
-      // Parallax Green Trees
-      const treeSpacing = 160;
-      const startTree = Math.floor((offsetX * 0.55 - 100) / treeSpacing);
-      for (let i = startTree; i < startTree + 12; i++) {
-        const tx = i * treeSpacing - offsetX * 0.55;
-        const ty = height - 130;
+      // Pine Silhouettes on Mid Hills
+      const pineSpacing = 70;
+      const startPine = Math.floor((offsetX * 0.22 - 100) / pineSpacing);
+      ctx.fillStyle = '#0f766e';
+      for (let i = startPine; i < startPine + 20; i++) {
+        const px = i * pineSpacing - offsetX * 0.22;
+        const py = height - 110 - Math.sin((i * pineSpacing) * 0.01) * 40;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px - 10, py + 28);
+        ctx.lineTo(px + 10, py + 28);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(px, py - 8);
+        ctx.lineTo(px - 7, py + 14);
+        ctx.lineTo(px + 7, py + 14);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 5. Layer 3: Closer Parallax Ancient Oak Trees & Lush Boughs
+      const oakSpacing = 220;
+      const startOak = Math.floor((offsetX * 0.45 - 120) / oakSpacing);
+      for (let i = startOak; i < startOak + 10; i++) {
+        const tx = i * oakSpacing - offsetX * 0.45;
+        const ty = height - 145 - (i % 3) * 15;
+
+        // Textured Trunk & Branches
         ctx.fillStyle = '#451a03';
-        ctx.fillRect(tx, ty, 14, 60);
+        ctx.fillRect(tx, ty, 20, 80);
+        ctx.fillRect(tx - 18, ty + 15, 24, 10);
+        ctx.fillRect(tx + 14, ty + 22, 22, 9);
+
+        // Deep Shadow Foliage
+        ctx.fillStyle = '#14532d';
+        ctx.beginPath();
+        ctx.arc(tx + 10, ty - 18, 38, 0, Math.PI * 2);
+        ctx.arc(tx - 18, ty + 4, 28, 0, Math.PI * 2);
+        ctx.arc(tx + 38, ty + 6, 28, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mid Green Foliage
         ctx.fillStyle = '#15803d';
         ctx.beginPath();
-        ctx.arc(tx + 7, ty - 10, 28, 0, Math.PI * 2);
-        ctx.arc(tx - 10, ty + 4, 20, 0, Math.PI * 2);
-        ctx.arc(tx + 24, ty + 4, 20, 0, Math.PI * 2);
+        ctx.arc(tx + 8, ty - 22, 32, 0, Math.PI * 2);
+        ctx.arc(tx - 14, ty + 2, 22, 0, Math.PI * 2);
+        ctx.arc(tx + 30, ty + 2, 22, 0, Math.PI * 2);
         ctx.fill();
+
+        // Bright Leaf Highlights
         ctx.fillStyle = '#22c55e';
         ctx.beginPath();
-        ctx.arc(tx + 3, ty - 16, 18, 0, Math.PI * 2);
+        ctx.arc(tx + 4, ty - 28, 22, 0, Math.PI * 2);
+        ctx.arc(tx - 10, ty - 6, 15, 0, Math.PI * 2);
+        ctx.arc(tx + 22, ty - 6, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Vines hanging down
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(tx - 12, ty + 22, 3, 24);
+        ctx.fillRect(tx + 24, ty + 26, 3, 20);
+      }
+
+      // 6. Foreground Ambient Forest Details (Rocks, Boulders, Wildflowers)
+      const fgSpacing = 180;
+      const startFg = Math.floor((offsetX * 0.85 - 100) / fgSpacing);
+      for (let i = startFg; i < startFg + 12; i++) {
+        const fx = i * fgSpacing - offsetX * 0.85;
+        const fy = height - 38;
+
+        if (i % 2 === 0) {
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.arc(fx, fy, 14, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#16a34a';
+          ctx.beginPath();
+          ctx.arc(fx, fy - 6, 11, Math.PI * 1.1, Math.PI * 1.9);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#15803d';
+          ctx.fillRect(fx - 10, fy + 4, 20, 8);
+
+          const flowerColors = ['#fef08a', '#f43f5e', '#38bdf8', '#facc15'];
+          for (let f = -8; f <= 8; f += 5) {
+            ctx.fillStyle = flowerColors[Math.abs(i + f) % flowerColors.length];
+            ctx.beginPath();
+            ctx.arc(fx + f, fy + 2, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Ambient Floating Leaf Spores in air
+      const time = Date.now() * 0.0015;
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.65)';
+      for (let p = 0; p < 12; p++) {
+        const px = ((p * 110 + time * 35) % (width + 100)) - 50;
+        const py = 120 + Math.sin(time + p) * 35 + (p * 25) % (height - 200);
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5 + (p % 2), 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (levelNum === 2) {

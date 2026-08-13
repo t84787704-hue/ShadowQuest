@@ -803,7 +803,7 @@ export class GameEngine {
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= dt;
       this.particles.update(dt * 0.2);
-      this.camera.follow(this.player.x, this.player.y, this.tileMap.widthInPixels, this.tileMap.heightInPixels);
+      this.camera.follow(this.player.x, this.player.y, this.tileMap.widthInPixels, this.tileMap.heightInPixels, this.player.facingRight);
       return;
     }
 
@@ -1263,6 +1263,7 @@ export class GameEngine {
           if (!goblin.isShadowClone) {
             this.totalEnemiesDefeated++;
             this.coins.push(new Coin(goblin.x, goblin.y, goblin.isBoss ? 20 : 2));
+            this.particles.createEnemyDefeatBurst(goblin.x + goblin.width / 2, goblin.y + goblin.height / 2);
 
             this.particles.createFloatingText(
               goblin.x + goblin.width / 2,
@@ -1381,7 +1382,8 @@ export class GameEngine {
       this.player.x,
       this.player.y,
       this.tileMap.widthInPixels,
-      this.tileMap.heightInPixels
+      this.tileMap.heightInPixels,
+      this.player.facingRight
     );
 
     // 8. Update Particles

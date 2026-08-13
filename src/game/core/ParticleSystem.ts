@@ -275,6 +275,61 @@ export class ParticleSystem {
     }
   }
 
+  public createEnemyDefeatBurst(x: number, y: number) {
+    const colors = ['#facc15', '#f97316', '#22c55e', '#38bdf8', '#ffffff'];
+    for (let i = 0; i < 18; i++) {
+      const angle = (Math.PI * 2 * i) / 18 + (Math.random() - 0.5) * 0.2;
+      const speed = Math.random() * 5.0 + 2.0;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        size: Math.random() * 4.0 + 2.0,
+        color: colors[i % colors.length],
+        alpha: 1.0,
+        life: 0,
+        maxLife: 0.35 + Math.random() * 0.15,
+        shape: i % 3 === 0 ? 'star' : i % 2 === 0 ? 'spark' : 'circle',
+      });
+    }
+  }
+
+  public createRunDust(x: number, y: number, facingRight: boolean) {
+    if (Math.random() > 0.45) return;
+    const dir = facingRight ? -1 : 1;
+    this.particles.push({
+      x: x + dir * 6,
+      y: y - 2,
+      vx: dir * (Math.random() * 1.5 + 0.5),
+      vy: -Math.random() * 0.8,
+      size: Math.random() * 2.5 + 1.5,
+      color: '#cbd5e1',
+      alpha: 0.6,
+      life: 0,
+      maxLife: 0.2 + Math.random() * 0.15,
+      shape: 'circle',
+    });
+  }
+
+  public createAttackWind(x: number, y: number, facingRight: boolean) {
+    const dir = facingRight ? 1 : -1;
+    for (let i = 0; i < 5; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 12,
+        vx: dir * (Math.random() * 4.0 + 2.0),
+        vy: (Math.random() - 0.5) * 1.5,
+        size: Math.random() * 3.0 + 2.0,
+        color: i % 2 === 0 ? '#38bdf8' : '#ffffff',
+        alpha: 0.8,
+        life: 0,
+        maxLife: 0.14 + Math.random() * 0.08,
+        shape: 'spark',
+      });
+    }
+  }
+
   public createVictoryConfetti(x: number, y: number) {
     const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
     for (let i = 0; i < 30; i++) {

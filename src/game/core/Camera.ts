@@ -11,18 +11,19 @@ export class Camera {
     this.viewportHeight = viewportHeight;
   }
 
-  public follow(targetX: number, targetY: number, levelWidth: number, levelHeight: number) {
-    // Center camera on target horizontally
-    let desiredX = targetX - this.viewportWidth * 0.35; // Slightly offset ahead of player
-    let desiredY = targetY - this.viewportHeight * 0.5;
+  public follow(targetX: number, targetY: number, levelWidth: number, levelHeight: number, facingRight: boolean = true) {
+    // Center camera comfortably on target with a slight lead in facing direction
+    const leadOffset = facingRight ? this.viewportWidth * 0.08 : -this.viewportWidth * 0.08;
+    let desiredX = (targetX + leadOffset) - this.viewportWidth * 0.5;
+    let desiredY = targetY - this.viewportHeight * 0.55;
 
     // Clamp camera within level bounds
     desiredX = Math.max(0, Math.min(desiredX, levelWidth - this.viewportWidth));
     desiredY = Math.max(0, Math.min(desiredY, levelHeight - this.viewportHeight));
 
     // Smooth lerp camera movement
-    this.x += (desiredX - this.x) * 0.12;
-    this.y += (desiredY - this.y) * 0.12;
+    this.x += (desiredX - this.x) * 0.14;
+    this.y += (desiredY - this.y) * 0.10;
 
     if (this.shakeTimer > 0) {
       this.shakeTimer -= 0.016;
