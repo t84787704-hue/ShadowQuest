@@ -16,6 +16,24 @@ export interface TilePalette {
 
 // Tile Palettes by World
 export function getTilePalette(levelId: string): TilePalette {
+  if (levelId === '1-3' || levelId.startsWith('1-3')) {
+    return {
+      topBase: '#7c2d12',
+      topCover: '#c2410c',
+      topBlades: '#ea580c',
+      flowerColor: '#f97316',
+      middleDirt: '#7c2d12',
+      middlePebble1: '#451a03',
+      middlePebble2: '#9a3412',
+      stoneMain: '#9a3412',
+      stoneStroke: '#451a03',
+      stoneAccent: '#fdba74',
+      woodMain: '#78350f',
+      woodGap: '#451a03',
+      woodNails: '#fed7aa',
+    };
+  }
+
   const [wStr] = levelId.split('-');
   const w = parseInt(wStr, 10) || 1;
 
@@ -480,33 +498,141 @@ export class EnvironmentRenderer {
         ctx.fill();
       }
     } else if (levelNum === 3) {
-      // 1-3 River Valley: Flowing water at horizon, sunrise horizon, stone bridge arches
+      // 1-3 Forbidden Canyon: Warm sunset dusk sky, towering red rock mesas, jagged canyon spires, dust particles & falling rock effects
+      // 1. Warm Canyon Sunset Sky Gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-      skyGrad.addColorStop(0, '#0284c7');
-      skyGrad.addColorStop(0.5, '#60a5fa');
-      skyGrad.addColorStop(1, '#fed7aa');
+      skyGrad.addColorStop(0, '#451a03');
+      skyGrad.addColorStop(0.35, '#7c2d12');
+      skyGrad.addColorStop(0.65, '#9a3412');
+      skyGrad.addColorStop(0.88, '#c2410c');
+      skyGrad.addColorStop(1, '#fdba74');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Distant Mountains
-      ctx.fillStyle = '#2563eb';
+      // Scorching Canyon Sun
+      const sunX = width * 0.28 - offsetX * 0.02;
+      const sunY = 110 - offsetY * 0.02;
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, 160);
+      sunGlow.addColorStop(0, 'rgba(254, 215, 170, 0.95)');
+      sunGlow.addColorStop(0.3, 'rgba(249, 115, 22, 0.45)');
+      sunGlow.addColorStop(0.7, 'rgba(194, 65, 12, 0.15)');
+      sunGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 160, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Atmospheric Heat Rays breaking over Canyon Horizon
+      ctx.fillStyle = 'rgba(253, 186, 116, 0.05)';
+      for (let r = 0; r < 6; r++) {
+        const rayAngle = r * 0.24 - 0.4;
+        ctx.beginPath();
+        ctx.moveTo(sunX, sunY);
+        ctx.lineTo(sunX + Math.cos(rayAngle) * 800, sunY + Math.sin(rayAngle) * 800);
+        ctx.lineTo(sunX + Math.cos(rayAngle + 0.12) * 800, sunY + Math.sin(rayAngle + 0.12) * 800);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 2. Layer 1: Deep Distant Red Sandstone Mesas
+      ctx.fillStyle = '#451a03';
       ctx.beginPath();
       ctx.moveTo(0, height);
-      for (let x = -50; x <= width + 50; x += 60) {
-        ctx.lineTo(x, height - 160 - Math.sin((x + offsetX * 0.15) * 0.007) * 55);
+      const mesaWidth = 240;
+      const startMesa = Math.floor((offsetX * 0.05 - 100) / mesaWidth);
+      for (let i = startMesa; i < startMesa + 8; i++) {
+        const mx = i * mesaWidth - offsetX * 0.05;
+        const my = height - 230 - (Math.abs(i * 37) % 40);
+        const mw = 140 + (Math.abs(i * 19) % 60);
+        ctx.lineTo(mx, height - 100);
+        ctx.lineTo(mx, my);
+        ctx.lineTo(mx + mw, my);
+        ctx.lineTo(mx + mw + 30, height - 100);
       }
       ctx.lineTo(width, height);
       ctx.fill();
 
-      // Flowing River Horizon Strip
-      const riverY = height - 70;
-      ctx.fillStyle = '#0284c7';
-      ctx.fillRect(0, riverY, width, 70);
-      ctx.fillStyle = '#38bdf8';
-      const wave = Math.sin(Date.now() / 300) * 8;
-      for (let x = 0; x < width; x += 60) {
-        ctx.fillRect(x + wave, riverY + 12, 30, 4);
-        ctx.fillRect(x - wave + 20, riverY + 32, 25, 3);
+      // 3. Layer 2: Mid-ground Canyon Ravines, Sediment Strata & Jagged Spires
+      const cliffSpacing = 220;
+      const startCliff = Math.floor((offsetX * 0.18 - 100) / cliffSpacing);
+      for (let i = startCliff; i < startCliff + 10; i++) {
+        const cx = i * cliffSpacing - offsetX * 0.18;
+        const cy = height - 260 + (i % 3) * 20;
+
+        // Sandstone Cliff Pillar
+        ctx.fillStyle = '#7c2d12';
+        ctx.fillRect(cx, cy, 70, 260);
+
+        // Horizontal Strata / Sediment Stripe lines
+        ctx.fillStyle = '#9a3412';
+        ctx.fillRect(cx, cy + 30, 70, 8);
+        ctx.fillRect(cx, cy + 80, 70, 12);
+        ctx.fillRect(cx, cy + 140, 70, 10);
+
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(cx + 15, cy + 10, 4, 250);
+        ctx.fillRect(cx + 45, cy + 10, 4, 250);
+
+        // Jagged Pinnacle Top
+        ctx.fillStyle = '#9a3412';
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy);
+        ctx.lineTo(cx + 35, cy - 25);
+        ctx.lineTo(cx + 80, cy);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 4. Layer 3: Closer Canyon Wall Sections & Hanging Canyon Rope Bridges
+      const wallSpacing = 310;
+      const startWall = Math.floor((offsetX * 0.40 - 120) / wallSpacing);
+      for (let i = startWall; i < startWall + 7; i++) {
+        const wx = i * wallSpacing - offsetX * 0.40;
+        const wy = height - 180;
+
+        // Terracotta Wall Blocks
+        ctx.fillStyle = '#9a3412';
+        ctx.fillRect(wx, wy, 100, 100);
+
+        // Canyon Wall Cavity / Crevasse
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(wx + 20, wy + 15, 60, 70);
+
+        // Strata Highlights
+        ctx.fillStyle = '#c2410c';
+        ctx.fillRect(wx, wy, 100, 6);
+        ctx.fillRect(wx, wy + 45, 100, 6);
+      }
+
+      // 5. Ambient Canyon Dust Motes & Occasional Falling Rock Particles
+      const time = Date.now() * 0.001;
+      // Dust Motes
+      for (let p = 0; p < 18; p++) {
+        const px = ((p * 85 + time * 32) % (width + 80)) - 40;
+        const py = 80 + Math.sin(time * 1.1 + p * 0.9) * 35 + (p * 20) % (height - 160);
+        ctx.fillStyle = p % 2 === 0 ? 'rgba(251, 146, 60, 0.70)' : 'rgba(253, 224, 71, 0.60)';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.8 + (p % 3) * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Occasional Tumbling Falling Rocks in Canyon Gap
+      for (let r = 0; r < 4; r++) {
+        const rockProgress = (time * 0.8 + r * 1.7) % 3.0; // falls every 3 seconds
+        const rockX = ((r * 220 + 110) - offsetX * 0.5) % (width + 100);
+        const rockY = rockProgress * 180 + 60;
+        if (rockX > -20 && rockX < width + 20) {
+          const rockSize = 3 + (r % 2) * 2;
+          ctx.save();
+          ctx.translate(rockX, rockY);
+          ctx.rotate(time * 4 + r);
+          ctx.fillStyle = '#7c2d12';
+          ctx.strokeStyle = '#451a03';
+          ctx.lineWidth = 1;
+          ctx.fillRect(-rockSize, -rockSize, rockSize * 2, rockSize * 2);
+          ctx.strokeRect(-rockSize, -rockSize, rockSize * 2, rockSize * 2);
+          ctx.restore();
+        }
       }
     } else if (levelNum === 4) {
       // 1-4 Misty Peaks: Cool high mountain peaks with fog layers

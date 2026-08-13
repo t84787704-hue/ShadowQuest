@@ -32,7 +32,7 @@ export const WORLD_NAMES: Record<number, string> = {
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Forest', 'Forest Ruins', 'River Valley', 'Misty Peaks', 'Mountain Fortress'],
+  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Misty Peaks', 'Mountain Fortress'],
   2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Desert Citadel'],
   3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frost Citadel'],
   4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Fortress', 'Volcanic Citadel'],
@@ -126,6 +126,9 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
   if (w === 1 && l === 2) {
     // Dedicated Layout for World 1-2 Ancient Ruins
     buildWorld1_2Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
+  } else if (w === 1 && l === 3) {
+    // Dedicated Layout for World 1-3 Forbidden Canyon
+    buildWorld1_3Layout(cols, rows, grid, coins, healthPickups, checkpoints, signs, rng);
   } else {
     // Tutorial Signs for Level 1-1
     if (w === 1 && l === 1) {
@@ -529,6 +532,139 @@ function buildWorld1_2Layout(
   coins.push({ x: 205 * 32, y: 8 * 32, value: 5 });
 }
 
+function buildWorld1_3Layout(
+  cols: number,
+  rows: number,
+  grid: number[][],
+  coins: { x: number; y: number; value?: number }[],
+  healthPickups: { x: number; y: number; healAmount?: number }[],
+  checkpoints: { x: number; y: number }[],
+  signs: TutorialSign[],
+  rng: () => number
+) {
+  // World 1-3: Forbidden Canyon layout
+  for (let c = 0; c < cols; c++) {
+    grid[12][c] = TileType.STONE_PLATFORM;
+    for (let r = 13; r < rows; r++) {
+      grid[r][c] = TileType.DIRT_MIDDLE;
+    }
+  }
+
+  signs.push(
+    { x: 120, y: 310, title: 'WORLD 1-3: FORBIDDEN CANYON', subtitle: 'Towering red sandstone cliffs and treacherous canyon passes. Defeat all 50 canyon enemies!' },
+    { x: 1500, y: 310, title: 'CANYON BATTLEGROUNDS', subtitle: 'Utilize elevated cliff ledges and wide canyon basins to isolate fast enemies and execute heavy combos!' }
+  );
+
+  const placeCanyonPillar = (c: number, topRow: number, heightRows: number) => {
+    for (let r = topRow; r < topRow + heightRows; r++) {
+      if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        grid[r][c] = TileType.STONE_PLATFORM;
+      }
+    }
+  };
+
+  const placeCliffLedge = (startC: number, endC: number, row: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols && row >= 0 && row < rows) {
+        grid[row][c] = TileType.STONE_PLATFORM;
+      }
+    }
+  };
+
+  const placeRopeBridge = (startC: number, endC: number, row: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols && row >= 0 && row < rows) {
+        grid[row][c] = TileType.WOOD_BRIDGE;
+      }
+    }
+  };
+
+  const placeCanyonChasm = (startC: number, endC: number) => {
+    for (let c = startC; c <= endC; c++) {
+      if (c >= 0 && c < cols) {
+        grid[12][c] = TileType.EMPTY;
+        grid[13][c] = TileType.HAZARD_SPIKES;
+        grid[14][c] = TileType.DIRT_MIDDLE;
+      }
+    }
+  };
+
+  // Entrance Pillars & Initial Coins
+  placeCanyonPillar(4, 6, 6);
+  placeCanyonPillar(12, 6, 6);
+  for (let c = 5; c <= 14; c += 3) coins.push({ x: c * 32, y: 320 });
+
+  // Section 1: Canyon Ledges & Stepped Mesa Terraces (cols 17..45)
+  placeCanyonPillar(20, 8, 4);
+  placeCliffLedge(20, 25, 8);
+  for (let c = 20; c <= 25; c += 2) coins.push({ x: c * 32, y: 7 * 32 });
+
+  placeCanyonChasm(26, 28);
+  placeCliffLedge(27, 28, 10);
+
+  placeCanyonPillar(32, 7, 5);
+  placeCliffLedge(32, 38, 7);
+  for (let c = 33; c <= 37; c += 2) coins.push({ x: c * 32, y: 6 * 32 });
+
+  placeCanyonChasm(39, 41);
+  placeCliffLedge(40, 41, 10);
+
+  // Section 2: Entrance Gorge Plaza (cols 42..75)
+  for (let c = 48; c <= 54; c += 2) coins.push({ x: c * 32, y: 320 });
+  healthPickups.push({ x: 50 * 32, y: 310, healAmount: 30 });
+  placeCanyonPillar(46, 7, 5);
+  placeCanyonPillar(58, 7, 5);
+
+  // Section 3: Canyon Ravine & Elevated Rope Bridges (cols 76..115)
+  placeRopeBridge(78, 88, 9);
+  for (let c = 79; c <= 87; c += 2) coins.push({ x: c * 32, y: 8 * 32 });
+
+  checkpoints.push({ x: 82 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 84 * 32, y: 310, healAmount: 30 });
+
+  placeCanyonPillar(92, 7, 5);
+  placeCliffLedge(92, 98, 7);
+  for (let c = 93; c <= 97; c += 2) coins.push({ x: c * 32, y: 6 * 32, value: 3 });
+
+  placeCanyonChasm(108, 110);
+  placeCliffLedge(109, 110, 10);
+
+  // Section 4: Great Canyon Ravine Courtyard Arena (cols 116..155)
+  placeCanyonPillar(116, 6, 6);
+  placeCanyonPillar(136, 6, 6);
+
+  placeCliffLedge(118, 123, 8);
+  placeCliffLedge(129, 134, 8);
+  for (let c = 119; c <= 122; c++) coins.push({ x: c * 32, y: 7 * 32 });
+  for (let c = 130; c <= 133; c++) coins.push({ x: c * 32, y: 7 * 32 });
+
+  healthPickups.push({ x: 126 * 32, y: 310, healAmount: 30 });
+
+  // Section 5: Sunken Canyon Terraces & Checkpoint 2 (cols 156..185)
+  placeCliffLedge(156, 162, 10);
+  for (let c = 157; c <= 161; c += 2) coins.push({ x: c * 32, y: 9 * 32 });
+
+  checkpoints.push({ x: 160 * 32, y: 11 * 32 - 16 });
+  healthPickups.push({ x: 162 * 32, y: 310, healAmount: 30 });
+
+  placeCanyonChasm(168, 170);
+  placeCliffLedge(169, 170, 10);
+
+  placeCliffLedge(174, 182, 8);
+  for (let c = 175; c <= 181; c += 2) coins.push({ x: c * 32, y: 7 * 32 });
+
+  // Section 6: Forbidden Canyon Basin Arena (cols 186..224)
+  placeCanyonPillar(186, 6, 6);
+  placeCanyonPillar(202, 6, 6);
+
+  grid[11][203] = TileType.STONE_PLATFORM;
+  grid[10][204] = TileType.STONE_PLATFORM;
+  grid[9][205] = TileType.STONE_PLATFORM;
+
+  for (let c = 188; c <= 200; c += 3) coins.push({ x: c * 32, y: 320 });
+  coins.push({ x: 205 * 32, y: 8 * 32, value: 5 });
+}
+
 function generate50EnemiesForLevel(
   cols: number,
   rows: number,
@@ -549,9 +685,9 @@ function generate50EnemiesForLevel(
     return false;
   };
 
-  // Wave counts: World 1-2 uses [5, 6, 7, 8, 9, 10, 5] = 50 enemies across 7 waves
+  // Wave counts: World 1-2 & 1-3 use [5, 6, 7, 8, 9, 10, 5] = 50 enemies across 7 waves
   // Other levels use [8, 8, 8, 8, 8, 10] = 50 enemies across 6 waves
-  const waveCounts = (w === 1 && l === 2) ? [5, 6, 7, 8, 9, 10, 5] : [8, 8, 8, 8, 8, 10];
+  const waveCounts = (w === 1 && (l === 2 || l === 3)) ? [5, 6, 7, 8, 9, 10, 5] : [8, 8, 8, 8, 8, 10];
   const numWaves = waveCounts.length;
   const startCol = 18;
   const endCol = cols - 16;

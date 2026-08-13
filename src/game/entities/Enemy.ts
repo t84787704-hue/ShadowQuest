@@ -148,7 +148,7 @@ export class ForestGoblin extends Entity {
     }
 
     // Set Serious World Names
-    this.enemyName = this.getEnemyName(w, this.enemyClass);
+    this.enemyName = this.getEnemyName(w, this.enemyClass, levelId);
 
     // HP Scaling according to World (Balanced for 4-15 hits based on archetype)
     const worldScale = 1 + (w - 1) * 0.12; // 1.0 in W1 -> 1.6 in W6
@@ -215,7 +215,17 @@ export class ForestGoblin extends Entity {
     }
   }
 
-  private getEnemyName(worldId: number, enemyClass: EnemyClass): string {
+  private getEnemyName(worldId: number, enemyClass: EnemyClass, levelId?: string): string {
+    if (worldId === 1 && levelId && levelId.endsWith('-3')) {
+      const canyonNames: Record<EnemyClass, string> = {
+        FAST_FIGHTER: 'Canyon Striker',
+        HEAVY_FIGHTER: 'Red Rock Brawler',
+        MARTIAL_ARTIST: 'Canyon Martial Artist',
+        ELITE_FIGHTER: 'Gorge Enforcer',
+      };
+      return canyonNames[enemyClass];
+    }
+
     const names: Record<number, Record<EnemyClass, string>> = {
       1: {
         FAST_FIGHTER: 'Forest Shadow Rogue',
