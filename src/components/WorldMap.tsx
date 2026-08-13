@@ -69,11 +69,47 @@ const WORLDS: WorldNode[] = [
   {
     id: 6,
     name: 'WORLD 6',
-    shortTitle: 'Final Realm',
-    subtitle: 'Ultimate realm & Goblin King',
+    shortTitle: 'Citadel',
+    subtitle: 'Royal Citadel & Goblin King Ramparts',
     icon: <Flame className="w-6 h-6 text-rose-500" />,
     bgGradient: 'from-rose-900/60 to-slate-900',
     borderColor: 'border-rose-500/50',
+  },
+  {
+    id: 7,
+    name: 'WORLD 7',
+    shortTitle: 'Crystal Caverns',
+    subtitle: 'Prismatic crystal caves & gemstone warden',
+    icon: <Shield className="w-6 h-6 text-cyan-400" />,
+    bgGradient: 'from-cyan-900/60 to-slate-900',
+    borderColor: 'border-cyan-500/50',
+  },
+  {
+    id: 8,
+    name: 'WORLD 8',
+    shortTitle: 'Sky Sanctuary',
+    subtitle: 'Thunder cloud spires & tempest lord',
+    icon: <Compass className="w-6 h-6 text-sky-300" />,
+    bgGradient: 'from-sky-900/60 to-slate-900',
+    borderColor: 'border-sky-400/50',
+  },
+  {
+    id: 9,
+    name: 'WORLD 9',
+    shortTitle: 'Sunken Temple',
+    subtitle: 'Submerged ruins & Kraken basin',
+    icon: <Flame className="w-6 h-6 text-teal-400" />,
+    bgGradient: 'from-teal-900/60 to-slate-900',
+    borderColor: 'border-teal-500/50',
+  },
+  {
+    id: 10,
+    name: 'WORLD 10',
+    shortTitle: 'Celestial Peak',
+    subtitle: 'Starlight throne & Ultimate Overlord',
+    icon: <Crown className="w-6 h-6 text-amber-400 fill-amber-400" />,
+    bgGradient: 'from-indigo-900/60 to-slate-900',
+    borderColor: 'border-amber-400/70',
   },
 ];
 
@@ -186,7 +222,7 @@ export const WorldMap: React.FC<WorldMapProps> = ({
                 </div>
 
                 <div className="text-[9px] font-mono text-slate-400">
-                  {isUnlocked ? `${completedInWorld}/5 Levels` : 'LOCKED'}
+                  {isUnlocked ? `${completedInWorld}/10 Levels` : 'LOCKED'}
                 </div>
               </button>
             );

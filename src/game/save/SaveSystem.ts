@@ -237,7 +237,7 @@ export class SaveSystem {
   }
 
   public static isWorldCompleted(data: SaveData, worldNum: number): boolean {
-    const requiredLevels = [`${worldNum}-1`, `${worldNum}-2`, `${worldNum}-3`, `${worldNum}-4`, `${worldNum}-5` ];
+    const requiredLevels = Array.from({ length: 10 }, (_, i) => `${worldNum}-${i + 1}`);
     const completed = data.completedLevels || [];
     return requiredLevels.every((lvl) => completed.includes(lvl));
   }
@@ -248,7 +248,7 @@ export class SaveSystem {
   }
 
   public static isAllWorldsCompleted(data: SaveData): boolean {
-    return [1, 2, 3, 4, 5, 6].every((w) => this.isWorldCompleted(data, w));
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].every((w) => this.isWorldCompleted(data, w));
   }
 
   public static completeLevel(levelId: string, stars: number, coinsEarned: number): SaveData {
@@ -266,17 +266,17 @@ export class SaveSystem {
 
     // Determine next level to unlock
     const [worldStr, levelStr] = levelId.split('-');
-    const w = parseInt(worldStr, 10);
-    const l = parseInt(levelStr, 10);
+    const w = parseInt(worldStr, 10) || 1;
+    const l = parseInt(levelStr, 10) || 1;
 
-    if (l < 5) {
+    if (l < 10) {
       // Unlocks next level in same world (e.g. 1-1 -> 1-2)
       data.currentWorld = w;
       data.currentLevel = l + 1;
     } else {
       // World boss cleared! Unlock next world
       const nextWorld = w + 1;
-      if (nextWorld <= 6) {
+      if (nextWorld <= 10) {
         if (!data.unlockedWorlds.includes(nextWorld)) {
           data.unlockedWorlds.push(nextWorld);
         }
@@ -285,8 +285,8 @@ export class SaveSystem {
       }
     }
 
-    // Check TRUE GAME COMPLETION: All required worlds 1-6 completed
-    if (this.isAllWorldsCompleted(data)) {
+    // Check TRUE GAME COMPLETION: All required worlds 1-10 completed
+    if (this.isAllWorldsCompleted(data) || (w === 10 && l === 10)) {
       if (!data.gameCompleted) {
         data.gameCompleted = true;
         data.legendaryTitleUnlocked = true;
@@ -330,7 +330,7 @@ export class SaveSystem {
   public static getCampaignProgress(data: SaveData) {
     const worldStatus: Record<number, boolean> = {};
     let completedWorldsCount = 0;
-    for (let w = 1; w <= 6; w++) {
+    for (let w = 1; w <= 10; w++) {
       const isDone = this.isWorldCompleted(data, w);
       worldStatus[w] = isDone;
       if (isDone) completedWorldsCount++;
@@ -345,13 +345,13 @@ export class SaveSystem {
 
     return {
       completedWorldsCount,
-      totalWorlds: 6,
+      totalWorlds: 10,
       completedLevelsCount: data.completedLevels?.length || 0,
-      totalLevels: 30,
+      totalLevels: 100,
       worldStatus,
       discoveredSecretRooms: totalSecretRoomsFound,
-      totalSecretRooms: 12,
-      isAllWorldsCompleted: completedWorldsCount === 6,
+      totalSecretRooms: 20,
+      isAllWorldsCompleted: completedWorldsCount === 10,
       gameCompleted: Boolean(data.gameCompleted),
       newGamePlusLevel: data.newGamePlusLevel || 0,
     };
@@ -370,8 +370,8 @@ export class SaveSystem {
 
     for (const lvlId of data.completedLevels) {
       const [wStr, lStr] = lvlId.split('-');
-      const w = parseInt(wStr, 10);
-      const l = parseInt(lStr, 10);
+      const w = parseInt(wStr, 10) || 1;
+      const l = parseInt(lStr, 10) || 1;
 
       if (w > maxWorld || (w === maxWorld && l > maxLevel)) {
         maxWorld = w;
@@ -380,13 +380,13 @@ export class SaveSystem {
     }
 
     // Next level to play
-    if (maxLevel < 5) {
+    if (maxLevel < 10) {
       return `${maxWorld}-${maxLevel + 1}`;
-    } else if (maxWorld < 6) {
+    } else if (maxWorld < 10) {
       return `${maxWorld + 1}-1`;
     }
 
-    return `${maxWorld}-5`;
+    return '10-10';
   }
 
   public static purchaseUpgrade(upgradeKey: keyof SaveData['upgrades'], cost: number): { success: boolean; data: SaveData } {

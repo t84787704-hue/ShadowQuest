@@ -124,7 +124,7 @@ export class ForestGoblin extends Entity {
     isBoss: boolean = false,
     levelId: string = '1-1'
   ) {
-    const isFinalBoss = isBoss && levelId === '6-5';
+    const isFinalBoss = isBoss && (levelId === '10-10' || levelId === '6-5');
     const width = isFinalBoss ? 68 : isBoss ? 54 : 34;
     const height = isFinalBoss ? 72 : isBoss ? 60 : 44;
     super(x, y, width, height);
@@ -272,6 +272,30 @@ export class ForestGoblin extends Entity {
         HEAVY_FIGHTER: 'Royal Gate Crusher',
         MARTIAL_ARTIST: 'Citadel Guard Monk',
         ELITE_FIGHTER: 'Imperial Grandmaster Guard',
+      },
+      7: {
+        FAST_FIGHTER: 'Crystal Shard Striker',
+        HEAVY_FIGHTER: 'Prismatic Golem Brawler',
+        MARTIAL_ARTIST: 'Gemstone Martial Artist',
+        ELITE_FIGHTER: 'Crystal Citadel Enforcer',
+      },
+      8: {
+        FAST_FIGHTER: 'Gale Wind Assassin',
+        HEAVY_FIGHTER: 'Thunder Cloud Crusher',
+        MARTIAL_ARTIST: 'Storm Monk',
+        ELITE_FIGHTER: 'Sky Sovereign Guard',
+      },
+      9: {
+        FAST_FIGHTER: 'Tide Coral Striker',
+        HEAVY_FIGHTER: 'Abyssal Trench Brute',
+        MARTIAL_ARTIST: 'Sunken Temple Monk',
+        ELITE_FIGHTER: 'Kraken Citadel Enforcer',
+      },
+      10: {
+        FAST_FIGHTER: 'Starlight Void Assassin',
+        HEAVY_FIGHTER: 'Cosmic Titan Crusher',
+        MARTIAL_ARTIST: 'Zodiac Celestial Monk',
+        ELITE_FIGHTER: 'Ultimate Overlord Guard',
       },
     };
 

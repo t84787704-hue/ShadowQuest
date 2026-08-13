@@ -118,9 +118,9 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const isAllWorldsCompleted = SaveSystem.isAllWorldsCompleted(saveData);
 
   const [worldNum, levelNum] = levelId.split('-').map((n) => parseInt(n, 10) || 1);
-  const isBossLevel = levelNum === 5 || Boolean(levelTitle?.toLowerCase().includes('boss'));
-  const isWorldComplete = levelNum === 5;
-  const isGrandVictory = isAllWorldsCompleted || (!hasNextLevel && (levelTitle?.includes('6-5') || levelTitle?.includes('THRONE')));
+  const isBossLevel = levelNum === 10 || Boolean(levelTitle?.toLowerCase().includes('boss'));
+  const isWorldComplete = levelNum === 10;
+  const isGrandVictory = isAllWorldsCompleted || (worldNum === 10 && levelNum === 10) || (!hasNextLevel && (levelTitle?.includes('10-10') || levelTitle?.includes('SOVEREIGN') || levelTitle?.includes('6-5')));
   const [showRewardModal, setShowRewardModal] = React.useState(false);
 
   const bossSpec = BOSS_SPECS[worldNum];

@@ -51,9 +51,9 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
         </div>
       </div>
 
-      {/* World Navigation Tabs (World 1 to World 6) */}
+      {/* World Navigation Tabs (World 1 to World 10) */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-6 no-scrollbar">
-        {[1, 2, 3, 4, 5, 6].map((worldNum) => {
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((worldNum) => {
           const isActive = selectedWorld === worldNum;
           return (
             <button
@@ -82,7 +82,9 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
         <p className="text-xs text-slate-400 mt-1">
           {selectedWorld === 1
             ? 'Defeat the Forest Goblins across Green Valley to reach the chief fortress!'
-            : 'Unlocks in Phase 2 Expansion. Conquer World 1 first!'}
+            : selectedWorld === 10
+            ? 'The final celestial showdown! Slay the Ultimate Overlord Sovereign!'
+            : `Battle through 10 challenging levels in ${WORLD_NAMES[selectedWorld]}!`}
         </p>
       </div>
 
@@ -133,7 +135,7 @@ export const LevelsMenu: React.FC<LevelsMenuProps> = ({
                     {lvl.title}
                   </h4>
 
-                  {(lvl.isBossLevel || lvl.levelNum === 5) && isUnlocked && !isCompleted && (
+                  {(lvl.isBossLevel || lvl.levelNum === 10) && isUnlocked && !isCompleted && (
                     <div className="mt-1 text-[9px] font-black text-rose-300 bg-rose-500/20 border border-rose-500/50 px-1.5 py-0.5 rounded tracking-wide animate-pulse flex items-center gap-1 w-fit">
                       <Crown className="w-3 h-3 text-amber-400 fill-amber-400" /> NEW BOSS UNLOCKED!
                     </div>

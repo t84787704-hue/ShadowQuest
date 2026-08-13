@@ -39,9 +39,29 @@ const WORLD_DESCRIPTIONS: Record<number, { desc: string; icon: React.ReactNode; 
     color: 'from-cyan-950 via-slate-900 to-slate-950 border-cyan-500/40',
   },
   6: {
-    desc: 'The ultimate stronghold of the Goblin King! Burning magma rivers and the final showdown for Aetheria!',
+    desc: 'The royal stronghold of the Goblin King! Iron gates, heavy catapults, and elite citadel guards.',
     icon: <Flame className="w-10 h-10 text-rose-500 animate-pulse" />,
     color: 'from-rose-950 via-slate-900 to-slate-950 border-rose-500/40',
+  },
+  7: {
+    desc: 'Glittering crystal chasms and prismatic reflection platforms! Defeat the Prismatic Crystal Golem.',
+    icon: <Shield className="w-10 h-10 text-cyan-400" />,
+    color: 'from-cyan-950 via-slate-900 to-slate-950 border-cyan-500/40',
+  },
+  8: {
+    desc: 'Sky sanctuary floating above thunderous clouds! Dodge gale winds and strike the Storm Lord.',
+    icon: <Compass className="w-10 h-10 text-sky-300" />,
+    color: 'from-sky-950 via-slate-900 to-slate-950 border-sky-500/40',
+  },
+  9: {
+    desc: 'Sunken temple submerged in ancient aquatic ruins! Beware the Kraken Basin Monarch.',
+    icon: <Flame className="w-10 h-10 text-teal-400" />,
+    color: 'from-teal-950 via-slate-900 to-slate-950 border-teal-500/40',
+  },
+  10: {
+    desc: 'The Ultimate Celestial Peak! Face the Ultimate Overlord Sovereign in the ultimate finale of Aetheria!',
+    icon: <Skull className="w-10 h-10 text-amber-400 animate-bounce" />,
+    color: 'from-indigo-950 via-slate-900 to-slate-950 border-amber-500/60',
   },
 };
 
@@ -65,7 +85,7 @@ export const WorldIntroModal: React.FC<WorldIntroModalProps> = ({
 
   const worldInfo = WORLD_DESCRIPTIONS[effectiveWorldId] || WORLD_DESCRIPTIONS[1];
   const worldName = WORLD_NAMES[effectiveWorldId] || `WORLD ${effectiveWorldId}`;
-  const isBoss = effectiveLevelNum === 5;
+  const isBoss = effectiveLevelNum === 10;
 
   const handleStartLevel = () => {
     audioEngine.playButtonClick();

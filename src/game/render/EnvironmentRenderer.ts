@@ -141,6 +141,74 @@ export function getTilePalette(levelId: string): TilePalette {
         woodNails: '#f59e0b',
       };
 
+    case 7: // CRYSTAL CAVERNS
+      return {
+        topBase: '#312e81',
+        topCover: '#4338ca',
+        topBlades: '#818cf8',
+        flowerColor: '#c084fc',
+        middleDirt: '#1e1b4b',
+        middlePebble1: '#0f172a',
+        middlePebble2: '#6366f1',
+        stoneMain: '#3730a3',
+        stoneStroke: '#0f172a',
+        stoneAccent: '#a5b4fc',
+        woodMain: '#312e81',
+        woodGap: '#0f172a',
+        woodNails: '#818cf8',
+      };
+
+    case 8: // STORMY SKY SANCTUARY
+      return {
+        topBase: '#0c4a6e',
+        topCover: '#0284c7',
+        topBlades: '#fde047',
+        flowerColor: '#38bdf8',
+        middleDirt: '#075985',
+        middlePebble1: '#0369a1',
+        middlePebble2: '#facc15',
+        stoneMain: '#0284c7',
+        stoneStroke: '#082f49',
+        stoneAccent: '#fef08a',
+        woodMain: '#1e293b',
+        woodGap: '#0f172a',
+        woodNails: '#facc15',
+      };
+
+    case 9: // SUNKEN TEMPLE
+      return {
+        topBase: '#134e4a',
+        topCover: '#0f766e',
+        topBlades: '#2dd4bf',
+        flowerColor: '#5eead4',
+        middleDirt: '#115e59',
+        middlePebble1: '#042f2e',
+        middlePebble2: '#14b8a6',
+        stoneMain: '#0f766e',
+        stoneStroke: '#042f2e',
+        stoneAccent: '#99f6e4',
+        woodMain: '#134e4a',
+        woodGap: '#042f2e',
+        woodNails: '#2dd4bf',
+      };
+
+    case 10: // CELESTIAL PEAK
+      return {
+        topBase: '#312e81',
+        topCover: '#4c1d95',
+        topBlades: '#fb7185',
+        flowerColor: '#f43f5e',
+        middleDirt: '#1e1b4b',
+        middlePebble1: '#0f172a',
+        middlePebble2: '#e11d48',
+        stoneMain: '#581c87',
+        stoneStroke: '#0f172a',
+        stoneAccent: '#f43f5e',
+        woodMain: '#1e1b4b',
+        woodGap: '#0f172a',
+        woodNails: '#fb7185',
+      };
+
     case 1: // NATURE
     default:
       return {

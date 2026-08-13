@@ -137,7 +137,7 @@ export function isWeaponUnlocked(weaponId: string, saveData: SaveData, currentLe
     case 'legendary_sword':
       return unlockedWorlds.includes(6) || maxCompletedWorld >= 5 || curW >= 6;
     case 'blaze_sovereign':
-      return (curW === 6 && curL === 5) || completed.includes('6-4') || completed.includes('6-5');
+      return curW >= 6 || maxCompletedWorld >= 6 || completed.includes('6-5') || completed.includes('10-10');
     default:
       return false;
   }

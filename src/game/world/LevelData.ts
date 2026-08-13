@@ -33,39 +33,19 @@ export const WORLD_NAMES: Record<number, string> = {
   8: 'WORLD 8 — STORMY SKY SANCTUARY',
   9: 'WORLD 9 — SUNKEN TEMPLE',
   10: 'WORLD 10 — CELESTIAL PEAK',
-  11: 'WORLD 11 — IRON FORGE',
-  12: 'WORLD 12 — WHISPERING ABYSS',
-  13: 'WORLD 13 — EMERALD FOREST KEEP',
-  14: 'WORLD 14 — SCORCHED WASTELAND',
-  15: 'WORLD 15 — GLACIAL STRONGHOLD',
-  16: 'WORLD 16 — PHANTOM CATACOMBS',
-  17: 'WORLD 17 — GOLDEN DRAGON PALACE',
-  18: 'WORLD 18 — VOID GATEWAY',
-  19: 'WORLD 19 — CHAOS BASTION',
-  20: 'WORLD 20 — ULTIMATE OVERLORD THRONE',
 };
 
 const WORLD_TITLES: Record<number, string[]> = {
-  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Valley Boss'],
-  2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Desert Citadel'],
-  3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frost Citadel'],
-  4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Fortress', 'Volcanic Citadel'],
-  5: ['Haunted Woods', 'Shadow Ruins', 'Dark Pass', 'Obsidian Tower', 'Shadow Citadel'],
-  6: ['Citadel Gates', 'Outer Ramparts', 'Inner Keep', 'Royal Chambers', 'Goblin King Throne'],
-  7: ['Crystal Entrance', 'Prismatic Halls', 'Glittering Chasm', 'Gemstone Terrace', 'Crystal Golem Sanctum'],
-  8: ['Sky Approach', 'Gale Ridge', 'Cloud Spire', 'Thunder Platform', 'Storm Lord Arena'],
-  9: ['Underwater Ruin', 'Submerged Sluice', 'Flooded Sanctuary', 'Coral Promenade', 'Kraken Basin'],
-  10: ['Starlight Path', 'Astral Terrace', 'Nebula Crest', 'Constellation Spire', 'Celestial Sovereign'],
-  11: ['Molten Foundry', 'Anvil Courtyard', 'Smelting Ramparts', 'Blast Furnace', 'Iron Colossus'],
-  12: ['Abyssal Trench', 'Echoing Depths', 'Void Fissure', 'Gloom Passage', 'Abyssal Monarch'],
-  13: ['Mossy Ramparts', 'Overgrown Courtyard', 'Elder Canopy', 'Vine Colonnade', 'Forest Overlord'],
-  14: ['Ashen Dunes', 'Searing Basin', 'Inferno Ridge', 'Magma Chasm', 'Pyre Warlord'],
-  15: ['Frostbite Spire', 'Icebound Courtyard', 'Rime Ramparts', 'Glacial Keep', 'Frost Titan'],
-  16: ['Crypt Passage', 'Skeletal Ramparts', 'Wraith Corridor', 'Tomb Coliseum', 'Lich King Chamber'],
-  17: ['Golden Ramparts', 'Dragon Terrace', 'Jade Colonnade', 'Wyrm Sanctum', 'Gold Dragon Emperor'],
-  18: ['Nether Rift', 'Void Bridge', 'Singularity Crest', 'Entropy Spire', 'Void Sovereign'],
-  19: ['Chaos Courtyard', 'Warped Ramparts', 'Cataclysm Pass', 'Bastion Arena', 'Chaos Overlord'],
-  20: ['Throne Approach', 'Overlord Ramparts', 'Sanctum Coliseum', 'Royal Pinnacle', 'Ultimate Overlord Finale'],
+  1: ['Green Forest', 'Ancient Ruins', 'Forbidden Canyon', 'Final Approach', 'Timberland Outpost', 'Overgrown Aqueduct', 'Cliffside Outlook', 'Old Watchtower', 'Valley Ramparts', 'Valley Chieftain Arena'],
+  2: ['Desert Oasis', 'Ancient Ruins', 'Dusty Canyon', 'Sandstorm Pass', 'Sun Temple Courtyard', 'Scorched Sluice', 'Nomadic Encampment', 'Pyramidal Corridor', 'Desert Ramparts', 'Sandstorm Titan Citadel'],
+  3: ['Snowy Woods', 'Frozen Lake', 'Ice Caverns', 'Blizzard Summit', 'Frostbite Terrace', 'Rime Ice Sluice', 'Avalanche Spire', 'Snowbound Watchtower', 'Glacier Ramparts', 'Frost Colossus Fortress'],
+  4: ['Ash Wasteland', 'Lava Caverns', 'Burning Ridge', 'Magma Foundry', 'Obsidian Sluice', 'Smelting Terrace', 'Firestorm Pass', 'Sulphur Watchtower', 'Volcanic Ramparts', 'Magma Overlord Sanctum'],
+  5: ['Haunted Woods', 'Shadow Crypt', 'Dark Fissure', 'Obsidian Tower', 'Void Terrace', 'Phantom Sluice', 'Gloom Ridge', 'Eclipse Watchtower', 'Shadow Ramparts', 'Shadow Monarch Spire'],
+  6: ['Citadel Gates', 'Iron Ramparts', 'Citadel Courtyard', 'Guard Garrison', 'Royal Colonnade', 'Armory Corridor', 'Citadel High Tower', 'Royal Keep', 'Throne Approach', 'Goblin King Throne'],
+  7: ['Crystal Entrance', 'Prismatic Halls', 'Glittering Chasm', 'Quartz Sluice', 'Gemstone Terrace', 'Amethyst Passage', 'Crystal Ridge', 'Geode Sanctuary', 'Prismatic Ramparts', 'Crystal Golem Sanctum'],
+  8: ['Sky Approach', 'Gale Ridge', 'Cloud Sanctuary', 'Thunder Spire', 'Nimbus Terrace', 'Lightning Sluice', 'Storm Ridge', 'Hurricane Watchtower', 'Sky Ramparts', 'Storm Lord Arena'],
+  9: ['Submerged Entrance', 'Coral Sluice', 'Flooded Sanctuary', 'Sunken Promenade', 'Aqueduct Terrace', 'Trench Passage', 'Submerged Ruins', 'Tidal Watchtower', 'Temple Ramparts', 'Kraken Basin Coliseum'],
+  10: ['Starlight Path', 'Astral Terrace', 'Nebula Pass', 'Constellation Spire', 'Zodiac Colonnade', 'Cosmic Sluice', 'Eclipse Ridge', 'Celestial Watchtower', 'Starlight Throne Approach', 'Ultimate Overlord Sovereign'],
 };
 
 // 20 Distinct Arena Archetypes
@@ -302,12 +282,37 @@ function makeRandom(seed: number) {
   };
 }
 
+export function parseLevelId(levelId: string): { worldId: number; levelNum: number; globalLevel: number; canonicalId: string } {
+  let w = 1;
+  let l = 1;
+  if (levelId.includes('-')) {
+    const [wStr, lStr] = levelId.split('-');
+    const wRaw = parseInt(wStr, 10) || 1;
+    const lRaw = parseInt(lStr, 10) || 1;
+    if (wRaw === 1 && lRaw > 10) {
+      const global = Math.min(100, Math.max(1, lRaw));
+      w = Math.floor((global - 1) / 10) + 1;
+      l = ((global - 1) % 10) + 1;
+    } else {
+      w = Math.min(10, Math.max(1, wRaw));
+      l = Math.min(10, Math.max(1, lRaw));
+    }
+  } else {
+    const global = Math.min(100, Math.max(1, parseInt(levelId, 10) || 1));
+    w = Math.floor((global - 1) / 10) + 1;
+    l = ((global - 1) % 10) + 1;
+  }
+  const globalLevel = (w - 1) * 10 + l;
+  const canonicalId = `${w}-${l}`;
+  return { worldId: w, levelNum: l, globalLevel, canonicalId };
+}
+
 export function getLevelCols(worldId: number, levelNum: number): number {
   if (worldId === 1 && levelNum === 1) return 220; // Level 1-1 (7,040px)
-  const isBoss = levelNum === 5;
-  if (worldId === 6 && isBoss) return 560; // Level 30 Final Boss Finale (17,920px)
+  const isBoss = levelNum === 10;
+  if (worldId === 10 && isBoss) return 560; // Level 100 Final Boss Finale (17,920px)
 
-  const baseCols = 200 + (worldId - 1) * 50 + (levelNum - 1) * 12;
+  const baseCols = 200 + (worldId - 1) * 20 + (levelNum - 1) * 8;
   return isBoss ? baseCols + 35 : baseCols;
 }
 
@@ -319,9 +324,10 @@ export function getLevelsForWorld(worldId: number): LevelConfig[] {
   const titles = WORLD_TITLES[worldId] || WORLD_TITLES[1];
   const wName = WORLD_NAMES[worldId] || `WORLD ${worldId}`;
 
-  return [1, 2, 3, 4, 5].map((lvlNum) => {
-    const isBoss = lvlNum === 5;
-    const title = `${worldId}-${lvlNum} ${titles[lvlNum - 1].toUpperCase()}`;
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((lvlNum) => {
+    const isBoss = lvlNum === 10;
+    const titleIndex = Math.min(titles.length - 1, lvlNum - 1);
+    const title = `${worldId}-${lvlNum} ${titles[titleIndex].toUpperCase()}`;
     const width = getLevelWidth(worldId, lvlNum);
     const arenaConfig = getArenaConfig(worldId, lvlNum);
     return {
@@ -342,23 +348,26 @@ export function getLevelsForWorld(worldId: number): LevelConfig[] {
   });
 }
 
-export const ALL_LEVELS_METADATA: LevelConfig[] = Array.from({ length: 20 }, (_, i) => i + 1).flatMap((w) =>
+export const ALL_LEVELS_METADATA: LevelConfig[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap((w) =>
   getLevelsForWorld(w)
 );
 
 export function getLevelDefinition(levelId: string): LevelDefinition {
-  const [wStr, lStr] = levelId.split('-');
-  const w = parseInt(wStr, 10) || 1;
-  const l = parseInt(lStr, 10) || 1;
+  const parsed = parseLevelId(levelId);
+  const w = parsed.worldId;
+  const l = parsed.levelNum;
 
-  const isBoss = l === 5;
-  const isFinalLevel = w === 6 && isBoss; // Level 30
+  const isBoss = l === 10;
+  const isFinalLevel = w === 10 && isBoss; // Level 100 (10-10)
   const cols = getLevelCols(w, l);
   const rows = 18;
 
   const wName = WORLD_NAMES[w] || `WORLD ${w}`;
   const titles = WORLD_TITLES[w] || WORLD_TITLES[1];
-  const title = `${w}-${l} ${titles[l - 1].toUpperCase()}`;
+  const titleIndex = Math.min(titles.length - 1, l - 1);
+  const title = isFinalLevel
+    ? "10-10 ULTIMATE OVERLORD SOVEREIGN (FINAL FINALE)"
+    : `${w}-${l} ${titles[titleIndex].toUpperCase()}`;
 
   const rng = makeRandom(w * 1000 + l * 47 + 1337);
 
@@ -646,7 +655,7 @@ export function getLevelDefinition(levelId: string): LevelDefinition {
       id: levelId,
       worldId: w,
       levelNum: l,
-      title: isFinalLevel ? "30 GOBLIN KING'S THRONE (FINAL FINALE)" : title,
+      title,
       worldName: isBoss ? `${wName} (BOSS)` : wName,
       width: cols * 32,
       height: 18 * 32,
@@ -1172,7 +1181,7 @@ function generate50EnemiesForLevel(
 }
 
 function buildSecretRooms(w: number, l: number, cols: number, grid: number[][]): SecretRoomDef[] {
-  const isBoss = l === 5;
+  const isBoss = l === 10;
   const secretRooms: SecretRoomDef[] = [];
   const rows = grid.length;
 
@@ -1282,16 +1291,30 @@ function buildSecretRooms(w: number, l: number, cols: number, grid: number[][]):
       carveRoom(1, 'Eclipse Secret Spire', 136, 144, 135, 'BREAKABLE_WALL', 'HP_PERMANENT')
     );
   } else if (w === 6) {
-    if (!isBoss) {
-      secretRooms.push(
-        carveRoom(0, 'Royal Citadel Treasury Vault', 56, 64, 55, 'BREAKABLE_WALL', 'RARE_WEAPON'),
-        carveRoom(1, 'Secret Tapestry Armory', 143, 151, 142, 'FAKE_WALL', 'ATTACK_UPGRADE')
-      );
-    } else {
-      secretRooms.push(
-        carveRoom(0, "Goblin King's Secret Royal Vault", 65, 73, 64, 'BREAKABLE_WALL', 'ANCIENT_RELIC')
-      );
-    }
+    secretRooms.push(
+      carveRoom(0, 'Royal Citadel Treasury Vault', 56, 64, 55, 'BREAKABLE_WALL', 'RARE_WEAPON'),
+      carveRoom(1, 'Secret Tapestry Armory', 143, 151, 142, 'FAKE_WALL', 'ATTACK_UPGRADE')
+    );
+  } else if (w === 7) {
+    secretRooms.push(
+      carveRoom(0, 'Prismatic Crystal Altar', 52, 60, 51, 'BREAKABLE_WALL', 'RARE_WEAPON'),
+      carveRoom(1, 'Geode Gemstone Cache', 138, 146, 137, 'FAKE_WALL', 'COIN_CACHE')
+    );
+  } else if (w === 8) {
+    secretRooms.push(
+      carveRoom(0, 'Sky Tempest Shrine', 50, 58, 49, 'FAKE_WALL', 'ATTACK_UPGRADE'),
+      carveRoom(1, 'Nimbus Cloud Treasury', 134, 142, 133, 'BREAKABLE_WALL', 'HP_PERMANENT')
+    );
+  } else if (w === 9) {
+    secretRooms.push(
+      carveRoom(0, 'Submerged Coral Vault', 54, 62, 53, 'BREAKABLE_WALL', 'ANCIENT_RELIC'),
+      carveRoom(1, 'Sunken Temple Altar', 140, 148, 139, 'FAKE_WALL', 'COIN_CACHE')
+    );
+  } else if (w === 10) {
+    secretRooms.push(
+      carveRoom(0, 'Celestial Starlight Sanctuary', 56, 64, 55, 'FAKE_WALL', 'RARE_WEAPON'),
+      carveRoom(1, 'Zodiac Sovereign Vault', 142, 150, 141, 'BREAKABLE_WALL', 'ATTACK_UPGRADE')
+    );
   }
 
   return secretRooms;
