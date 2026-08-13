@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameEngine } from '../game/core/GameEngine';
 import { GameStateStatus, SaveData } from '../types/game';
+import { Scene3DManager } from '../game/three/Scene3DManager';
 import { HUD } from './HUD';
 import { ComboOverlay } from './ComboOverlay';
 import { BossHUD } from './BossHUD';
@@ -33,7 +34,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   onReturnToMainMenu,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const threeContainerRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  const scene3DRef = useRef<Scene3DManager | null>(null);
 
   const [gameStatus, setGameStatus] = useState<GameStateStatus>('RUNNING');
   const [playerHp, setPlayerHp] = useState<{ current: number; max: number }>({
@@ -105,6 +108,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     canvas.width = 800;
     canvas.height = 450;
 
+    // Initialize 3D Scene Manager
+    const scene3D = new Scene3DManager();
+    scene3DRef.current = scene3D;
+    if (threeContainerRef.current) {
+      scene3D.mount(threeContainerRef.current);
+      scene3D.start();
+    }
+
     // Load save data & create game engine
     const currentSave = SaveSystem.load();
     const engine = new GameEngine(canvas, currentSave, levelId, isResume);
@@ -142,9 +153,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     engine.start();
 
-    // Stats sync ticker
+    // Stats sync ticker & 3D Input sync
     const statsInterval = setInterval(() => {
       if (engineRef.current) {
+        // Sync 2D touch/keyboard input state with 3D engine
+        const inputState = engineRef.current.input.getState();
+        if (scene3DRef.current) {
+          scene3DRef.current.syncWith2DInput(inputState);
+        }
+
         setPlayerHp({
           current: engineRef.current.player.stats.currentHp,
           max: engineRef.current.player.stats.maxHp,
@@ -188,6 +205,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         window.clearTimeout(impactTimeoutRef.current);
       }
       clearInterval(statsInterval);
+      if (scene3DRef.current) {
+        scene3DRef.current.dispose();
+        scene3DRef.current = null;
+      }
       if (engineRef.current) {
         engineRef.current.stop();
         engineRef.current = null;
@@ -227,6 +248,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         max: engineRef.current.player.stats.maxHp,
       });
     }
+    if (scene3DRef.current) {
+      scene3DRef.current.resetPlayer(0, 0, 0);
+    }
   };
 
   const handleRespawnCheckpoint = () => {
@@ -239,6 +263,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         current: engineRef.current.player.stats.currentHp,
         max: engineRef.current.player.stats.maxHp,
       });
+    }
+    if (scene3DRef.current) {
+      scene3DRef.current.resetPlayer(0, 0, 0);
     }
   };
 
@@ -279,7 +306,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           transition={{ duration: impactEffect?.type === 'BOSS' ? 0.3 : 0.2, ease: 'easeOut' }}
           className="w-full h-full relative"
         >
-          <canvas ref={canvasRef} className="w-full h-full block bg-sky-900" />
+          {/* 3D WebGL Layer */}
+          <div ref={threeContainerRef} className="w-full h-full absolute inset-0 block bg-slate-950" />
+          {/* Hidden 2D Canvas for game engine background calculations */}
+          <canvas ref={canvasRef} className="hidden" />
         </motion.div>
 
         {/* Impact Flash Effect Overlay */}

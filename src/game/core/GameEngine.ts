@@ -1400,16 +1400,7 @@ export class GameEngine {
               this.isAreaCleared = true;
               this.levelObjective.isCompleted = true;
               this.areaClearedBannerTimer = 5.0;
-
-              this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-              this.particles.createFloatingText(
-                this.player.x,
-                this.player.y - 50,
-                `ALL ${targetVal} ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!`,
-                '#22c55e',
-                22
-              );
-              audioEngine.playVictory();
+              this.triggerVictory();
             }
           }
 
@@ -1448,16 +1439,7 @@ export class GameEngine {
         this.isAreaCleared = true;
         this.levelObjective.isCompleted = true;
         this.areaClearedBannerTimer = 5.0;
-
-        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-        this.particles.createFloatingText(
-          this.player.x,
-          this.player.y - 50,
-          `ALL ${targetVal} ENEMIES DEFEATED! EXIT PORTAL UNLOCKED!`,
-          '#22c55e',
-          22
-        );
-        audioEngine.playVictory();
+        this.triggerVictory();
       }
     }
 
@@ -1468,15 +1450,7 @@ export class GameEngine {
         if (this.levelObjective.currentValue >= this.levelObjective.targetValue) {
           this.levelObjective.isCompleted = true;
           this.isAreaCleared = true;
-          audioEngine.playVictory();
-          this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-          this.particles.createFloatingText(
-            this.player.x,
-            this.player.y - 40,
-            '✨ OBJECTIVE COMPLETE! EXIT PORTAL UNLOCKED! 🚪',
-            '#facc15',
-            18
-          );
+          this.triggerVictory();
         }
       }
     }
@@ -1495,15 +1469,7 @@ export class GameEngine {
       if (this.survivalTimer >= this.levelObjective.targetValue) {
         this.levelObjective.isCompleted = true;
         this.isAreaCleared = true;
-        audioEngine.playVictory();
-        this.particles.createVictoryConfetti(this.player.x, this.player.y - 30);
-        this.particles.createFloatingText(
-          this.player.x,
-          this.player.y - 40,
-          '⏱️ SURVIVAL COMPLETE! EXIT PORTAL UNLOCKED! 🚪',
-          '#facc15',
-          18
-        );
+        this.triggerVictory();
       }
     }
 
