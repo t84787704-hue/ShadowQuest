@@ -1650,9 +1650,9 @@ export class GameEngine {
       const [wStr] = (this.levelDef.config.id || '1-1').split('-');
       const worldNum = parseInt(wStr, 10) || 1;
       if (worldNum === 9 || worldNum === 10) {
-        ctx.fillStyle = '#f43f5e';
+        ctx.fillStyle = '#f59e0b';
         ctx.font = 'bold 9px monospace';
-        ctx.fillText('🛡️ LARGE MONSTER IS UNKILLABLE!', bx + boxW / 2, by + 48);
+        ctx.fillText('🛡️ HEAVY MONSTERS REQUIRE HEAVY COMBOS!', bx + boxW / 2, by + 48);
       }
     }
 

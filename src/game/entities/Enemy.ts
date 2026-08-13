@@ -42,12 +42,6 @@ export class ForestGoblin extends Entity {
   }
 
   public get isImmortal(): boolean {
-    if (this.isBoss) return false;
-    const [wStr] = (this.levelId || '1-1').split('-');
-    const w = parseInt(wStr, 10) || 1;
-    if (w === 9 || w === 10) {
-      return this.isLargeMonster;
-    }
     return false;
   }
 
@@ -183,9 +177,9 @@ export class ForestGoblin extends Entity {
         break;
 
       case 'HEAVY_FIGHTER':
-        hpMultiplier = 1.5; // ~135 HP in W1 (8-9 hits) -> ~216 HP in W6 (10-12 hits)
+        hpMultiplier = 3.5; // ~315 HP in W1 -> ~560 HP in W10 (Substantially higher HP for Large Monster!)
         speedMult = 0.85;
-        dmgOffset = 2; // Heavy attack: 6-8 dmg (heavy punch: 7-10 dmg)
+        dmgOffset = 3; // Heavy attack: 7-9 dmg
         this.maxComboSteps = 1;
         break;
 
@@ -868,15 +862,11 @@ export class ForestGoblin extends Entity {
     // 2. Guarding reduces incoming damage by 80%
     if (this.isGuarding || this.combatState === 'DEFEND') {
       const finalDamage = Math.max(1, Math.round(damage * 0.2));
-      if (this.isImmortal) {
-        this.hp = Math.max(1, this.hp - finalDamage);
-      } else {
-        this.hp -= finalDamage;
-      }
+      this.hp -= finalDamage;
       this.hitFlashTimer = 0.18;
 
       audioEngine.playEnemyBlock();
-      particles.createFloatingText(hitX, hitY, this.isImmortal ? `BLOCKED! (IMMORTAL! ∞)` : `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
+      particles.createFloatingText(hitX, hitY, `BLOCKED! -${finalDamage} 🛡️`, '#94a3b8', 13);
 
       if (this.counterCooldown <= 0 && Math.random() < 0.5) {
         this.counterCooldown = 1.8;
@@ -887,7 +877,7 @@ export class ForestGoblin extends Entity {
         particles.createFloatingText(hitX, hitY - 15, 'GUARD COUNTER! ⚡', '#ef4444', 14);
       }
 
-      if (!this.isImmortal && this.hp <= 0) {
+      if (this.hp <= 0) {
         this.hp = 0;
         this.combatState = 'DEAD';
         this.deathTimer = 0.5;
@@ -902,12 +892,12 @@ export class ForestGoblin extends Entity {
     }
 
     // 3. Direct Hit -> Enter HIT Stagger state
-    const finalDamage = damage;
-    if (this.isImmortal) {
-      this.hp = Math.max(1, this.hp - finalDamage);
-    } else {
-      this.hp -= finalDamage;
-    }
+    // Large Monsters have 55% heavy armor damage resistance
+    const finalDamage = this.isLargeMonster
+      ? Math.max(1, Math.round(damage * 0.45))
+      : damage;
+
+    this.hp -= finalDamage;
     this.hitFlashTimer = 0.10; // Crisp brief 100ms white hit flash
     this.combatState = 'HIT';
 
@@ -919,28 +909,31 @@ export class ForestGoblin extends Entity {
 
     this.hitStunTimer = hitStunDuration;
 
-    // Scaled knockback based on attack type
-    let pushX = 3.6;
-    let pushY = -1.2;
-    if (attackType === 'FINISHER') { pushX = 11.5; pushY = -4.5; }
-    else if (attackType === 'SPIN_KICK') { pushX = 8.8; pushY = -3.4; }
-    else if (attackType === 'KICK' || attackType === 'JUMP_KICK') { pushX = 7.0; pushY = -2.8; }
-    else if (attackType === 'CROSS') { pushX = 5.2; pushY = -1.8; }
+    // Scaled knockback based on attack type (Heavy enemies get reduced knockback)
+    const heavyFactor = this.isLargeMonster ? 0.6 : 1.0;
+    let pushX = 3.6 * heavyFactor;
+    let pushY = -1.2 * heavyFactor;
+    if (attackType === 'FINISHER') { pushX = 11.5 * heavyFactor; pushY = -4.5 * heavyFactor; }
+    else if (attackType === 'SPIN_KICK') { pushX = 8.8 * heavyFactor; pushY = -3.4 * heavyFactor; }
+    else if (attackType === 'KICK' || attackType === 'JUMP_KICK') { pushX = 7.0 * heavyFactor; pushY = -2.8 * heavyFactor; }
+    else if (attackType === 'CROSS') { pushX = 5.2 * heavyFactor; pushY = -1.8 * heavyFactor; }
 
     this.vx = this.facingRight ? -pushX : pushX;
     this.vy = pushY;
 
     audioEngine.playHitImpact('enemy', attackType);
-    if (!attackType) {
-      particles.createFloatingText(hitX, hitY, this.isImmortal ? `-${finalDamage} (IMMORTAL! ∞)` : `-${finalDamage}`, '#ef4444', 15);
-    } else if (this.isImmortal) {
-      particles.createFloatingText(hitX, hitY, `IMMORTAL! ∞`, '#f43f5e', 14);
-    }
+    particles.createFloatingText(
+      hitX,
+      hitY,
+      `-${finalDamage}`,
+      this.isLargeMonster ? '#f59e0b' : '#ef4444',
+      15
+    );
     this.consecutiveHitsTaken++;
 
     particles.createHitBloodOrSparks(this.x + this.width / 2, this.y + this.height / 2);
 
-    if (!this.isImmortal && this.hp <= 0) {
+    if (this.hp <= 0) {
       this.hp = 0;
       this.combatState = 'DEAD';
       this.deathTimer = 0.5;
@@ -1102,52 +1095,36 @@ export class ForestGoblin extends Entity {
   private renderHealthBar(ctx: CanvasRenderingContext2D, rx: number, ry: number) {
     if (!this.isAlive) return;
 
-    if (this.isImmortal) {
-      const barW = 46;
-      const barH = 6;
+    // Render Health Bar if damaged or if Large Monster
+    if (this.hp < this.maxHp || this.isLargeMonster) {
+      const barW = this.isLargeMonster ? 48 : 38;
+      const barH = this.isLargeMonster ? 6 : 5;
       const bx = rx + (this.width - barW) / 2;
       const by = ry - 14;
 
       ctx.save();
-      ctx.fillStyle = '#1e1b4b';
-      ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx - 1, by - 1, barW + 2, barH + 2);
-
-      ctx.fillStyle = '#9333ea';
-      ctx.fillRect(bx, by, barW, barH);
-
-      ctx.fillStyle = '#fef08a';
-      ctx.font = 'bold 8px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('∞ HP', bx + barW / 2, by + 5);
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.fillText('🛡️ IMMORTAL MONSTER', rx + this.width / 2, ry - 18);
-      ctx.restore();
-      return;
-    }
-
-    if (this.hp < this.maxHp) {
-      const barW = 38;
-      const barH = 5;
-      const bx = rx + (this.width - barW) / 2;
-      const by = ry - 14;
-
       ctx.fillStyle = '#020617';
       ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
 
+      if (this.isLargeMonster) {
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx - 1, by - 1, barW + 2, barH + 2);
+      }
+
       const hpRatio = Math.max(0, this.hp / this.maxHp);
-      ctx.fillStyle = hpRatio > 0.5 ? '#22c55e' : hpRatio > 0.25 ? '#f59e0b' : '#ef4444';
+      ctx.fillStyle = this.isLargeMonster
+        ? (hpRatio > 0.5 ? '#f59e0b' : hpRatio > 0.25 ? '#eab308' : '#ef4444')
+        : (hpRatio > 0.5 ? '#22c55e' : hpRatio > 0.25 ? '#f59e0b' : '#ef4444');
       ctx.fillRect(bx, by, Math.round(barW * hpRatio), barH);
 
-      // Render Serious Enemy Name
+      // Render Enemy Name
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(this.enemyName, rx + this.width / 2, ry - 18);
+      const displayName = this.isLargeMonster ? `🛡️ ${this.enemyName} (HEAVY)` : this.enemyName;
+      ctx.fillText(displayName, rx + this.width / 2, ry - 18);
+      ctx.restore();
     }
   }
 
